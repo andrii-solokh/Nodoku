@@ -35,6 +35,7 @@ var connect_anchor_id: int = -1
 var connect_last_id: int = -1
 var connect_moved: bool = false
 var connect_start_pos: Vector2 = Vector2.ZERO
+var total_required_edges: int = 0
 
 @onready var grid_view: GridView = $GridView
 @onready var back_button: Button = $HUD/Root/TopBar/TopBarHBox/BackButton
@@ -48,7 +49,6 @@ var connect_start_pos: Vector2 = Vector2.ZERO
 @onready var sfx_disconnect: AudioStreamPlayer = $Sfx/DisconnectSfx
 @onready var sfx_complete: AudioStreamPlayer = $Sfx/CompleteSfx
 @onready var sfx_ui: AudioStreamPlayer = $Sfx/UiSfx
-@onready var sfx_node_complete: AudioStreamPlayer = $Sfx/NodeCompleteSfx
 
 func _ready() -> void:
 	set_process_input(true)
@@ -82,6 +82,18 @@ func _generate_model(seed: int) -> void:
 	var gen := LevelGenerator.new()
 	model = gen.generate(current_size, current_size, current_depth, params.density, seed, params.min_nonzero_ratio, params.max_attempts)
 	grid_view.model = model
+	_compute_total_required_edges()
+
+func _compute_total_required_edges() -> void:
+	total_required_edges = 0
+	if model == null:
+		return
+	var sum_required := 0
+	for i in range(model.total_nodes()):
+		if not model.is_active(i):
+			continue
+		sum_required += model.required[i]
+	total_required_edges = max(1, int(sum_required / 2))
 
 func _difficulty_params(difficulty: int) -> Dictionary:
 	match difficulty:
@@ -451,7 +463,7 @@ func _clear_selection() -> void:
 	grid_view.queue_redraw()
 
 func _show_completion() -> void:
-	_play_sfx(sfx_complete)
+	_play_completion_tune()
 	_haptic_pulse(60, 0.9)
 	completion_label.text = "Level Complete"
 	completion_panel.visible = true
@@ -573,28 +585,34 @@ func _play_sfx(player: AudioStreamPlayer, pitch: float = 1.0) -> void:
 	player.play()
 
 func _play_edge_sfx(a: int, b: int, connected: bool) -> void:
-	var remaining_avg := 4.0
-	if model != null:
-		remaining_avg = (float(model.remaining_dots(a)) + float(model.remaining_dots(b))) * 0.5
-	var t := clampf(remaining_avg / 4.0, 0.0, 1.0)
-	# Fewer dots left -> higher pitch.
-	var pitch := lerpf(1.15, 0.8, t)
+	var progress := 0.0
+	if model != null and total_required_edges > 0:
+		progress = clampf(float(model.placed_edges.size()) / float(total_required_edges), 0.0, 1.0)
+	var pitch := lerpf(0.9, 1.35, progress)
 	if connected:
 		_play_sfx(sfx_connect, pitch)
 		_haptic_pulse(24, 0.45)
 	else:
-		_play_sfx(sfx_disconnect, pitch)
+		_play_sfx(sfx_disconnect, maxf(0.8, pitch - 0.1))
 		_haptic_pulse(16, 0.35)
 
 func _maybe_play_node_complete(a: int, b: int, before_a: int, before_b: int) -> void:
 	if model == null:
 		return
 	if before_a > 0 and model.remaining_dots(a) == 0:
-		_play_sfx(sfx_node_complete, 1.0)
 		_haptic_pulse(40, 0.7)
 	elif before_b > 0 and model.remaining_dots(b) == 0:
-		_play_sfx(sfx_node_complete, 1.0)
 		_haptic_pulse(40, 0.7)
+
+func _play_completion_tune() -> void:
+	if sfx_complete == null:
+		return
+	var pitches := [1.0, 1.2, 1.45]
+	var tween := create_tween()
+	tween.tween_callback(Callable(self, "_play_sfx").bind(sfx_complete, pitches[0]))
+	for i in range(1, pitches.size()):
+		tween.tween_interval(0.12)
+		tween.tween_callback(Callable(self, "_play_sfx").bind(sfx_complete, pitches[i]))
 
 func _haptic_pulse(duration_ms: int, amplitude: float = 0.5) -> void:
 	if duration_ms <= 0:
