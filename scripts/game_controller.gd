@@ -49,6 +49,7 @@ var connect_start_pos: Vector2 = Vector2.ZERO
 @onready var sfx_rotate: AudioStreamPlayer = $Sfx/RotateSfx
 @onready var sfx_complete: AudioStreamPlayer = $Sfx/CompleteSfx
 @onready var sfx_ui: AudioStreamPlayer = $Sfx/UiSfx
+@onready var sfx_node_complete: AudioStreamPlayer = $Sfx/NodeCompleteSfx
 
 func _ready() -> void:
 	set_process_input(true)
@@ -381,11 +382,17 @@ func _handle_connect_drag(pos: Vector2) -> void:
 	if not model.is_neighbor(connect_anchor_id, node_id):
 		return
 	if model.placed_edge_exists(connect_anchor_id, node_id):
+		var before_a := model.remaining_dots(connect_anchor_id)
+		var before_b := model.remaining_dots(node_id)
 		if model.remove_placed_edge(connect_anchor_id, node_id):
 			_play_edge_sfx(connect_anchor_id, node_id, false)
+			_maybe_play_node_complete(connect_anchor_id, node_id, before_a, before_b)
 	else:
+		var before_a := model.remaining_dots(connect_anchor_id)
+		var before_b := model.remaining_dots(node_id)
 		if model.add_placed_edge(connect_anchor_id, node_id):
 			_play_edge_sfx(connect_anchor_id, node_id, true)
+			_maybe_play_node_complete(connect_anchor_id, node_id, before_a, before_b)
 	connect_anchor_id = node_id
 	connect_last_id = node_id
 	connect_moved = true
@@ -423,11 +430,17 @@ func _handle_press(pos: Vector2) -> void:
 
 	if model.is_neighbor(selected_id, node_id):
 		if model.placed_edge_exists(selected_id, node_id):
+			var before_a := model.remaining_dots(selected_id)
+			var before_b := model.remaining_dots(node_id)
 			if model.remove_placed_edge(selected_id, node_id):
 				_play_edge_sfx(selected_id, node_id, false)
+				_maybe_play_node_complete(selected_id, node_id, before_a, before_b)
 		else:
+			var before_a := model.remaining_dots(selected_id)
+			var before_b := model.remaining_dots(node_id)
 			if model.add_placed_edge(selected_id, node_id):
 				_play_edge_sfx(selected_id, node_id, true)
+				_maybe_play_node_complete(selected_id, node_id, before_a, before_b)
 
 	_clear_selection()
 
@@ -571,3 +584,11 @@ func _play_edge_sfx(a: int, b: int, connected: bool) -> void:
 		_play_sfx(sfx_connect, pitch)
 	else:
 		_play_sfx(sfx_disconnect, pitch)
+
+func _maybe_play_node_complete(a: int, b: int, before_a: int, before_b: int) -> void:
+	if model == null:
+		return
+	if before_a > 0 and model.remaining_dots(a) == 0:
+		_play_sfx(sfx_node_complete, 1.0)
+	elif before_b > 0 and model.remaining_dots(b) == 0:
+		_play_sfx(sfx_node_complete, 1.0)

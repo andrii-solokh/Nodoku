@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/game_controller.gd" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="AudioStream" path="res://assets/sfx/rotate.wav" id="6"]
 [ext_resource type="AudioStream" path="res://assets/sfx/complete.wav" id="7"]
 [ext_resource type="AudioStream" path="res://assets/sfx/ui.wav" id="8"]
+[ext_resource type="AudioStream" path="res://assets/sfx/node_complete.wav" id="9"]
 
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(0.957, 0.945, 0.925, 1)
@@ -172,6 +173,10 @@ volume_db = -4.0
 [node name="UiSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
 stream = ExtResource("8")
 volume_db = -6.0
+
+[node name="NodeCompleteSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
+stream = ExtResource("9")
+volume_db = -4.0
 
 [node name="HUD" type="CanvasLayer" parent="Game"]
 
