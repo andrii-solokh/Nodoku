@@ -26,9 +26,7 @@ var pan_active: bool = false
 var pan_end_deadline: float = 0.0
 var use_polling_input: bool = false
 var poll_mouse_active: bool = false
-var poll_touch_active: bool = false
 var poll_mouse_last: Vector2 = Vector2.ZERO
-var poll_touch_last: Vector2 = Vector2.ZERO
 var key_state := {}
 
 @onready var grid_view: GridView = $GridView
@@ -43,6 +41,8 @@ var key_state := {}
 func _ready() -> void:
 	set_process_input(true)
 	use_polling_input = OS.has_feature("web")
+	if use_polling_input:
+		Input.set_emulate_mouse_from_touch(true)
 	back_button.pressed.connect(_on_back_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
 	next_button.pressed.connect(_on_next_pressed)
@@ -278,18 +278,6 @@ func _key_just_pressed(keycode: int) -> bool:
 	return pressed and not prev
 
 func _poll_pointer_web() -> void:
-	if Input.get_touch_count() > 0:
-		var pos := Input.get_touch_position(0)
-		if not poll_touch_active:
-			poll_touch_active = _begin_swipe(pos)
-		else:
-			_handle_drag_motion(pos)
-		poll_touch_last = pos
-		return
-	if poll_touch_active:
-		_handle_pointer_release(poll_touch_last)
-		poll_touch_active = false
-
 	var pressed := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	var pos := get_viewport().get_mouse_position()
 	if pressed:
