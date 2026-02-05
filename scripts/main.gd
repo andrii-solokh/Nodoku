@@ -1,9 +1,12 @@
 extends Control
 
 const SETTINGS_PATH := "user://settings.cfg"
+const VERSION_PATH := "res://version.txt"
+const GAME_VERSION := "0.1.0"
 
 @onready var menu: Control = $Menu
 @onready var game: GameController = $Game
+@onready var version_label: Label = $Menu/VersionLabel
 
 @onready var grid_size_option: OptionButton = $Menu/MenuMargin/VBox/GridSizeRow/GridSizeOption
 @onready var depth_option: OptionButton = $Menu/MenuMargin/VBox/DepthRow/DepthOption
@@ -13,8 +16,19 @@ const SETTINGS_PATH := "user://settings.cfg"
 func _ready() -> void:
 	_setup_options()
 	_load_settings()
+	_update_version_label()
 	start_button.pressed.connect(_on_start_pressed)
 	game.back_requested.connect(_on_game_back)
+
+func _update_version_label() -> void:
+	var version := GAME_VERSION
+	if FileAccess.file_exists(VERSION_PATH):
+		var file := FileAccess.open(VERSION_PATH, FileAccess.READ)
+		if file != null:
+			var line := file.get_line().strip_edges()
+			if line != "":
+				version = line
+	version_label.text = "v%s" % version
 
 func _setup_options() -> void:
 	grid_size_option.clear()
