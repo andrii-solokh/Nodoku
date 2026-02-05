@@ -24,6 +24,12 @@ var pan_last_time: float = 0.0
 var pan_block_until: float = 0.0
 var pan_active: bool = false
 var pan_end_deadline: float = 0.0
+var use_polling_input: bool = false
+var poll_mouse_active: bool = false
+var poll_touch_active: bool = false
+var poll_mouse_last: Vector2 = Vector2.ZERO
+var poll_touch_last: Vector2 = Vector2.ZERO
+var key_state := {}
 
 @onready var grid_view: GridView = $GridView
 @onready var back_button: Button = $HUD/Root/TopBar/TopBarHBox/BackButton
@@ -36,6 +42,7 @@ var pan_end_deadline: float = 0.0
 
 func _ready() -> void:
 	set_process_input(true)
+	use_polling_input = OS.has_feature("web")
 	back_button.pressed.connect(_on_back_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
 	next_button.pressed.connect(_on_next_pressed)
@@ -54,6 +61,7 @@ func start_new_game(size: int, depth: int, difficulty: int) -> void:
 	completion_panel.visible = false
 	grid_view.selected_id = -1
 	grid_view.queue_redraw()
+	_release_ui_focus()
 
 func _generate_model(seed: int) -> void:
 	var params := _difficulty_params(current_difficulty)
@@ -71,33 +79,34 @@ func _difficulty_params(difficulty: int) -> Dictionary:
 			return {"density": 0.42, "min_nonzero_ratio": 0.45, "max_attempts": 14}
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventPanGesture:
+		_log_debug("pan gesture delta=%s" % [str(event.delta)])
+		_handle_pan_gesture(event.delta)
+		return
+	if event is InputEventMouseButton and event.pressed:
+		if _handle_wheel(event):
+			return
+	if use_polling_input:
+		return
 	if event is InputEventMouseButton and event.pressed:
 		_log_pointer("mouse_down", event.position)
+		_release_ui_focus()
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			if not _is_pointer_over_ui(event.position):
-				swipe_active = true
-				swipe_start = event.position
-				swipe_last = event.position
-				swipe_total = Vector2.ZERO
-				drag_moved = false
+			if _begin_swipe(event.position):
 				_log_debug("swipe start")
 	if event is InputEventScreenTouch and event.pressed:
 		_log_pointer("touch_down", event.position)
-		if not _is_pointer_over_ui(event.position):
-			swipe_active = true
-			swipe_start = event.position
-			swipe_last = event.position
-			swipe_total = Vector2.ZERO
-			drag_moved = false
+		_release_ui_focus()
+		if _begin_swipe(event.position):
 			_log_debug("touch swipe start")
 	if event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_handle_pointer_release(event.position)
 	if event is InputEventScreenTouch and not event.pressed:
 		_handle_pointer_release(event.position)
 	if event is InputEventMouseMotion and swipe_active:
-		_handle_drag_motion(event.position)
+		_handle_drag_delta(event.relative, event.position)
 	if event is InputEventScreenDrag and swipe_active:
-		_handle_drag_motion(event.position)
+		_handle_drag_delta(event.relative, event.position)
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_LEFT:
 			_rotate_by_delta(Vector2(-1, 0))
@@ -119,10 +128,6 @@ func _input(event: InputEvent) -> void:
 			_rotate_by_delta(Vector2(-1, 0))
 		elif event.keycode == KEY_BRACKETRIGHT:
 			_rotate_by_delta(Vector2(1, 0))
-	if event is InputEventPanGesture:
-		_log_debug("pan gesture delta=%s" % [str(event.delta)])
-		_handle_pan_gesture(event.delta)
-
 func _handle_pointer_release(pos: Vector2) -> void:
 	if not swipe_active:
 		return
@@ -144,6 +149,9 @@ func _handle_pointer_release(pos: Vector2) -> void:
 
 func _handle_drag_motion(pos: Vector2) -> void:
 	var delta := pos - swipe_last
+	_handle_drag_delta(delta, pos)
+
+func _handle_drag_delta(delta: Vector2, pos: Vector2) -> void:
 	swipe_last = pos
 	swipe_total += delta
 	if current_depth <= 1:
@@ -190,6 +198,9 @@ func _process(_delta: float) -> void:
 	if pan_active and float(Time.get_ticks_msec()) / 1000.0 > pan_end_deadline:
 		pan_active = false
 		pan_accum = Vector2.ZERO
+	if use_polling_input:
+		_poll_keyboard_web()
+		_poll_pointer_web()
 
 func _rotate_by_delta(dir: Vector2) -> void:
 	if current_depth <= 1:
@@ -208,6 +219,88 @@ func _drag_threshold() -> float:
 func _drag_sensitivity() -> float:
 	var vp := get_viewport_rect().size
 	return PI / maxf(240.0, minf(vp.x, vp.y))
+
+func _begin_swipe(pos: Vector2) -> bool:
+	if swipe_active:
+		return false
+	if _is_pointer_over_ui(pos):
+		return false
+	swipe_active = true
+	swipe_start = pos
+	swipe_last = pos
+	swipe_total = Vector2.ZERO
+	drag_moved = false
+	return true
+
+func _handle_wheel(event: InputEventMouseButton) -> bool:
+	var dir := Vector2.ZERO
+	match event.button_index:
+		MOUSE_BUTTON_WHEEL_LEFT:
+			dir = Vector2(-1, 0)
+		MOUSE_BUTTON_WHEEL_RIGHT:
+			dir = Vector2(1, 0)
+		MOUSE_BUTTON_WHEEL_UP:
+			dir = Vector2(0, -1)
+		MOUSE_BUTTON_WHEEL_DOWN:
+			dir = Vector2(0, 1)
+	if dir == Vector2.ZERO:
+		return false
+	var now := float(Time.get_ticks_msec()) / 1000.0
+	if now < pan_block_until:
+		return true
+	_rotate_by_delta(dir)
+	pan_block_until = now + 0.6
+	return true
+
+func _poll_keyboard_web() -> void:
+	if current_depth <= 1:
+		return
+	if grid_view.is_rotating():
+		return
+	var dir := Vector2.ZERO
+	if _key_just_pressed(KEY_LEFT) or _key_just_pressed(KEY_A) or _key_just_pressed(KEY_BRACKETLEFT):
+		dir = Vector2(-1, 0)
+	elif _key_just_pressed(KEY_RIGHT) or _key_just_pressed(KEY_D) or _key_just_pressed(KEY_BRACKETRIGHT):
+		dir = Vector2(1, 0)
+	elif _key_just_pressed(KEY_UP) or _key_just_pressed(KEY_W):
+		dir = Vector2(0, -1)
+	elif _key_just_pressed(KEY_DOWN) or _key_just_pressed(KEY_S):
+		dir = Vector2(0, 1)
+	if dir != Vector2.ZERO:
+		_rotate_by_delta(dir)
+
+func _key_just_pressed(keycode: int) -> bool:
+	var pressed := Input.is_key_pressed(keycode)
+	var prev := false
+	if key_state.has(keycode):
+		prev = key_state[keycode]
+	key_state[keycode] = pressed
+	return pressed and not prev
+
+func _poll_pointer_web() -> void:
+	if Input.get_touch_count() > 0:
+		var pos := Input.get_touch_position(0)
+		if not poll_touch_active:
+			poll_touch_active = _begin_swipe(pos)
+		else:
+			_handle_drag_motion(pos)
+		poll_touch_last = pos
+		return
+	if poll_touch_active:
+		_handle_pointer_release(poll_touch_last)
+		poll_touch_active = false
+
+	var pressed := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var pos := get_viewport().get_mouse_position()
+	if pressed:
+		if not poll_mouse_active:
+			poll_mouse_active = _begin_swipe(pos)
+		else:
+			_handle_drag_motion(pos)
+		poll_mouse_last = pos
+	elif poll_mouse_active:
+		_handle_pointer_release(pos)
+		poll_mouse_active = false
 
 func _handle_press(pos: Vector2) -> void:
 	_log_pointer("handle_press", pos)
@@ -301,13 +394,30 @@ func _log_pointer(tag: String, pos: Vector2) -> void:
 	_log_debug(message)
 
 func _is_pointer_over_ui(pos: Vector2) -> bool:
-	if completion_panel.visible and completion_panel.get_global_rect().has_point(pos):
-		return true
-	if back_button.get_global_rect().has_point(pos):
-		return true
-	if restart_button.get_global_rect().has_point(pos):
-		return true
+	var hovered := get_viewport().gui_get_hovered_control()
+	if hovered == null:
+		return false
+	return _is_ui_control(hovered)
+
+func _is_ui_control(node: Control) -> bool:
+	var current: Node = node
+	while current != null:
+		if current == back_button:
+			return true
+		if current == restart_button:
+			return true
+		if current == next_button:
+			return true
+		if current == replay_button:
+			return true
+		if current == completion_panel:
+			return true
+		current = current.get_parent()
 	return false
+
+func _release_ui_focus() -> void:
+	if OS.has_feature("web"):
+		get_viewport().gui_release_focus()
 
 func _log_debug(message: String) -> void:
 	var file := FileAccess.open(DEBUG_LOG_PATH, FileAccess.READ_WRITE)
