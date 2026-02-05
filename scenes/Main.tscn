@@ -1,271 +1,448 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene format=3 uid="uid://dkmaydbhsq8fx"]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/game_controller.gd" id="2"]
-[ext_resource type="Script" path="res://scripts/grid_view.gd" id="3"]
-[ext_resource type="AudioStream" path="res://assets/sfx/connect.wav" id="4"]
-[ext_resource type="AudioStream" path="res://assets/sfx/disconnect.wav" id="5"]
-[ext_resource type="AudioStream" path="res://assets/sfx/complete.wav" id="7"]
-[ext_resource type="AudioStream" path="res://assets/sfx/ui.wav" id="8"]
-[ext_resource type="AudioStream" path="res://assets/sfx/node_complete.wav" id="9"]
+[ext_resource type="Script" uid="uid://bhns6tme20u6d" path="res://scripts/main.gd" id="1"]
+[ext_resource type="Script" uid="uid://cu6o5xoog0byk" path="res://scripts/game_controller.gd" id="2"]
+[ext_resource type="Script" uid="uid://duda7eb7l5uwv" path="res://scripts/grid_view.gd" id="3"]
+[ext_resource type="AudioStream" uid="uid://dcbogu0ttcc1h" path="res://assets/sfx/connect.wav" id="4"]
+[ext_resource type="AudioStream" uid="uid://mqym63ols3js" path="res://assets/sfx/disconnect.wav" id="5"]
+[ext_resource type="AudioStream" uid="uid://b1jvplas5chin" path="res://assets/sfx/complete.wav" id="7"]
+[ext_resource type="AudioStream" uid="uid://cqah67p8scy15" path="res://assets/sfx/ui.wav" id="8"]
+
+[sub_resource type="SystemFont" id="3"]
+font_names = PackedStringArray("Avenir Next", "Avenir", "Segoe UI", "Noto Sans")
+font_weight = 600
+subpixel_positioning = 0
+
+[sub_resource type="Theme" id="4"]
+default_font = SubResource("3")
+default_font_size = 20
+Label/colors/font_color = Color(0.16, 0.2, 0.22, 1)
+
+[sub_resource type="Gradient" id="5"]
+colors = PackedColorArray(0.962, 0.942, 0.914, 1, 0.925, 0.937, 0.952, 1)
+
+[sub_resource type="GradientTexture2D" id="6"]
+gradient = SubResource("5")
+width = 2
+height = 2
 
 [sub_resource type="StyleBoxFlat" id="1"]
-bg_color = Color(0.957, 0.945, 0.925, 1)
+bg_color = Color(0.98, 0.965, 0.94, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.78, 0.72, 0.64, 0.6)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+shadow_color = Color(0, 0, 0, 0.12)
+shadow_size = 18
+shadow_offset = Vector2(0, 8)
+
+[sub_resource type="StyleBoxFlat" id="10"]
+bg_color = Color(0.95, 0.93, 0.89, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.78, 0.72, 0.64, 0.6)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
-corner_radius_bottom_left = 16
 corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
-[sub_resource type="StyleBoxFlat" id="2"]
-bg_color = Color(1, 1, 1, 0.96)
+[sub_resource type="StyleBoxFlat" id="12"]
+bg_color = Color(0.9, 0.86, 0.8, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.72, 0.66, 0.58, 0.7)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="11"]
+bg_color = Color(0.93, 0.9, 0.85, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.78, 0.72, 0.64, 0.65)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="7"]
+bg_color = Color(0.27, 0.35, 0.37, 1)
 corner_radius_top_left = 18
 corner_radius_top_right = 18
-corner_radius_bottom_left = 18
 corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+shadow_color = Color(0, 0, 0, 0.2)
+shadow_size = 10
+shadow_offset = Vector2(0, 4)
 
-[node name="Main" type="Control"]
+[sub_resource type="StyleBoxFlat" id="9"]
+bg_color = Color(0.23, 0.3, 0.32, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="StyleBoxFlat" id="8"]
+bg_color = Color(0.31, 0.4, 0.42, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="StyleBoxFlat" id="2"]
+bg_color = Color(1, 1, 1, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.78, 0.72, 0.64, 0.5)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
+shadow_color = Color(0, 0, 0, 0.12)
+shadow_size = 14
+shadow_offset = Vector2(0, 6)
+
+[node name="Main" type="Control" unique_id=1173963211]
+layout_mode = 3
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = SubResource("4")
 script = ExtResource("1")
 
-[node name="Menu" type="Control" parent="."]
-anchor_right = 1.0
-anchor_bottom = 1.0
-
-[node name="MenuPanel" type="Panel" parent="Menu"]
+[node name="Background" type="TextureRect" parent="." unique_id=1648514583]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("1")
+texture = SubResource("6")
+expand_mode = 1
 
-[node name="MenuMargin" type="MarginContainer" parent="Menu"]
+[node name="Menu" type="Control" parent="." unique_id=234804345]
+visible = false
+layout_mode = 1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = 120.0
-margin_top = 140.0
-margin_right = -120.0
-margin_bottom = -140.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="VersionLabel" type="Label" parent="Menu"]
+[node name="MenuPanel" type="Panel" parent="Menu" unique_id=1170441116]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -231.0
+offset_top = -236.0
+offset_right = -231.0
+offset_bottom = -236.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("1")
+
+[node name="VersionLabel" type="Label" parent="Menu/MenuPanel" unique_id=989407676]
+layout_mode = 0
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = -220.0
-margin_top = -48.0
-margin_right = -30.0
-margin_bottom = -18.0
-text = "v0.1.0"
+offset_left = -200.0
+offset_top = -36.0
+offset_right = -24.0
+offset_bottom = -16.0
+theme_override_colors/font_color = Color(0.44, 0.46, 0.48, 1)
 theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
+text = "v0.1.0"
 horizontal_alignment = 2
 
-[node name="VBox" type="VBoxContainer" parent="Menu/MenuMargin"]
+[node name="MenuMargin" type="MarginContainer" parent="Menu/MenuPanel" unique_id=509159409]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
+
+[node name="VBox" type="VBoxContainer" parent="Menu/MenuPanel/MenuMargin" unique_id=1521732845]
+layout_mode = 2
+theme_override_constants/separation = 16
 alignment = 1
 
-[node name="Title" type="Label" parent="Menu/MenuMargin/VBox"]
+[node name="Title" type="Label" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=352786825]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.17, 0.22, 0.24, 1)
+theme_override_font_sizes/font_size = 64
 text = "Nodes"
-theme_override_font_sizes/font_size = 56
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 horizontal_alignment = 1
 
-[node name="SpacerTop" type="Control" parent="Menu/MenuMargin/VBox"]
-custom_minimum_size = Vector2(0, 30)
+[node name="Subtitle" type="Label" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=2074178761]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.47, 0.5, 1)
+theme_override_font_sizes/font_size = 20
+text = "Connect every dot"
+horizontal_alignment = 1
 
-[node name="GridSizeRow" type="HBoxContainer" parent="Menu/MenuMargin/VBox"]
+[node name="SpacerTop" type="Control" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=415868955]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
 
-[node name="GridSizeLabel" type="Label" parent="Menu/MenuMargin/VBox/GridSizeRow"]
+[node name="GridSizeRow" type="HBoxContainer" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=2036061837]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="GridSizeLabel" type="Label" parent="Menu/MenuPanel/MenuMargin/VBox/GridSizeRow" unique_id=295329560]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.26, 0.28, 1)
+theme_override_font_sizes/font_size = 22
 text = "Grid Size"
-custom_minimum_size = Vector2(180, 0)
-theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 
-[node name="GridSizeOption" type="OptionButton" parent="Menu/MenuMargin/VBox/GridSizeRow"]
-size_flags_horizontal = 3
+[node name="GridSizeOption" type="OptionButton" parent="Menu/MenuPanel/MenuMargin/VBox/GridSizeRow" unique_id=1521685801]
 custom_minimum_size = Vector2(260, 60)
+layout_mode = 2
+size_flags_horizontal = 3
 focus_mode = 0
-theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_color_hover = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_color_pressed = Color(0.0862745, 0.0941176, 0.105882, 1)
+theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("10")
+theme_override_styles/pressed = SubResource("12")
+theme_override_styles/hover = SubResource("11")
 
-[node name="DepthRow" type="HBoxContainer" parent="Menu/MenuMargin/VBox"]
+[node name="DepthRow" type="HBoxContainer" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=1806913698]
+layout_mode = 2
+theme_override_constants/separation = 16
 
-[node name="DepthLabel" type="Label" parent="Menu/MenuMargin/VBox/DepthRow"]
+[node name="DepthLabel" type="Label" parent="Menu/MenuPanel/MenuMargin/VBox/DepthRow" unique_id=615111199]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.26, 0.28, 1)
+theme_override_font_sizes/font_size = 22
 text = "Depth"
-custom_minimum_size = Vector2(180, 0)
-theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 
-[node name="DepthOption" type="OptionButton" parent="Menu/MenuMargin/VBox/DepthRow"]
-size_flags_horizontal = 3
+[node name="DepthOption" type="OptionButton" parent="Menu/MenuPanel/MenuMargin/VBox/DepthRow" unique_id=1317616866]
 custom_minimum_size = Vector2(260, 60)
+layout_mode = 2
+size_flags_horizontal = 3
 focus_mode = 0
-theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_color_hover = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_color_pressed = Color(0.0862745, 0.0941176, 0.105882, 1)
+theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("10")
+theme_override_styles/pressed = SubResource("12")
+theme_override_styles/hover = SubResource("11")
 
-[node name="DifficultyRow" type="HBoxContainer" parent="Menu/MenuMargin/VBox"]
+[node name="DifficultyRow" type="HBoxContainer" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=1419426753]
+layout_mode = 2
+theme_override_constants/separation = 16
 
-[node name="DifficultyLabel" type="Label" parent="Menu/MenuMargin/VBox/DifficultyRow"]
+[node name="DifficultyLabel" type="Label" parent="Menu/MenuPanel/MenuMargin/VBox/DifficultyRow" unique_id=1453352947]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.26, 0.28, 1)
+theme_override_font_sizes/font_size = 22
 text = "Difficulty"
-custom_minimum_size = Vector2(180, 0)
-theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 
-[node name="DifficultyOption" type="OptionButton" parent="Menu/MenuMargin/VBox/DifficultyRow"]
-size_flags_horizontal = 3
+[node name="DifficultyOption" type="OptionButton" parent="Menu/MenuPanel/MenuMargin/VBox/DifficultyRow" unique_id=600872537]
 custom_minimum_size = Vector2(260, 60)
-focus_mode = 0
-theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_color_hover = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_color_pressed = Color(0.0862745, 0.0941176, 0.105882, 1)
-
-[node name="SpacerMid" type="Control" parent="Menu/MenuMargin/VBox"]
-custom_minimum_size = Vector2(0, 20)
-
-[node name="StartButton" type="Button" parent="Menu/MenuMargin/VBox"]
-text = "Start"
+layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 74)
 focus_mode = 0
-theme_override_font_sizes/font_size = 28
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_hover_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_pressed_color = Color(0.0862745, 0.0941176, 0.105882, 1)
+theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("10")
+theme_override_styles/pressed = SubResource("12")
+theme_override_styles/hover = SubResource("11")
 
-[node name="SpacerBottom" type="Control" parent="Menu/MenuMargin/VBox"]
+[node name="SpacerMid" type="Control" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=2030206992]
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+
+[node name="StartButton" type="Button" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=527792172]
+custom_minimum_size = Vector2(0, 78)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme_override_colors/font_color = Color(0.97, 0.96, 0.94, 1)
+theme_override_colors/font_pressed_color = Color(0.97, 0.96, 0.94, 1)
+theme_override_colors/font_hover_color = Color(0.97, 0.96, 0.94, 1)
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("7")
+theme_override_styles/pressed = SubResource("9")
+theme_override_styles/hover = SubResource("8")
+text = "Start"
+
+[node name="SpacerBottom" type="Control" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=136256322]
 custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
 
-[node name="Game" type="Control" parent="."]
+[node name="Game" type="Control" parent="." unique_id=1783481741]
 visible = false
+anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 1
 script = ExtResource("2")
 
-[node name="GridView" type="Node2D" parent="Game"]
+[node name="GridView" type="Node2D" parent="Game" unique_id=1266691265]
 script = ExtResource("3")
 
-[node name="Sfx" type="Node" parent="Game"]
+[node name="Sfx" type="Node" parent="Game" unique_id=105003542]
 
-[node name="ConnectSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
+[node name="ConnectSfx" type="AudioStreamPlayer" parent="Game/Sfx" unique_id=1228371189]
 stream = ExtResource("4")
 volume_db = -6.0
 
-[node name="DisconnectSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
+[node name="DisconnectSfx" type="AudioStreamPlayer" parent="Game/Sfx" unique_id=1338139637]
 stream = ExtResource("5")
 volume_db = -6.0
 
-[node name="CompleteSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
+[node name="CompleteSfx" type="AudioStreamPlayer" parent="Game/Sfx" unique_id=670161201]
 stream = ExtResource("7")
 volume_db = -4.0
 
-[node name="UiSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
+[node name="UiSfx" type="AudioStreamPlayer" parent="Game/Sfx" unique_id=1918624409]
 stream = ExtResource("8")
 volume_db = -6.0
 
-[node name="NodeCompleteSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
-stream = ExtResource("9")
-volume_db = -4.0
+[node name="HUD" type="CanvasLayer" parent="Game" unique_id=1739806057]
 
-[node name="HUD" type="CanvasLayer" parent="Game"]
-
-[node name="Root" type="Control" parent="Game/HUD"]
+[node name="Root" type="Control" parent="Game/HUD" unique_id=794657108]
+layout_mode = 3
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(518, 237)
 mouse_filter = 2
 
-
-[node name="TopBar" type="Control" parent="Game/HUD/Root"]
+[node name="TopBar" type="Control" parent="Game/HUD/Root" unique_id=839974709]
+anchors_preset = 0
 anchor_right = 1.0
-anchor_bottom = 0.0
-margin_left = 30.0
-margin_top = 30.0
-margin_right = -30.0
-margin_bottom = 90.0
 
-[node name="TopBarHBox" type="HBoxContainer" parent="Game/HUD/Root/TopBar"]
+[node name="TopBarHBox" type="HBoxContainer" parent="Game/HUD/Root/TopBar" unique_id=1139808879]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="BackButton" type="Button" parent="Game/HUD/Root/TopBar/TopBarHBox"]
-text = "Back"
+[node name="BackButton" type="Button" parent="Game/HUD/Root/TopBar/TopBarHBox" unique_id=474283972]
 custom_minimum_size = Vector2(110, 52)
+layout_mode = 2
 focus_mode = 0
-theme_override_font_sizes/font_size = 22
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_hover_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_pressed_color = Color(0.0862745, 0.0941176, 0.105882, 1)
+theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("10")
+theme_override_styles/pressed = SubResource("12")
+theme_override_styles/hover = SubResource("11")
+text = "Back"
 
-[node name="RestartButton" type="Button" parent="Game/HUD/Root/TopBar/TopBarHBox"]
-text = "Restart"
+[node name="RestartButton" type="Button" parent="Game/HUD/Root/TopBar/TopBarHBox" unique_id=956553963]
 custom_minimum_size = Vector2(140, 52)
+layout_mode = 2
 focus_mode = 0
-theme_override_font_sizes/font_size = 22
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_hover_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_pressed_color = Color(0.0862745, 0.0941176, 0.105882, 1)
+theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("10")
+theme_override_styles/pressed = SubResource("12")
+theme_override_styles/hover = SubResource("11")
+text = "Restart"
 
-[node name="Spacer" type="Control" parent="Game/HUD/Root/TopBar/TopBarHBox"]
+[node name="Spacer" type="Control" parent="Game/HUD/Root/TopBar/TopBarHBox" unique_id=1288576706]
+layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SideLabel" type="Label" parent="Game/HUD/Root/TopBar/TopBarHBox"]
-text = "Side"
+[node name="SideLabel" type="Label" parent="Game/HUD/Root/TopBar/TopBarHBox" unique_id=1492460377]
 custom_minimum_size = Vector2(200, 0)
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 20
+layout_mode = 2
 size_flags_horizontal = 2
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
+theme_override_colors/font_color = Color(0.25, 0.3, 0.32, 1)
+theme_override_font_sizes/font_size = 19
+text = "Side"
+horizontal_alignment = 1
 
-[node name="CompletionPanel" type="Panel" parent="Game/HUD/Root"]
-visible = false
+[node name="ControlHints" type="Label" parent="Game/HUD/Root" unique_id=539545972]
+layout_mode = 0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_colors/font_color = Color(0.42, 0.47, 0.5, 1)
+theme_override_font_sizes/font_size = 18
+text = "Rotate: W / A / S / D or Arrow Keys"
+horizontal_alignment = 1
+
+[node name="CompletionPanel" type="Panel" parent="Game/HUD/Root" unique_id=1009577788]
+layout_mode = 0
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-margin_left = -200.0
-margin_top = -120.0
-margin_right = 200.0
-margin_bottom = 120.0
 theme_override_styles/panel = SubResource("2")
 
-[node name="CompletionVBox" type="VBoxContainer" parent="Game/HUD/Root/CompletionPanel"]
+[node name="CompletionVBox" type="VBoxContainer" parent="Game/HUD/Root/CompletionPanel" unique_id=1060746136]
+layout_mode = 1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = 24.0
-margin_top = 24.0
-margin_right = -24.0
-margin_bottom = -24.0
+offset_left = -104.0
+offset_top = -85.0
+offset_right = 103.0
+offset_bottom = 90.0
+grow_horizontal = 2
+grow_vertical = 2
 alignment = 1
 
-[node name="CompletionLabel" type="Label" parent="Game/HUD/Root/CompletionPanel/CompletionVBox"]
+[node name="CompletionLabel" type="Label" parent="Game/HUD/Root/CompletionPanel/CompletionVBox" unique_id=422671316]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_font_sizes/font_size = 28
 text = "Level Complete"
-theme_override_font_sizes/font_size = 30
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 horizontal_alignment = 1
 
-[node name="CompletionSpacer" type="Control" parent="Game/HUD/Root/CompletionPanel/CompletionVBox"]
+[node name="CompletionSpacer" type="Control" parent="Game/HUD/Root/CompletionPanel/CompletionVBox" unique_id=1225980847]
 custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
 
-[node name="NextButton" type="Button" parent="Game/HUD/Root/CompletionPanel/CompletionVBox"]
+[node name="NextButton" type="Button" parent="Game/HUD/Root/CompletionPanel/CompletionVBox" unique_id=1510488600]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("10")
+theme_override_styles/pressed = SubResource("12")
+theme_override_styles/hover = SubResource("11")
 text = "Next"
-custom_minimum_size = Vector2(0, 56)
-focus_mode = 0
-theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_hover_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_pressed_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 
-[node name="ReplayButton" type="Button" parent="Game/HUD/Root/CompletionPanel/CompletionVBox"]
-text = "Replay"
+[node name="ReplayButton" type="Button" parent="Game/HUD/Root/CompletionPanel/CompletionVBox" unique_id=1349998100]
 custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
 focus_mode = 0
-theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_hover_color = Color(0.0862745, 0.0941176, 0.105882, 1)
-theme_override_colors/font_pressed_color = Color(0.0862745, 0.0941176, 0.105882, 1)
+theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("10")
+theme_override_styles/pressed = SubResource("12")
+theme_override_styles/hover = SubResource("11")
+text = "Replay"

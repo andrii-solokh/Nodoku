@@ -61,7 +61,6 @@ func _ready() -> void:
 	restart_button.pressed.connect(_on_restart_pressed)
 	next_button.pressed.connect(_on_next_pressed)
 	replay_button.pressed.connect(_on_restart_pressed)
-	grid_view.rotation_finished.connect(_update_side_ui)
 	completion_panel.visible = false
 	_log_debug("session start")
 
@@ -71,7 +70,6 @@ func start_new_game(size: int, depth: int, difficulty: int) -> void:
 	current_difficulty = difficulty
 	selected_id = -1
 	_generate_model(-1)
-	_update_side_ui()
 	completion_panel.visible = false
 	grid_view.selected_id = -1
 	grid_view.queue_redraw()
@@ -379,7 +377,6 @@ func _try_start_connection_drag(pos: Vector2) -> bool:
 	connect_last_id = node_id
 	connect_moved = false
 	connect_start_pos = pos
-	_clear_selection()
 	return true
 
 func _handle_connect_drag(pos: Vector2) -> void:
@@ -394,6 +391,9 @@ func _handle_connect_drag(pos: Vector2) -> void:
 		return
 	if not model.is_neighbor(connect_anchor_id, node_id):
 		return
+	if not connect_moved:
+		connect_moved = true
+		_clear_selection()
 	if model.placed_edge_exists(connect_anchor_id, node_id):
 		var before_a := model.remaining_dots(connect_anchor_id)
 		var before_b := model.remaining_dots(node_id)
@@ -408,7 +408,6 @@ func _handle_connect_drag(pos: Vector2) -> void:
 			_maybe_play_node_complete(connect_anchor_id, node_id, before_a, before_b)
 	connect_anchor_id = node_id
 	connect_last_id = node_id
-	connect_moved = true
 	grid_view.queue_redraw()
 	if model.is_solved():
 		_show_completion()
@@ -491,12 +490,6 @@ func _on_next_pressed() -> void:
 	completion_panel.visible = false
 	grid_view.selected_id = -1
 	grid_view.queue_redraw()
-
-func _update_side_ui() -> void:
-	if current_depth <= 1:
-		side_label.text = "Side"
-		return
-	side_label.text = "Side: %s" % _face_name(grid_view.get_front_face())
 
 func _face_name(face_id: int) -> String:
 	match face_id:

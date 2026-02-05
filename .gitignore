@@ -1,5 +1,6 @@
 # Godot
 .godot/
+.godot_home/
 .import/
 *.import
 
@@ -11,6 +12,7 @@
 
 # Node
 node_modules/
+tmp_screens/
 
 # Cloudflare Wrangler
 .wrangler/

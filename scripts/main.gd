@@ -6,19 +6,27 @@ const GAME_VERSION := "0.1.0"
 
 @onready var menu: Control = $Menu
 @onready var game: GameController = $Game
-@onready var version_label: Label = $Menu/VersionLabel
+@onready var version_label: Label = $Menu/MenuPanel/VersionLabel
+@onready var control_hints: Label = $Game/HUD/Root/ControlHints
 
-@onready var grid_size_option: OptionButton = $Menu/MenuMargin/VBox/GridSizeRow/GridSizeOption
-@onready var depth_option: OptionButton = $Menu/MenuMargin/VBox/DepthRow/DepthOption
-@onready var difficulty_option: OptionButton = $Menu/MenuMargin/VBox/DifficultyRow/DifficultyOption
-@onready var start_button: Button = $Menu/MenuMargin/VBox/StartButton
+@onready var grid_size_option: OptionButton = $Menu/MenuPanel/MenuMargin/VBox/GridSizeRow/GridSizeOption
+@onready var depth_option: OptionButton = $Menu/MenuPanel/MenuMargin/VBox/DepthRow/DepthOption
+@onready var difficulty_option: OptionButton = $Menu/MenuPanel/MenuMargin/VBox/DifficultyRow/DifficultyOption
+@onready var start_button: Button = $Menu/MenuPanel/MenuMargin/VBox/StartButton
 
 func _ready() -> void:
 	_setup_options()
 	_load_settings()
 	_update_version_label()
+	_update_control_hints()
 	start_button.pressed.connect(_on_start_pressed)
 	game.back_requested.connect(_on_game_back)
+
+func _update_control_hints() -> void:
+	var show := OS.has_feature("web")
+	if show and DisplayServer.is_touchscreen_available():
+		show = false
+	control_hints.visible = show
 
 func _update_version_label() -> void:
 	var version := GAME_VERSION
@@ -36,7 +44,7 @@ func _setup_options() -> void:
 		grid_size_option.add_item("%dx%d" % [size, size], size)
 
 	depth_option.clear()
-	for depth in range(1, 5):
+	for depth in range(1, 8):
 		depth_option.add_item("%d layer%s" % [depth, "" if depth == 1 else "s"], depth)
 
 	difficulty_option.clear()

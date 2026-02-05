@@ -49,8 +49,8 @@ func _update_metrics() -> void:
 	var span: int = maxi(max_dim - 1, 1)
 	var max_cell_x: float = (vp.x - pad_x) / float(span)
 	var max_cell_y: float = (vp.y - pad_y) / float(span)
-	cell_size = clampf(minf(max_cell_x, max_cell_y), 72.0, 170.0)
-	cell_size = clampf(cell_size * 1.12, 72.0, 190.0)
+	cell_size = clampf(minf(max_cell_x, max_cell_y), 68.0, 160.0)
+	cell_size = clampf(cell_size * 0.95, 68.0, 170.0)
 	base_radius = cell_size * 0.28
 
 func is_rotating() -> bool:

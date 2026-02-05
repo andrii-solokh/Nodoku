@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "release:web": "bash scripts/release_web.sh"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.1",
+    "wrangler": "^4.63.0"
+  }
+}
