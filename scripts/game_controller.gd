@@ -30,6 +30,11 @@ var poll_mouse_last: Vector2 = Vector2.ZERO
 var key_state := {}
 var last_event_time: float = 0.0
 var last_motion_time: float = 0.0
+var connect_drag_active: bool = false
+var connect_anchor_id: int = -1
+var connect_last_id: int = -1
+var connect_moved: bool = false
+var connect_start_pos: Vector2 = Vector2.ZERO
 
 @onready var grid_view: GridView = $GridView
 @onready var back_button: Button = $HUD/Root/TopBar/TopBarHBox/BackButton
@@ -95,23 +100,41 @@ func _input(event: InputEvent) -> void:
 		_log_pointer("mouse_down", event.position)
 		_release_ui_focus()
 		if event.button_index == MOUSE_BUTTON_LEFT:
+			if _try_start_connection_drag(event.position):
+				_log_debug("connect drag start")
+				return
 			if _begin_swipe(event.position):
 				_log_debug("swipe start")
 	if event is InputEventScreenTouch and event.pressed:
 		_log_pointer("touch_down", event.position)
 		_release_ui_focus()
+		if _try_start_connection_drag(event.position):
+			_log_debug("connect drag start")
+			return
 		if _begin_swipe(event.position):
 			_log_debug("touch swipe start")
 	if event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if connect_drag_active:
+			_end_connection_drag(event.position)
+			return
 		_handle_pointer_release(event.position)
 	if event is InputEventScreenTouch and not event.pressed:
+		if connect_drag_active:
+			_end_connection_drag(event.position)
+			return
 		_handle_pointer_release(event.position)
 	if event is InputEventMouseMotion and swipe_active:
 		last_motion_time = last_event_time
 		_handle_drag_event(event.position, event.relative)
+	if event is InputEventMouseMotion and connect_drag_active:
+		last_motion_time = last_event_time
+		_handle_connect_drag(event.position)
 	if event is InputEventScreenDrag and swipe_active:
 		last_motion_time = last_event_time
 		_handle_drag_event(event.position, event.relative)
+	if event is InputEventScreenDrag and connect_drag_active:
+		last_motion_time = last_event_time
+		_handle_connect_drag(event.position)
 	if event is InputEventKey and event.pressed:
 		_log_debug("key pressed keycode=%d unicode=%d echo=%s" % [event.keycode, event.unicode, str(event.echo)])
 		if event.keycode == KEY_LEFT:
@@ -237,6 +260,8 @@ func _begin_swipe(pos: Vector2) -> bool:
 		return false
 	if _is_pointer_over_ui(pos):
 		return false
+	if connect_drag_active:
+		return false
 	swipe_active = true
 	swipe_start = pos
 	swipe_last = pos
@@ -297,13 +322,75 @@ func _poll_pointer_web() -> void:
 	var pos := get_viewport().get_mouse_position()
 	if pressed:
 		if not poll_mouse_active:
-			poll_mouse_active = _begin_swipe(pos)
-		else:
+			poll_mouse_active = true
+			if _try_start_connection_drag(pos):
+				return
+			_begin_swipe(pos)
+			return
+		if connect_drag_active:
+			_handle_connect_drag(pos)
+			return
+		if swipe_active:
 			_handle_drag_motion(pos)
 		poll_mouse_last = pos
 	elif poll_mouse_active:
-		_handle_pointer_release(pos)
+		if connect_drag_active:
+			_end_connection_drag(pos)
+		else:
+			_handle_pointer_release(pos)
 		poll_mouse_active = false
+
+func _try_start_connection_drag(pos: Vector2) -> bool:
+	if _is_pointer_over_ui(pos):
+		return false
+	if grid_view.is_rotating():
+		return false
+	if model == null:
+		return false
+	var node_id := grid_view.pick_node(pos)
+	if node_id == -1:
+		return false
+	connect_drag_active = true
+	connect_anchor_id = node_id
+	connect_last_id = node_id
+	connect_moved = false
+	connect_start_pos = pos
+	_clear_selection()
+	return true
+
+func _handle_connect_drag(pos: Vector2) -> void:
+	if not connect_drag_active:
+		return
+	if grid_view.is_rotating():
+		return
+	var node_id := grid_view.pick_node(pos)
+	if node_id == -1:
+		return
+	if node_id == connect_last_id:
+		return
+	if not model.is_neighbor(connect_anchor_id, node_id):
+		return
+	if model.placed_edge_exists(connect_anchor_id, node_id):
+		model.remove_placed_edge(connect_anchor_id, node_id)
+	else:
+		model.add_placed_edge(connect_anchor_id, node_id)
+	connect_anchor_id = node_id
+	connect_last_id = node_id
+	connect_moved = true
+	grid_view.queue_redraw()
+	if model.is_solved():
+		_show_completion()
+		connect_drag_active = false
+
+func _end_connection_drag(pos: Vector2) -> void:
+	if not connect_drag_active:
+		return
+	var did_move := connect_moved
+	connect_drag_active = false
+	connect_anchor_id = -1
+	connect_last_id = -1
+	if not did_move:
+		_handle_press(connect_start_pos)
 
 func _handle_press(pos: Vector2) -> void:
 	_log_pointer("handle_press", pos)
