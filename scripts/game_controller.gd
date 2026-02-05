@@ -46,7 +46,6 @@ var connect_start_pos: Vector2 = Vector2.ZERO
 @onready var replay_button: Button = $HUD/Root/CompletionPanel/CompletionVBox/ReplayButton
 @onready var sfx_connect: AudioStreamPlayer = $Sfx/ConnectSfx
 @onready var sfx_disconnect: AudioStreamPlayer = $Sfx/DisconnectSfx
-@onready var sfx_rotate: AudioStreamPlayer = $Sfx/RotateSfx
 @onready var sfx_complete: AudioStreamPlayer = $Sfx/CompleteSfx
 @onready var sfx_ui: AudioStreamPlayer = $Sfx/UiSfx
 @onready var sfx_node_complete: AudioStreamPlayer = $Sfx/NodeCompleteSfx
@@ -256,7 +255,6 @@ func _rotate_by_delta(dir: Vector2) -> void:
 	if swipe_dir == Vector2.ZERO:
 		return
 	grid_view.rotate_step(swipe_dir)
-	_play_sfx(sfx_rotate)
 
 func _drag_threshold() -> float:
 	var vp := get_viewport_rect().size
@@ -454,6 +452,7 @@ func _clear_selection() -> void:
 
 func _show_completion() -> void:
 	_play_sfx(sfx_complete)
+	_haptic_pulse(60, 0.9)
 	completion_label.text = "Level Complete"
 	completion_panel.visible = true
 	var tween := create_tween()
@@ -582,13 +581,23 @@ func _play_edge_sfx(a: int, b: int, connected: bool) -> void:
 	var pitch := lerpf(1.15, 0.8, t)
 	if connected:
 		_play_sfx(sfx_connect, pitch)
+		_haptic_pulse(24, 0.45)
 	else:
 		_play_sfx(sfx_disconnect, pitch)
+		_haptic_pulse(16, 0.35)
 
 func _maybe_play_node_complete(a: int, b: int, before_a: int, before_b: int) -> void:
 	if model == null:
 		return
 	if before_a > 0 and model.remaining_dots(a) == 0:
 		_play_sfx(sfx_node_complete, 1.0)
+		_haptic_pulse(40, 0.7)
 	elif before_b > 0 and model.remaining_dots(b) == 0:
 		_play_sfx(sfx_node_complete, 1.0)
+		_haptic_pulse(40, 0.7)
+
+func _haptic_pulse(duration_ms: int, amplitude: float = 0.5) -> void:
+	if duration_ms <= 0:
+		return
+	if OS.has_feature("mobile") or OS.has_feature("web"):
+		Input.vibrate_handheld(duration_ms, amplitude)
