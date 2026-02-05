@@ -46,6 +46,7 @@ func _ready() -> void:
 	use_polling_input = OS.has_feature("web")
 	if use_polling_input:
 		Input.set_emulate_mouse_from_touch(true)
+		_focus_canvas_web()
 	back_button.pressed.connect(_on_back_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
 	next_button.pressed.connect(_on_next_pressed)
@@ -107,10 +108,10 @@ func _input(event: InputEvent) -> void:
 		_handle_pointer_release(event.position)
 	if event is InputEventMouseMotion and swipe_active:
 		last_motion_time = last_event_time
-		_handle_drag_delta(event.relative, event.position)
+		_handle_drag_event(event.position, event.relative)
 	if event is InputEventScreenDrag and swipe_active:
 		last_motion_time = last_event_time
-		_handle_drag_delta(event.relative, event.position)
+		_handle_drag_event(event.position, event.relative)
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_LEFT:
 			_rotate_by_delta(Vector2(-1, 0))
@@ -153,6 +154,12 @@ func _handle_pointer_release(pos: Vector2) -> void:
 
 func _handle_drag_motion(pos: Vector2) -> void:
 	var delta := pos - swipe_last
+	_handle_drag_delta(delta, pos)
+
+func _handle_drag_event(pos: Vector2, relative: Vector2) -> void:
+	var delta := relative
+	if delta.length() < 0.001:
+		delta = pos - swipe_last
 	_handle_drag_delta(delta, pos)
 
 func _handle_drag_delta(delta: Vector2, pos: Vector2) -> void:
@@ -413,6 +420,19 @@ func _is_ui_control(node: Control) -> bool:
 func _release_ui_focus() -> void:
 	if OS.has_feature("web"):
 		get_viewport().gui_release_focus()
+		_focus_canvas_web()
+
+func _focus_canvas_web() -> void:
+	if not OS.has_feature("web"):
+		return
+	JavaScriptBridge.eval("""
+		(function() {
+			var c = document.getElementById('canvas');
+			if (!c) return;
+			if (!c.hasAttribute('tabindex')) c.setAttribute('tabindex', '0');
+			c.focus();
+		})();
+	""")
 
 func _log_debug(message: String) -> void:
 	var file := FileAccess.open(DEBUG_LOG_PATH, FileAccess.READ_WRITE)
