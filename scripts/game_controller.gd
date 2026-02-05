@@ -382,10 +382,10 @@ func _handle_connect_drag(pos: Vector2) -> void:
 		return
 	if model.placed_edge_exists(connect_anchor_id, node_id):
 		if model.remove_placed_edge(connect_anchor_id, node_id):
-			_play_sfx(sfx_disconnect)
+			_play_edge_sfx(connect_anchor_id, node_id, false)
 	else:
 		if model.add_placed_edge(connect_anchor_id, node_id):
-			_play_sfx(sfx_connect)
+			_play_edge_sfx(connect_anchor_id, node_id, true)
 	connect_anchor_id = node_id
 	connect_last_id = node_id
 	connect_moved = true
@@ -424,10 +424,10 @@ func _handle_press(pos: Vector2) -> void:
 	if model.is_neighbor(selected_id, node_id):
 		if model.placed_edge_exists(selected_id, node_id):
 			if model.remove_placed_edge(selected_id, node_id):
-				_play_sfx(sfx_disconnect)
+				_play_edge_sfx(selected_id, node_id, false)
 		else:
 			if model.add_placed_edge(selected_id, node_id):
-				_play_sfx(sfx_connect)
+				_play_edge_sfx(selected_id, node_id, true)
 
 	_clear_selection()
 
@@ -552,9 +552,22 @@ func _log_debug(message: String) -> void:
 func play_ui_sound() -> void:
 	_play_sfx(sfx_ui)
 
-func _play_sfx(player: AudioStreamPlayer) -> void:
+func _play_sfx(player: AudioStreamPlayer, pitch: float = 1.0) -> void:
 	if player == null:
 		return
 	if player.playing:
 		player.stop()
+	player.pitch_scale = pitch
 	player.play()
+
+func _play_edge_sfx(a: int, b: int, connected: bool) -> void:
+	var remaining_avg := 4.0
+	if model != null:
+		remaining_avg = (float(model.remaining_dots(a)) + float(model.remaining_dots(b))) * 0.5
+	var t := clampf(remaining_avg / 4.0, 0.0, 1.0)
+	# Fewer dots left -> higher pitch.
+	var pitch := lerpf(1.15, 0.8, t)
+	if connected:
+		_play_sfx(sfx_connect, pitch)
+	else:
+		_play_sfx(sfx_disconnect, pitch)
