@@ -130,6 +130,8 @@ func pick_node(global_pos: Vector2) -> int:
 	for n in nodes:
 		if n.fade < PICK_FADE_MIN:
 			continue
+		if not _is_node_on_front_face(n.id):
+			continue
 		var pos: Vector2 = n.pos
 		var radius: float = n.radius
 		var d := pos.distance_to(global_pos)
@@ -264,6 +266,28 @@ func _edge_color(fade: float) -> Color:
 	var color := _tint_color(COLOR_EDGE, fade)
 	var extra := lerpf(0.45, 1.0, fade)
 	return Color(color.r * extra, color.g * extra, color.b * extra, 1.0)
+
+func _is_node_on_front_face(node_id: int) -> bool:
+	if model == null:
+		return false
+	if model.nz <= 1:
+		return true
+	var c := model.coords(node_id)
+	match get_front_face():
+		FACE_FRONT:
+			return c.z == 0
+		FACE_BACK:
+			return c.z == model.nz - 1
+		FACE_LEFT:
+			return c.x == 0
+		FACE_RIGHT:
+			return c.x == model.nx - 1
+		FACE_TOP:
+			return c.y == 0
+		FACE_BOTTOM:
+			return c.y == model.ny - 1
+		_:
+			return false
 
 func _node_face_z(c: Vector3i) -> float:
 	var max_z := -1.0
