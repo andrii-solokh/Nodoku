@@ -22,6 +22,10 @@ const MIME = {
 };
 
 const BROTLI_EXT = new Set(['.wasm', '.pck']);
+const MAGIC = {
+  '.wasm': Buffer.from([0x00, 0x61, 0x73, 0x6d]),
+  '.pck': Buffer.from('GDPC')
+};
 
 function send(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -30,6 +34,20 @@ function send(res, status, body) {
 
 function log(...args) {
   process.stdout.write(args.join(' ') + '\n');
+}
+
+function hasMagicHeader(filePath, ext, cb) {
+  const magic = MAGIC[ext];
+  if (!magic) return cb(null, false);
+  const buf = Buffer.alloc(magic.length);
+  fs.open(filePath, 'r', (openErr, fd) => {
+    if (openErr) return cb(openErr, false);
+    fs.read(fd, buf, 0, magic.length, 0, (readErr) => {
+      fs.close(fd, () => {});
+      if (readErr) return cb(readErr, false);
+      cb(null, buf.equals(magic));
+    });
+  });
 }
 
 const server = http.createServer((req, res) => {
@@ -58,7 +76,6 @@ const server = http.createServer((req, res) => {
     const acceptEncoding = String(req.headers['accept-encoding'] || '');
     const canBrotli = acceptEncoding.includes('br');
     const isBrotliAsset = BROTLI_EXT.has(ext);
-    const useBrotli = isBrotliAsset && !forceDecompress && canBrotli;
 
     const headers = {
       'Content-Type': MIME[ext] || 'application/octet-stream',
@@ -67,11 +84,29 @@ const server = http.createServer((req, res) => {
       'Cache-Control': 'no-cache'
     };
 
-    if (useBrotli) {
-      headers['Content-Encoding'] = 'br';
+    if (!isBrotliAsset) {
+      res.writeHead(200, headers);
+      return fs.createReadStream(filePath).pipe(res);
     }
 
-    if (isBrotliAsset && !useBrotli) {
+    hasMagicHeader(filePath, ext, (magicErr, isUncompressed) => {
+      if (magicErr) {
+        log('500 magic', urlPath, magicErr.message || magicErr);
+        return send(res, 500, 'Read Error');
+      }
+
+      if (isUncompressed) {
+        res.writeHead(200, headers);
+        return fs.createReadStream(filePath).pipe(res);
+      }
+
+      const useBrotli = !forceDecompress && canBrotli;
+      if (useBrotli) {
+        headers['Content-Encoding'] = 'br';
+        res.writeHead(200, headers);
+        return fs.createReadStream(filePath).pipe(res);
+      }
+
       fs.readFile(filePath, (readErr, data) => {
         if (readErr) {
           log('500 read', urlPath, readErr.message || readErr);
@@ -87,19 +122,7 @@ const server = http.createServer((req, res) => {
           res.end(out);
         });
       });
-      return;
-    }
-
-    res.writeHead(200, headers);
-    const stream = fs.createReadStream(filePath);
-    stream.on('error', (streamErr) => {
-      log('500 stream', urlPath, streamErr.message || streamErr);
-      if (!res.headersSent) {
-        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-      }
-      res.end('Stream Error');
     });
-    stream.pipe(res);
   });
 });
 
