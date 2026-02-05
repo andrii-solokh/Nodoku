@@ -28,6 +28,8 @@ var use_polling_input: bool = false
 var poll_mouse_active: bool = false
 var poll_mouse_last: Vector2 = Vector2.ZERO
 var key_state := {}
+var last_event_time: float = 0.0
+var last_motion_time: float = 0.0
 
 @onready var grid_view: GridView = $GridView
 @onready var back_button: Button = $HUD/Root/TopBar/TopBarHBox/BackButton
@@ -40,6 +42,7 @@ var key_state := {}
 
 func _ready() -> void:
 	set_process_input(true)
+	set_process(true)
 	use_polling_input = OS.has_feature("web")
 	if use_polling_input:
 		Input.set_emulate_mouse_from_touch(true)
@@ -79,6 +82,7 @@ func _difficulty_params(difficulty: int) -> Dictionary:
 			return {"density": 0.42, "min_nonzero_ratio": 0.45, "max_attempts": 14}
 
 func _input(event: InputEvent) -> void:
+	last_event_time = float(Time.get_ticks_msec()) / 1000.0
 	if event is InputEventPanGesture:
 		_log_debug("pan gesture delta=%s" % [str(event.delta)])
 		_handle_pan_gesture(event.delta)
@@ -86,8 +90,6 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if _handle_wheel(event):
 			return
-	if use_polling_input:
-		return
 	if event is InputEventMouseButton and event.pressed:
 		_log_pointer("mouse_down", event.position)
 		_release_ui_focus()
@@ -104,8 +106,10 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch and not event.pressed:
 		_handle_pointer_release(event.position)
 	if event is InputEventMouseMotion and swipe_active:
+		last_motion_time = last_event_time
 		_handle_drag_delta(event.relative, event.position)
 	if event is InputEventScreenDrag and swipe_active:
+		last_motion_time = last_event_time
 		_handle_drag_delta(event.relative, event.position)
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_LEFT:
@@ -278,6 +282,9 @@ func _key_just_pressed(keycode: int) -> bool:
 	return pressed and not prev
 
 func _poll_pointer_web() -> void:
+	var now := float(Time.get_ticks_msec()) / 1000.0
+	if now - last_motion_time < 0.12:
+		return
 	var pressed := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	var pos := get_viewport().get_mouse_position()
 	if pressed:
