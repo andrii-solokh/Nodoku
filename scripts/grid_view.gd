@@ -165,7 +165,7 @@ func _compute_nodes() -> Array:
 func _draw_edges(nodes: Array) -> void:
 	var positions := {}
 	for n in nodes:
-		positions[n.id] = {"pos": n.pos, "fade": n.fade}
+		positions[n.id] = {"pos": n.pos, "fade": n.fade, "radius": n.radius}
 	var keys := model.placed_edges.keys()
 	for key in keys:
 		var pair := model.decode_edge(key)
@@ -176,8 +176,21 @@ func _draw_edges(nodes: Array) -> void:
 		var fa: float = positions[a].fade
 		var fb: float = positions[b].fade
 		var fade := minf(fa, fb)
-		var color := _tint_color(COLOR_EDGE, fade)
-		draw_line(positions[a].pos, positions[b].pos, color, maxf(2.0, base_radius * 0.18))
+		var color := _edge_color(fade)
+		var start: Vector2 = positions[a].pos
+		var end: Vector2 = positions[b].pos
+		var dir := end - start
+		var len := dir.length()
+		if len < 0.001:
+			continue
+		var unit := dir / len
+		var ra: float = positions[a].radius
+		var rb: float = positions[b].radius
+		var inset_a := minf(ra * 0.9, len * 0.45)
+		var inset_b := minf(rb * 0.9, len * 0.45)
+		start += unit * inset_a
+		end -= unit * inset_b
+		draw_line(start, end, color, maxf(2.0, base_radius * 0.18))
 
 func _draw_nodes(nodes: Array) -> void:
 	for n in nodes:
@@ -246,6 +259,11 @@ func _tint_color(base: Color, fade: float) -> Color:
 	var washed := base.lerp(COLOR_BG, t * 0.85)
 	var factor := lerpf(0.6, 1.0, fade)
 	return Color(washed.r * factor, washed.g * factor, washed.b * factor, 1.0)
+
+func _edge_color(fade: float) -> Color:
+	var color := _tint_color(COLOR_EDGE, fade)
+	var extra := lerpf(0.45, 1.0, fade)
+	return Color(color.r * extra, color.g * extra, color.b * extra, 1.0)
 
 func _node_face_z(c: Vector3i) -> float:
 	var max_z := -1.0
