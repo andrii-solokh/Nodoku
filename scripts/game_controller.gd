@@ -113,6 +113,7 @@ func _input(event: InputEvent) -> void:
 		last_motion_time = last_event_time
 		_handle_drag_event(event.position, event.relative)
 	if event is InputEventKey and event.pressed:
+		_log_debug("key pressed keycode=%d unicode=%d echo=%s" % [event.keycode, event.unicode, str(event.echo)])
 		if event.keycode == KEY_LEFT:
 			_rotate_by_delta(Vector2(-1, 0))
 		elif event.keycode == KEY_RIGHT:
