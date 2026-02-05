@@ -51,11 +51,11 @@ func _load_settings() -> void:
 		return
 
 	var size := int(cfg.get_value("game", "grid_size", 5))
-	var depth := int(cfg.get_value("game", "grid_depth", 1))
+	var depth := int(cfg.get_value("game", "grid_depth", 2))
 	var difficulty := int(cfg.get_value("game", "difficulty", 1))
 
 	_select_option_by_id(grid_size_option, size, 5)
-	_select_option_by_id(depth_option, depth, 1)
+	_select_option_by_id(depth_option, depth, 2)
 	_select_option_by_id(difficulty_option, difficulty, 1)
 
 func _save_settings(size: int, depth: int, difficulty: int) -> void:
@@ -67,7 +67,7 @@ func _save_settings(size: int, depth: int, difficulty: int) -> void:
 
 func _apply_defaults() -> void:
 	_select_option_by_id(grid_size_option, 5, 5)
-	_select_option_by_id(depth_option, 1, 1)
+	_select_option_by_id(depth_option, 2, 2)
 	_select_option_by_id(difficulty_option, 1, 1)
 
 func _select_option_by_id(option: OptionButton, id_value: int, fallback: int) -> void:
