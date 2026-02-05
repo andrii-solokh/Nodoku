@@ -194,17 +194,20 @@ func _handle_pointer_release(pos: Vector2) -> void:
 		_handle_press(swipe_start)
 
 func _handle_drag_motion(pos: Vector2) -> void:
-	var delta := pos - swipe_last
+	var delta := -(pos - swipe_last)
 	_handle_drag_delta(delta, pos)
 
 func _handle_drag_event(pos: Vector2, relative: Vector2, is_touch: bool) -> void:
 	var delta := relative
+	var scale := 1.0
+	var dir := -1.0
 	if is_touch:
-		delta = -delta * 0.6
+		scale = 0.6
+		dir = 1.0
+	delta *= scale * dir
 	if delta.length() < 0.001:
 		delta = pos - swipe_last
-		if is_touch:
-			delta = -delta * 0.6
+		delta *= scale * dir
 	_handle_drag_delta(delta, pos)
 
 func _handle_drag_delta(delta: Vector2, pos: Vector2) -> void:
