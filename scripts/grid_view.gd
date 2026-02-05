@@ -116,8 +116,16 @@ func _draw() -> void:
 	_update_metrics()
 	var nodes := _compute_nodes()
 	draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), COLOR_BG)
+	var front_nodes: Array = []
+	var back_nodes: Array = []
+	for n in nodes:
+		if _is_node_on_front_face(n.id):
+			front_nodes.append(n)
+		else:
+			back_nodes.append(n)
+	_draw_nodes_list(back_nodes)
 	_draw_edges(nodes)
-	_draw_nodes(nodes)
+	_draw_nodes_list(front_nodes)
 
 func pick_node(global_pos: Vector2) -> int:
 	if model == null:
@@ -194,7 +202,7 @@ func _draw_edges(nodes: Array) -> void:
 		end -= unit * inset_b
 		draw_line(start, end, color, maxf(2.0, base_radius * 0.18))
 
-func _draw_nodes(nodes: Array) -> void:
+func _draw_nodes_list(nodes: Array) -> void:
 	for n in nodes:
 		var node_id: int = n.id
 		var pos: Vector2 = n.pos
