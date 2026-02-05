@@ -11,7 +11,7 @@ const FACE_BOTTOM := 5
 const COLOR_BG := Color("#F4F1EC")
 const COLOR_CIRCLE := Color("#4A5A5E")
 const COLOR_DOT := Color("#2F3E46")
-const COLOR_EDGE := Color("#A6A2A0")
+const COLOR_EDGE := Color("#4A5A5E")
 const COLOR_SELECTED := Color("#C1A66A")
 const COLOR_QUIET := Color("#DAD4CC")
 
