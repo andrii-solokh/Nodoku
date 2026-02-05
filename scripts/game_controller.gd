@@ -44,6 +44,11 @@ var connect_start_pos: Vector2 = Vector2.ZERO
 @onready var completion_label: Label = $HUD/Root/CompletionPanel/CompletionVBox/CompletionLabel
 @onready var next_button: Button = $HUD/Root/CompletionPanel/CompletionVBox/NextButton
 @onready var replay_button: Button = $HUD/Root/CompletionPanel/CompletionVBox/ReplayButton
+@onready var sfx_connect: AudioStreamPlayer = $Sfx/ConnectSfx
+@onready var sfx_disconnect: AudioStreamPlayer = $Sfx/DisconnectSfx
+@onready var sfx_rotate: AudioStreamPlayer = $Sfx/RotateSfx
+@onready var sfx_complete: AudioStreamPlayer = $Sfx/CompleteSfx
+@onready var sfx_ui: AudioStreamPlayer = $Sfx/UiSfx
 
 func _ready() -> void:
 	set_process_input(true)
@@ -250,6 +255,7 @@ func _rotate_by_delta(dir: Vector2) -> void:
 	if swipe_dir == Vector2.ZERO:
 		return
 	grid_view.rotate_step(swipe_dir)
+	_play_sfx(sfx_rotate)
 
 func _drag_threshold() -> float:
 	var vp := get_viewport_rect().size
@@ -375,9 +381,11 @@ func _handle_connect_drag(pos: Vector2) -> void:
 	if not model.is_neighbor(connect_anchor_id, node_id):
 		return
 	if model.placed_edge_exists(connect_anchor_id, node_id):
-		model.remove_placed_edge(connect_anchor_id, node_id)
+		if model.remove_placed_edge(connect_anchor_id, node_id):
+			_play_sfx(sfx_disconnect)
 	else:
-		model.add_placed_edge(connect_anchor_id, node_id)
+		if model.add_placed_edge(connect_anchor_id, node_id):
+			_play_sfx(sfx_connect)
 	connect_anchor_id = node_id
 	connect_last_id = node_id
 	connect_moved = true
@@ -415,9 +423,11 @@ func _handle_press(pos: Vector2) -> void:
 
 	if model.is_neighbor(selected_id, node_id):
 		if model.placed_edge_exists(selected_id, node_id):
-			model.remove_placed_edge(selected_id, node_id)
+			if model.remove_placed_edge(selected_id, node_id):
+				_play_sfx(sfx_disconnect)
 		else:
-			model.add_placed_edge(selected_id, node_id)
+			if model.add_placed_edge(selected_id, node_id):
+				_play_sfx(sfx_connect)
 
 	_clear_selection()
 
@@ -430,6 +440,7 @@ func _clear_selection() -> void:
 	grid_view.queue_redraw()
 
 func _show_completion() -> void:
+	_play_sfx(sfx_complete)
 	completion_label.text = "Level Complete"
 	completion_panel.visible = true
 	var tween := create_tween()
@@ -437,15 +448,18 @@ func _show_completion() -> void:
 	tween.tween_property(completion_panel, "modulate", Color(1, 1, 1, 1), 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 func _on_back_pressed() -> void:
+	_play_sfx(sfx_ui)
 	back_requested.emit()
 
 func _on_restart_pressed() -> void:
+	_play_sfx(sfx_ui)
 	_generate_model(-1)
 	completion_panel.visible = false
 	grid_view.selected_id = -1
 	grid_view.queue_redraw()
 
 func _on_next_pressed() -> void:
+	_play_sfx(sfx_ui)
 	_generate_model(int(Time.get_ticks_msec()))
 	completion_panel.visible = false
 	grid_view.selected_id = -1
@@ -534,3 +548,13 @@ func _log_debug(message: String) -> void:
 		return
 	file.seek_end()
 	file.store_line(message)
+
+func play_ui_sound() -> void:
+	_play_sfx(sfx_ui)
+
+func _play_sfx(player: AudioStreamPlayer) -> void:
+	if player == null:
+		return
+	if player.playing:
+		player.stop()
+	player.play()

@@ -43,13 +43,14 @@ func _update_metrics() -> void:
 	if model == null:
 		return
 	var vp := get_viewport_rect().size
-	var pad_x := 140.0
-	var pad_y := 220.0
+	var pad_x := 100.0
+	var pad_y := 180.0
 	var max_dim := maxi(maxi(model.nx, model.ny), model.nz)
 	var span: int = maxi(max_dim - 1, 1)
 	var max_cell_x: float = (vp.x - pad_x) / float(span)
 	var max_cell_y: float = (vp.y - pad_y) / float(span)
 	cell_size = clampf(minf(max_cell_x, max_cell_y), 72.0, 170.0)
+	cell_size = clampf(cell_size * 1.12, 72.0, 190.0)
 	base_radius = cell_size * 0.28
 
 func is_rotating() -> bool:

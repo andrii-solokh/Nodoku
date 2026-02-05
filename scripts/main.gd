@@ -86,6 +86,7 @@ func _on_start_pressed() -> void:
 	var difficulty := difficulty_option.get_item_id(difficulty_option.selected)
 
 	_save_settings(size, depth, difficulty)
+	game.play_ui_sound()
 	game.start_new_game(size, depth, difficulty)
 
 	menu.visible = false

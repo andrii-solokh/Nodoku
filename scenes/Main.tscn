@@ -1,8 +1,13 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/game_controller.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/grid_view.gd" id="3"]
+[ext_resource type="AudioStream" path="res://assets/sfx/connect.wav" id="4"]
+[ext_resource type="AudioStream" path="res://assets/sfx/disconnect.wav" id="5"]
+[ext_resource type="AudioStream" path="res://assets/sfx/rotate.wav" id="6"]
+[ext_resource type="AudioStream" path="res://assets/sfx/complete.wav" id="7"]
+[ext_resource type="AudioStream" path="res://assets/sfx/ui.wav" id="8"]
 
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(0.957, 0.945, 0.925, 1)
@@ -79,9 +84,9 @@ theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 
 [node name="GridSizeOption" type="OptionButton" parent="Menu/MenuMargin/VBox/GridSizeRow"]
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(260, 50)
+custom_minimum_size = Vector2(260, 60)
 focus_mode = 0
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 24
 theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_color_hover = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_color_pressed = Color(0.0862745, 0.0941176, 0.105882, 1)
@@ -96,9 +101,9 @@ theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 
 [node name="DepthOption" type="OptionButton" parent="Menu/MenuMargin/VBox/DepthRow"]
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(260, 50)
+custom_minimum_size = Vector2(260, 60)
 focus_mode = 0
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 24
 theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_color_hover = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_color_pressed = Color(0.0862745, 0.0941176, 0.105882, 1)
@@ -113,9 +118,9 @@ theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 
 [node name="DifficultyOption" type="OptionButton" parent="Menu/MenuMargin/VBox/DifficultyRow"]
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(260, 50)
+custom_minimum_size = Vector2(260, 60)
 focus_mode = 0
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 24
 theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_color_hover = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_color_pressed = Color(0.0862745, 0.0941176, 0.105882, 1)
@@ -126,9 +131,9 @@ custom_minimum_size = Vector2(0, 20)
 [node name="StartButton" type="Button" parent="Menu/MenuMargin/VBox"]
 text = "Start"
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 74)
 focus_mode = 0
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 28
 theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_hover_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_pressed_color = Color(0.0862745, 0.0941176, 0.105882, 1)
@@ -145,6 +150,28 @@ script = ExtResource("2")
 
 [node name="GridView" type="Node2D" parent="Game"]
 script = ExtResource("3")
+
+[node name="Sfx" type="Node" parent="Game"]
+
+[node name="ConnectSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
+stream = ExtResource("4")
+volume_db = -6.0
+
+[node name="DisconnectSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
+stream = ExtResource("5")
+volume_db = -6.0
+
+[node name="RotateSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
+stream = ExtResource("6")
+volume_db = -8.0
+
+[node name="CompleteSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
+stream = ExtResource("7")
+volume_db = -4.0
+
+[node name="UiSfx" type="AudioStreamPlayer" parent="Game/Sfx"]
+stream = ExtResource("8")
+volume_db = -6.0
 
 [node name="HUD" type="CanvasLayer" parent="Game"]
 
@@ -168,18 +195,18 @@ anchor_bottom = 1.0
 
 [node name="BackButton" type="Button" parent="Game/HUD/Root/TopBar/TopBarHBox"]
 text = "Back"
-custom_minimum_size = Vector2(90, 44)
+custom_minimum_size = Vector2(110, 52)
 focus_mode = 0
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_hover_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_pressed_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 
 [node name="RestartButton" type="Button" parent="Game/HUD/Root/TopBar/TopBarHBox"]
 text = "Restart"
-custom_minimum_size = Vector2(120, 44)
+custom_minimum_size = Vector2(140, 52)
 focus_mode = 0
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_hover_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_pressed_color = Color(0.0862745, 0.0941176, 0.105882, 1)
@@ -227,18 +254,18 @@ custom_minimum_size = Vector2(0, 12)
 
 [node name="NextButton" type="Button" parent="Game/HUD/Root/CompletionPanel/CompletionVBox"]
 text = "Next"
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 56)
 focus_mode = 0
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 24
 theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_hover_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_pressed_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 
 [node name="ReplayButton" type="Button" parent="Game/HUD/Root/CompletionPanel/CompletionVBox"]
 text = "Replay"
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 56)
 focus_mode = 0
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 24
 theme_override_colors/font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_hover_color = Color(0.0862745, 0.0941176, 0.105882, 1)
 theme_override_colors/font_pressed_color = Color(0.0862745, 0.0941176, 0.105882, 1)
