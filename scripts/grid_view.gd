@@ -272,7 +272,7 @@ func _tint_color(base: Color, fade: float) -> Color:
 
 func _edge_color(fade: float) -> Color:
 	var color := _tint_color(COLOR_EDGE, fade)
-	var extra := lerpf(0.45, 1.0, fade)
+	var extra := lerpf(0.25, 1.0, fade)
 	return Color(color.r * extra, color.g * extra, color.b * extra, 1.0)
 
 func _is_node_on_front_face(node_id: int) -> bool:
