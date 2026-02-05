@@ -18,6 +18,9 @@ corner_radius_top_right = 18
 corner_radius_bottom_left = 18
 corner_radius_bottom_right = 18
 
+[sub_resource type="Theme" id="3"]
+default_font_color = Color(0.0862745, 0.0941176, 0.105882, 1)
+
 [node name="Main" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -26,6 +29,7 @@ script = ExtResource("1")
 [node name="Menu" type="Control" parent="."]
 anchor_right = 1.0
 anchor_bottom = 1.0
+theme = SubResource("3")
 
 [node name="MenuPanel" type="Panel" parent="Menu"]
 anchor_right = 1.0
@@ -130,6 +134,7 @@ script = ExtResource("2")
 script = ExtResource("3")
 
 [node name="HUD" type="CanvasLayer" parent="Game"]
+theme = SubResource("3")
 
 [node name="Root" type="Control" parent="Game/HUD"]
 anchor_right = 1.0
