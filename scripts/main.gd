@@ -32,7 +32,7 @@ func _update_version_label() -> void:
 
 func _setup_options() -> void:
 	grid_size_option.clear()
-	for size in range(4, 8):
+	for size in range(3, 8):
 		grid_size_option.add_item("%dx%d" % [size, size], size)
 
 	depth_option.clear()

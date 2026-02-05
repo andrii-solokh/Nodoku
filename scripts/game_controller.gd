@@ -125,13 +125,13 @@ func _input(event: InputEvent) -> void:
 		_handle_pointer_release(event.position)
 	if event is InputEventMouseMotion and swipe_active:
 		last_motion_time = last_event_time
-		_handle_drag_event(event.position, event.relative)
+		_handle_drag_event(event.position, event.relative, false)
 	if event is InputEventMouseMotion and connect_drag_active:
 		last_motion_time = last_event_time
 		_handle_connect_drag(event.position)
 	if event is InputEventScreenDrag and swipe_active:
 		last_motion_time = last_event_time
-		_handle_drag_event(event.position, event.relative)
+		_handle_drag_event(event.position, event.relative, true)
 	if event is InputEventScreenDrag and connect_drag_active:
 		last_motion_time = last_event_time
 		_handle_connect_drag(event.position)
@@ -180,10 +180,14 @@ func _handle_drag_motion(pos: Vector2) -> void:
 	var delta := pos - swipe_last
 	_handle_drag_delta(delta, pos)
 
-func _handle_drag_event(pos: Vector2, relative: Vector2) -> void:
+func _handle_drag_event(pos: Vector2, relative: Vector2, is_touch: bool) -> void:
 	var delta := relative
+	if is_touch:
+		delta = -delta * 0.6
 	if delta.length() < 0.001:
 		delta = pos - swipe_last
+		if is_touch:
+			delta = -delta * 0.6
 	_handle_drag_delta(delta, pos)
 
 func _handle_drag_delta(delta: Vector2, pos: Vector2) -> void:
