@@ -27,21 +27,15 @@ width = 2
 height = 2
 
 [sub_resource type="StyleBoxFlat" id="1"]
-bg_color = Color(0.98, 0.965, 0.94, 0.96)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
+bg_color = Color(1, 1, 1, 0)
 border_color = Color(0.78, 0.72, 0.64, 0.6)
-corner_radius_top_left = 28
-corner_radius_top_right = 28
-corner_radius_bottom_right = 28
-corner_radius_bottom_left = 28
-shadow_color = Color(0, 0, 0, 0.12)
-shadow_size = 18
-shadow_offset = Vector2(0, 8)
+shadow_color = Color(0, 0, 0, 0)
 
 [sub_resource type="StyleBoxFlat" id="10"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 24.0
+content_margin_bottom = 8.0
 bg_color = Color(0.95, 0.93, 0.89, 1)
 border_width_left = 2
 border_width_top = 2
@@ -54,6 +48,10 @@ corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
 [sub_resource type="StyleBoxFlat" id="12"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 24.0
+content_margin_bottom = 8.0
 bg_color = Color(0.9, 0.86, 0.8, 1)
 border_width_left = 2
 border_width_top = 2
@@ -66,6 +64,10 @@ corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
 [sub_resource type="StyleBoxFlat" id="11"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 24.0
+content_margin_bottom = 8.0
 bg_color = Color(0.93, 0.9, 0.85, 1)
 border_width_left = 2
 border_width_top = 2
@@ -135,7 +137,6 @@ texture = SubResource("6")
 expand_mode = 1
 
 [node name="Menu" type="Control" parent="." unique_id=234804345]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -145,34 +146,13 @@ grow_vertical = 2
 
 [node name="MenuPanel" type="Panel" parent="Menu" unique_id=1170441116]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -231.0
-offset_top = -236.0
-offset_right = -231.0
-offset_bottom = -236.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("1")
-
-[node name="VersionLabel" type="Label" parent="Menu/MenuPanel" unique_id=989407676]
-layout_mode = 0
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -200.0
-offset_top = -36.0
-offset_right = -24.0
-offset_bottom = -16.0
-theme_override_colors/font_color = Color(0.44, 0.46, 0.48, 1)
-theme_override_font_sizes/font_size = 18
-text = "v0.1.0"
-horizontal_alignment = 2
 
 [node name="MenuMargin" type="MarginContainer" parent="Menu/MenuPanel" unique_id=509159409]
 layout_mode = 0
@@ -181,6 +161,7 @@ anchor_bottom = 1.0
 
 [node name="VBox" type="VBoxContainer" parent="Menu/MenuPanel/MenuMargin" unique_id=1521732845]
 layout_mode = 2
+size_flags_horizontal = 4
 theme_override_constants/separation = 16
 alignment = 1
 
@@ -219,6 +200,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
 theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -241,6 +224,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
 theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -263,6 +248,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
 theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -289,6 +276,24 @@ text = "Start"
 [node name="SpacerBottom" type="Control" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=136256322]
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
+
+[node name="VersionLabel" type="Label" parent="Menu" unique_id=989407676]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -220.0
+offset_top = -28.0
+offset_right = -24.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.44, 0.46, 0.48, 1)
+theme_override_font_sizes/font_size = 18
+text = "v0.1.0"
+horizontal_alignment = 2
 
 [node name="Game" type="Control" parent="." unique_id=1783481741]
 visible = false
@@ -371,6 +376,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="SideLabel" type="Label" parent="Game/HUD/Root/TopBar/TopBarHBox" unique_id=1492460377]
+visible = false
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 2
@@ -395,6 +401,12 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
+offset_left = -210.0
+offset_top = -140.0
+offset_right = 210.0
+offset_bottom = 140.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("2")
 
 [node name="CompletionVBox" type="VBoxContainer" parent="Game/HUD/Root/CompletionPanel" unique_id=1060746136]
@@ -402,12 +414,13 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -104.0
-offset_top = -85.0
-offset_right = 103.0
-offset_bottom = 90.0
+offset_left = 24.0
+offset_top = 20.0
+offset_right = -24.0
+offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 14
 alignment = 1
 
 [node name="CompletionLabel" type="Label" parent="Game/HUD/Root/CompletionPanel/CompletionVBox" unique_id=422671316]
@@ -432,7 +445,7 @@ theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
 theme_override_styles/hover = SubResource("11")
-text = "Next"
+text = "Back"
 
 [node name="ReplayButton" type="Button" parent="Game/HUD/Root/CompletionPanel/CompletionVBox" unique_id=1349998100]
 custom_minimum_size = Vector2(0, 56)
@@ -445,4 +458,4 @@ theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
 theme_override_styles/hover = SubResource("11")
-text = "Replay"
+text = "Play"

@@ -36,11 +36,12 @@ var connect_last_id: int = -1
 var connect_moved: bool = false
 var connect_start_pos: Vector2 = Vector2.ZERO
 var total_required_edges: int = 0
+var last_tap_time: float = 0.0
+var last_tap_node: int = -1
 
 @onready var grid_view: GridView = $GridView
 @onready var back_button: Button = $HUD/Root/TopBar/TopBarHBox/BackButton
 @onready var restart_button: Button = $HUD/Root/TopBar/TopBarHBox/RestartButton
-@onready var side_label: Label = $HUD/Root/TopBar/TopBarHBox/SideLabel
 @onready var completion_panel: Panel = $HUD/Root/CompletionPanel
 @onready var completion_label: Label = $HUD/Root/CompletionPanel/CompletionVBox/CompletionLabel
 @onready var next_button: Button = $HUD/Root/CompletionPanel/CompletionVBox/NextButton
@@ -59,10 +60,14 @@ func _ready() -> void:
 		_focus_canvas_web()
 	back_button.pressed.connect(_on_back_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
-	next_button.pressed.connect(_on_next_pressed)
-	replay_button.pressed.connect(_on_restart_pressed)
+	next_button.pressed.connect(_on_back_pressed)
+	replay_button.pressed.connect(_on_next_pressed)
 	completion_panel.visible = false
 	_log_debug("session start")
+
+func set_hud_visible(visible: bool) -> void:
+	if has_node("HUD"):
+		$HUD.visible = visible
 
 func start_new_game(size: int, depth: int, difficulty: int) -> void:
 	current_size = size
@@ -429,6 +434,14 @@ func _handle_press(pos: Vector2) -> void:
 	if node_id == -1:
 		_clear_selection()
 		return
+	var now := float(Time.get_ticks_msec()) / 1000.0
+	if node_id == last_tap_node and (now - last_tap_time) <= 0.35:
+		last_tap_time = 0.0
+		last_tap_node = -1
+		_auto_fill_node(node_id)
+		return
+	last_tap_time = now
+	last_tap_node = node_id
 
 	if selected_id == -1:
 		selected_id = node_id
@@ -459,6 +472,46 @@ func _handle_press(pos: Vector2) -> void:
 	if model.is_solved():
 		_show_completion()
 
+func _auto_fill_node(node_id: int) -> void:
+	if model == null:
+		return
+	if grid_view.is_rotating():
+		return
+	var remaining := model.remaining_dots(node_id)
+	if remaining <= 0:
+		var changed := false
+		for nb in model.neighbors(node_id):
+			if model.placed_edge_exists(node_id, nb):
+				var before_a := model.remaining_dots(node_id)
+				var before_b := model.remaining_dots(nb)
+				if model.remove_placed_edge(node_id, nb):
+					_play_edge_sfx(node_id, nb, false)
+					_maybe_play_node_complete(node_id, nb, before_a, before_b)
+					changed = true
+		if changed:
+			grid_view.queue_redraw()
+		_clear_selection()
+		if model.is_solved():
+			_show_completion()
+		return
+	for nb in model.neighbors(node_id):
+		if remaining <= 0:
+			break
+		if model.remaining_dots(nb) <= 0:
+			continue
+		if model.placed_edge_exists(node_id, nb):
+			continue
+		var before_a := model.remaining_dots(node_id)
+		var before_b := model.remaining_dots(nb)
+		if model.add_placed_edge(node_id, nb):
+			_play_edge_sfx(node_id, nb, true)
+			_maybe_play_node_complete(node_id, nb, before_a, before_b)
+			remaining = model.remaining_dots(node_id)
+	grid_view.queue_redraw()
+	_clear_selection()
+	if model.is_solved():
+		_show_completion()
+
 func _clear_selection() -> void:
 	selected_id = -1
 	grid_view.selected_id = -1
@@ -475,6 +528,7 @@ func _show_completion() -> void:
 
 func _on_back_pressed() -> void:
 	_play_sfx(sfx_ui)
+	completion_panel.visible = false
 	back_requested.emit()
 
 func _on_restart_pressed() -> void:

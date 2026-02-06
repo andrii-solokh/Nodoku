@@ -30,14 +30,51 @@ var rotation_active: bool = false
 var rotation_duration: float = 0.35
 var _tween_from: Quaternion
 var _tween_to: Quaternion
+var dot_states: Dictionary = {}
+var dot_anim_speed: float = 10.0
+var edge_states: Dictionary = {}
+var edge_anim_speed: float = 8.0
+var float_time: float = 0.0
+var float_amp_factor: float = 0.018
+var float_speed: float = 0.25
 
 signal rotation_finished
+
+func _ready() -> void:
+	set_process(true)
 
 func _set_model(value: GridModel) -> void:
 	model = value
 	rotation_basis = Basis()
+	dot_states.clear()
+	edge_states.clear()
 	_update_metrics()
 	queue_redraw()
+
+func _process(delta: float) -> void:
+	_sync_edge_states()
+	var dirty := false
+	float_time += delta * float_speed
+	dirty = true
+	for key in dot_states.keys():
+		var state: Dictionary = dot_states[key]
+		if float(state.t) < 1.0:
+			state.t = minf(1.0, float(state.t) + delta * dot_anim_speed)
+			dot_states[key] = state
+			dirty = true
+	for key in edge_states.keys():
+		var state: Dictionary = edge_states[key]
+		var target: float = float(state.target)
+		var t: float = float(state.t)
+		if t != target:
+			t = move_toward(t, target, delta * edge_anim_speed)
+			state.t = t
+			edge_states[key] = state
+			dirty = true
+		if t <= 0.0 and target <= 0.0:
+			edge_states.erase(key)
+	if dirty:
+		queue_redraw()
 
 func _update_metrics() -> void:
 	if model == null:
@@ -116,17 +153,60 @@ func _draw() -> void:
 		return
 	_update_metrics()
 	var nodes := _compute_nodes()
+	_sync_edge_states()
 	draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), COLOR_BG)
-	var front_nodes: Array = []
-	var back_nodes: Array = []
+	var positions := {}
+	var items: Array = []
 	for n in nodes:
-		if _is_node_on_front_face(n.id):
-			front_nodes.append(n)
+		positions[n.id] = n
+		items.append({"kind": "node", "depth": n.depth, "node": n})
+	for key in edge_states.keys():
+		var state: Dictionary = edge_states[key]
+		var t: float = float(state.t)
+		if t <= 0.0:
+			continue
+		var pair := model.decode_edge(key)
+		var a := pair.x
+		var b := pair.y
+		if not positions.has(a) or not positions.has(b):
+			continue
+		var fa: float = positions[a].fade
+		var fb: float = positions[b].fade
+		var fade := minf(fa, fb)
+		var depth: float = (float(positions[a].depth) + float(positions[b].depth)) * 0.5 - 0.0001
+		items.append({
+			"kind": "edge",
+			"depth": depth,
+			"a": a,
+			"b": b,
+			"fade": fade,
+			"t": t
+		})
+	items.sort_custom(func(a, b): return a.depth < b.depth)
+	for item in items:
+		if item.kind == "edge":
+			_draw_edge_item(item, positions)
 		else:
-			back_nodes.append(n)
-	_draw_nodes_list(back_nodes)
-	_draw_edges(nodes)
-	_draw_nodes_list(front_nodes)
+			_draw_node_item(item.node)
+
+func _sync_edge_states() -> void:
+	if model == null:
+		edge_states.clear()
+		return
+	var present := {}
+	for key in model.placed_edges.keys():
+		present[key] = true
+		if not edge_states.has(key):
+			edge_states[key] = {"t": 0.0, "target": 1.0}
+		else:
+			var state: Dictionary = edge_states[key]
+			state.target = 1.0
+			edge_states[key] = state
+	for key in edge_states.keys():
+		if not present.has(key):
+			var state: Dictionary = edge_states[key]
+			state.target = 0.0
+			edge_states[key] = state
 
 func pick_node(global_pos: Vector2) -> int:
 	if model == null:
@@ -157,7 +237,7 @@ func _compute_nodes() -> Array:
 		if not model.is_active(node_id):
 			continue
 		var c := model.coords(node_id)
-		var p := _node_position(c)
+		var p := _node_position(c) + _float_offset(node_id)
 		var r := _rotate_vec(p)
 		var depth := cam_dist - r.z
 		if depth <= 0.1:
@@ -173,72 +253,115 @@ func _compute_nodes() -> Array:
 	out.sort_custom(func(a, b): return a.depth < b.depth)
 	return out
 
-func _draw_edges(nodes: Array) -> void:
-	var positions := {}
-	for n in nodes:
-		positions[n.id] = {"pos": n.pos, "fade": n.fade, "radius": n.radius}
-	var keys := model.placed_edges.keys()
-	for key in keys:
-		var pair := model.decode_edge(key)
-		var a := pair.x
-		var b := pair.y
-		if not positions.has(a) or not positions.has(b):
-			continue
-		var fa: float = positions[a].fade
-		var fb: float = positions[b].fade
-		var fade := minf(fa, fb)
-		var color := _edge_color(fade)
-		var start: Vector2 = positions[a].pos
-		var end: Vector2 = positions[b].pos
-		var dir := end - start
-		var len := dir.length()
-		if len < 0.001:
-			continue
-		var unit := dir / len
-		var ra: float = positions[a].radius
-		var rb: float = positions[b].radius
-		var inset_a := minf(ra * 0.9, len * 0.45)
-		var inset_b := minf(rb * 0.9, len * 0.45)
-		start += unit * inset_a
-		end -= unit * inset_b
-		draw_line(start, end, color, maxf(2.0, base_radius * 0.18))
+func _draw_edge_item(item: Dictionary, positions: Dictionary) -> void:
+	var a: int = item.a
+	var b: int = item.b
+	var t: float = clampf(float(item.t), 0.0, 1.0)
+	var color := _edge_color(float(item.fade))
+	color.a *= t
+	var start: Vector2 = positions[a].pos
+	var end: Vector2 = positions[b].pos
+	var dir := end - start
+	var len := dir.length()
+	if len < 0.001:
+		return
+	var unit := dir / len
+	var ra: float = positions[a].radius
+	var rb: float = positions[b].radius
+	var inset_a := minf(ra * 0.9, len * 0.45)
+	var inset_b := minf(rb * 0.9, len * 0.45)
+	start += unit * inset_a
+	end -= unit * inset_b
+	var mid := (start + end) * 0.5
+	var half := (end - start) * 0.5 * t
+	start = mid - half
+	end = mid + half
+	draw_line(start, end, color, maxf(2.0, base_radius * 0.18))
 
-func _draw_nodes_list(nodes: Array) -> void:
-	for n in nodes:
-		var node_id: int = n.id
-		var pos: Vector2 = n.pos
-		var radius: float = n.radius
-		var fade: float = n.fade
-		var fill_color := _tint_color(COLOR_BG, fade)
-		var quiet_color := _tint_color(COLOR_QUIET, fade)
-		var circle_color := _tint_color(COLOR_CIRCLE, fade)
-		var dot_color := _tint_color(COLOR_DOT, fade)
-		# Opaque fill to occlude nodes behind.
-		draw_circle(pos, maxf(2.0, radius - maxf(1.0, radius * 0.12)), fill_color)
-		if model.remaining_dots(node_id) == 0:
-			draw_circle(pos, maxf(2.0, radius - 2.0), quiet_color)
-		draw_arc(pos, radius, 0.0, TAU, 48, circle_color, maxf(1.6, radius * 0.12))
-		if node_id == selected_id:
-			var sel_color := _tint_color(COLOR_SELECTED, maxf(fade, 0.6))
-			draw_arc(pos, radius + 4.0, 0.0, TAU, 48, sel_color, maxf(1.6, radius * 0.12))
-		_draw_dots(pos, model.remaining_dots(node_id), radius, dot_color)
+func _draw_node_item(n: Dictionary) -> void:
+	var node_id: int = n.id
+	var pos: Vector2 = n.pos
+	var radius: float = n.radius
+	var fade: float = n.fade
+	var fill_color := _tint_color(COLOR_BG, fade)
+	var quiet_color := _tint_color(COLOR_QUIET, fade)
+	var circle_color := _tint_color(COLOR_CIRCLE, fade)
+	var dot_color := _tint_color(COLOR_DOT, fade)
+	# Opaque fill to occlude nodes behind.
+	draw_circle(pos, maxf(2.0, radius - maxf(0.5, radius * 0.08)), fill_color)
+	if model.remaining_dots(node_id) == 0:
+		draw_circle(pos, maxf(2.0, radius - 1.2), quiet_color)
+	draw_arc(pos, radius, 0.0, TAU, 48, circle_color, maxf(1.6, radius * 0.12))
+	if node_id == selected_id:
+		var sel_color := _tint_color(COLOR_SELECTED, maxf(fade, 0.6))
+		draw_arc(pos, radius + 4.0, 0.0, TAU, 48, sel_color, maxf(1.6, radius * 0.12))
+	_draw_dots(node_id, pos, model.remaining_dots(node_id), radius, dot_color)
 
-func _draw_dots(pos: Vector2, count: int, radius: float, color: Color) -> void:
+func _draw_dots(node_id: int, pos: Vector2, count: int, radius: float, color: Color) -> void:
 	if count <= 0:
+		dot_states.erase(node_id)
 		return
 	var dr: float = maxf(2.0, radius * 0.16)
-	var spacing: float = radius * 0.4
-	if count == 1:
-		draw_circle(pos, dr, color)
-		return
-	var offsets := [
-		Vector2(-spacing, -spacing),
-		Vector2(spacing, -spacing),
-		Vector2(-spacing, spacing),
-		Vector2(spacing, spacing)
-	]
-	for i in range(min(count, 4)):
+	var spacing: float = radius * 0.36
+	var target_offsets := _dot_offsets(count, spacing)
+	var state: Dictionary = {}
+	if dot_states.has(node_id):
+		state = dot_states[node_id]
+	if state.is_empty():
+		state = {"count": count, "from": target_offsets, "to": target_offsets, "t": 1.0}
+	else:
+		if int(state.count) != count:
+			var current_offsets := _interpolate_offsets(state.from, state.to, float(state.t))
+			var mapped_from: Array = []
+			for i in range(target_offsets.size()):
+				if i < current_offsets.size():
+					mapped_from.append(current_offsets[i])
+				else:
+					mapped_from.append(Vector2.ZERO)
+			state = {"count": count, "from": mapped_from, "to": target_offsets, "t": 0.0}
+	dot_states[node_id] = state
+	var offsets := _interpolate_offsets(state.from, state.to, float(state.t))
+	for i in range(min(count, offsets.size())):
 		draw_circle(pos + offsets[i], dr, color)
+
+func _dot_offsets(count: int, spacing: float) -> Array:
+	var out: Array = []
+	if count <= 0:
+		return out
+	if count == 1:
+		out.append(Vector2.ZERO)
+		return out
+	if count == 2:
+		out.append(Vector2(-spacing, 0.0))
+		out.append(Vector2(spacing, 0.0))
+		return out
+	if count == 3:
+		out.append(Vector2(0.0, -spacing * 0.9))
+		out.append(Vector2(-spacing, spacing * 0.7))
+		out.append(Vector2(spacing, spacing * 0.7))
+		return out
+	out.append(Vector2(-spacing, -spacing))
+	out.append(Vector2(spacing, -spacing))
+	out.append(Vector2(-spacing, spacing))
+	out.append(Vector2(spacing, spacing))
+	return out
+
+func _interpolate_offsets(from: Array, to: Array, t: float) -> Array:
+	var out: Array = []
+	for i in range(to.size()):
+		var a: Vector2 = Vector2.ZERO
+		if i < from.size():
+			a = from[i]
+		var b: Vector2 = to[i]
+		out.append(a.lerp(b, t))
+	return out
+
+func _float_offset(node_id: int) -> Vector3:
+	var amp := cell_size * float_amp_factor
+	var seed := float(node_id)
+	var ox := sin(float_time + seed * 0.37) * amp
+	var oy := cos(float_time * 0.8 + seed * 0.53) * amp * 0.8
+	return Vector3(ox, oy, 0.0)
 
 func get_front_face() -> int:
 	var normals := {
