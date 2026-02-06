@@ -49,4 +49,15 @@ printf "%s (%s)\n" "$base_version" "$timestamp" > version.txt
 
 git add public/index.html public/index.wasm public/index.pck version.txt >/dev/null 2>&1 || true
 
-echo "Release ready. Updated public/ and version.txt."
+if command -v git >/dev/null 2>&1; then
+  if ! git diff --cached --quiet; then
+    msg="Release web $(date '+%Y-%m-%d %H:%M')"
+    git commit -m "$msg" >/dev/null 2>&1 || true
+    git push >/dev/null 2>&1 || true
+    echo "Release committed and pushed."
+  else
+    echo "Release ready. No changes to commit."
+  fi
+else
+  echo "Release ready. Updated public/ and version.txt."
+fi
