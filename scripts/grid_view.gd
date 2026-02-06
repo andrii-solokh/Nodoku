@@ -24,6 +24,7 @@ var base_radius: float = 28.0
 
 var model: GridModel: set = _set_model
 var selected_id: int = -1
+var hint_id: int = -1
 
 var rotation_basis: Basis = Basis()
 var rotation_active: bool = false
@@ -48,6 +49,7 @@ func _set_model(value: GridModel) -> void:
 	rotation_basis = Basis()
 	dot_states.clear()
 	edge_states.clear()
+	hint_id = -1
 	_update_metrics()
 	queue_redraw()
 
@@ -295,6 +297,9 @@ func _draw_node_item(n: Dictionary) -> void:
 	if node_id == selected_id:
 		var sel_color := _tint_color(COLOR_SELECTED, maxf(fade, 0.6))
 		draw_arc(pos, radius + 4.0, 0.0, TAU, 48, sel_color, maxf(1.6, radius * 0.12))
+	if node_id == hint_id:
+		var hint_color := _tint_color(COLOR_SELECTED, maxf(fade, 0.55))
+		draw_arc(pos, radius + 8.0, 0.0, TAU, 48, hint_color, maxf(1.4, radius * 0.1))
 	_draw_dots(node_id, pos, model.remaining_dots(node_id), radius, dot_color)
 
 func _draw_dots(node_id: int, pos: Vector2, count: int, radius: float, color: Color) -> void:
@@ -374,6 +379,39 @@ func snap_to_face(face_id: int) -> void:
 	var target := _basis_for_front_face(face_id)
 	_animate_to_basis(target)
 
+func is_node_on_front_face(node_id: int) -> bool:
+	return _is_node_on_front_face(node_id)
+
+func best_face_for_node(node_id: int) -> int:
+	if model == null:
+		return FACE_FRONT
+	var c := model.coords(node_id)
+	var candidates: Array = []
+	if c.z == 0:
+		candidates.append(FACE_FRONT)
+	if c.z == model.nz - 1:
+		candidates.append(FACE_BACK)
+	if c.x == 0:
+		candidates.append(FACE_LEFT)
+	if c.x == model.nx - 1:
+		candidates.append(FACE_RIGHT)
+	if c.y == 0:
+		candidates.append(FACE_TOP)
+	if c.y == model.ny - 1:
+		candidates.append(FACE_BOTTOM)
+	if candidates.is_empty():
+		return get_front_face()
+	var best_face: int = int(candidates[0])
+	var best_z: float = -1e9
+	for face_id in candidates:
+		var face_val: int = int(face_id)
+		var normal := _face_normal(face_val)
+		var rn := rotation_basis * normal
+		if rn.z > best_z:
+			best_z = rn.z
+			best_face = face_val
+	return best_face
+
 func _front_face_for_basis(basis: Basis) -> int:
 	var normals := {
 		FACE_FRONT: Vector3(0, 0, 1),
@@ -392,6 +430,23 @@ func _front_face_for_basis(basis: Basis) -> int:
 			best_z = rn.z
 			best_face = face_id
 	return best_face
+
+func _face_normal(face_id: int) -> Vector3:
+	match face_id:
+		FACE_FRONT:
+			return Vector3(0, 0, 1)
+		FACE_BACK:
+			return Vector3(0, 0, -1)
+		FACE_LEFT:
+			return Vector3(-1, 0, 0)
+		FACE_RIGHT:
+			return Vector3(1, 0, 0)
+		FACE_TOP:
+			return Vector3(0, 1, 0)
+		FACE_BOTTOM:
+			return Vector3(0, -1, 0)
+		_:
+			return Vector3(0, 0, 1)
 
 func _basis_for_front_face(face_id: int) -> Basis:
 	var candidates: Array = _candidate_orientations()

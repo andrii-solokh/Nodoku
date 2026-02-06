@@ -484,6 +484,20 @@ theme_override_styles/hover = SubResource("11")
 text = ""
 tooltip_text = "Restart"
 
+[node name="HintButton" type="Button" parent="Game/HUD/Root/TopBar/TopBarHBox"]
+custom_minimum_size = Vector2(84, 52)
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("10")
+theme_override_styles/pressed = SubResource("12")
+theme_override_styles/hover = SubResource("11")
+text = "Hint"
+tooltip_text = "Hint"
+
 [node name="Spacer" type="Control" parent="Game/HUD/Root/TopBar/TopBarHBox" unique_id=1288576706]
 layout_mode = 2
 size_flags_horizontal = 3

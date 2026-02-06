@@ -45,12 +45,17 @@ var undo_waiting: bool = false
 var suppress_record: bool = false
 var undo_delayed_action: Dictionary = {}
 const UNDO_ROTATE_DELAY := 0.12
+var hint_pending: Dictionary = {}
+var hint_waiting: bool = false
+var hint_token: int = 0
+const HINT_HOLD_TIME := 2.2
 
 @onready var grid_view: GridView = $GridView
 @onready var hud_root: Control = $HUD/Root
 @onready var top_bar: Control = $HUD/Root/TopBar
 @onready var back_button: Button = $HUD/Root/TopBar/TopBarHBox/BackButton
 @onready var restart_button: Button = $HUD/Root/TopBar/TopBarHBox/RestartButton
+@onready var hint_button: Button = $HUD/Root/TopBar/TopBarHBox/HintButton
 @onready var completion_panel: Panel = $HUD/Root/CompletionPanel
 @onready var completion_label: Label = $HUD/Root/CompletionPanel/CompletionVBox/CompletionLabel
 @onready var next_button: Button = $HUD/Root/CompletionPanel/CompletionVBox/NextButton
@@ -69,6 +74,7 @@ func _ready() -> void:
 		_focus_canvas_web()
 	back_button.pressed.connect(_on_back_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
+	hint_button.pressed.connect(_on_hint_pressed)
 	next_button.pressed.connect(_on_back_pressed)
 	replay_button.pressed.connect(_on_next_pressed)
 	completion_panel.visible = false
@@ -117,9 +123,13 @@ func start_new_game(size: int, depth: int, difficulty: int) -> void:
 	undo_stack.clear()
 	undo_pending = {}
 	undo_waiting = false
+	hint_pending = {}
+	hint_waiting = false
+	hint_token += 1
 	_generate_model(-1)
 	completion_panel.visible = false
 	grid_view.selected_id = -1
+	grid_view.hint_id = -1
 	grid_view.queue_redraw()
 	_release_ui_focus()
 
@@ -131,6 +141,9 @@ func _generate_model(seed: int) -> void:
 	undo_stack.clear()
 	undo_pending = {}
 	undo_waiting = false
+	hint_pending = {}
+	hint_waiting = false
+	hint_token += 1
 	_compute_total_required_edges()
 
 func _compute_total_required_edges() -> void:
@@ -435,6 +448,7 @@ func _handle_connect_drag(pos: Vector2) -> void:
 		return
 	if grid_view.is_rotating():
 		return
+	_clear_hint()
 	var node_id := grid_view.pick_node(pos)
 	if node_id == -1:
 		return
@@ -478,6 +492,7 @@ func _end_connection_drag(pos: Vector2) -> void:
 
 func _handle_press(pos: Vector2) -> void:
 	_log_pointer("handle_press", pos)
+	_clear_hint()
 	var node_id: int = grid_view.pick_node(pos)
 	if node_id == -1:
 		_clear_selection()
@@ -588,6 +603,84 @@ func _show_completion() -> void:
 	var tween := create_tween()
 	completion_panel.modulate = Color(1, 1, 1, 0)
 	tween.tween_property(completion_panel, "modulate", Color(1, 1, 1, 1), 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+func _on_hint_pressed() -> void:
+	_play_sfx(sfx_ui)
+	_show_hint()
+
+func _show_hint() -> void:
+	if model == null:
+		return
+	if grid_view.is_rotating():
+		return
+	var hint_id := _find_hint_node()
+	if hint_id == -1:
+		return
+	var target_face := grid_view.best_face_for_node(hint_id)
+	if current_depth > 1 and grid_view.get_front_face() != target_face:
+		hint_pending = {"id": hint_id, "face": target_face}
+		hint_waiting = true
+		grid_view.rotation_finished.connect(_on_hint_rotation_finished, Object.CONNECT_ONE_SHOT)
+		grid_view.snap_to_face(target_face)
+		return
+	_apply_hint(hint_id)
+
+func _find_hint_node() -> int:
+	var best_id := -1
+	var best_score := -1.0
+	for node_id in range(model.total_nodes()):
+		if not model.is_active(node_id):
+			continue
+		var remaining := model.remaining_dots(node_id)
+		if remaining <= 0:
+			continue
+		var free_neighbors := 0
+		for nb in model.neighbors(node_id):
+			if model.placed_edge_exists(node_id, nb):
+				continue
+			if model.remaining_dots(nb) <= 0:
+				continue
+			free_neighbors += 1
+		if free_neighbors <= 0:
+			continue
+		if remaining != free_neighbors:
+			continue
+		var score := float(free_neighbors)
+		if grid_view.is_node_on_front_face(node_id):
+			score += 4.0
+		if score > best_score:
+			best_score = score
+			best_id = node_id
+	return best_id
+
+func _on_hint_rotation_finished() -> void:
+	if not hint_waiting:
+		return
+	hint_waiting = false
+	if hint_pending.is_empty():
+		return
+	var id := int(hint_pending.id)
+	hint_pending = {}
+	_apply_hint(id)
+
+func _apply_hint(node_id: int) -> void:
+	_clear_selection()
+	grid_view.hint_id = node_id
+	grid_view.queue_redraw()
+	hint_token += 1
+	var token := hint_token
+	var timer := get_tree().create_timer(HINT_HOLD_TIME)
+	timer.timeout.connect(func ():
+		if token != hint_token:
+			return
+		_clear_hint()
+	, Object.CONNECT_ONE_SHOT)
+
+func _clear_hint() -> void:
+	if grid_view.hint_id == -1:
+		return
+	grid_view.hint_id = -1
+	grid_view.queue_redraw()
 
 func _record_action(a: int, b: int, connected: bool) -> void:
 	_record_actions([{"a": a, "b": b, "connected": connected}])
