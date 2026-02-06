@@ -364,6 +364,17 @@ func _float_offset(node_id: int) -> Vector3:
 	return Vector3(ox, oy, 0.0)
 
 func get_front_face() -> int:
+	return _front_face_for_basis(rotation_basis)
+
+func snap_to_face(face_id: int) -> void:
+	if rotation_active:
+		return
+	if model == null:
+		return
+	var target := _basis_for_front_face(face_id)
+	_animate_to_basis(target)
+
+func _front_face_for_basis(basis: Basis) -> int:
 	var normals := {
 		FACE_FRONT: Vector3(0, 0, 1),
 		FACE_BACK: Vector3(0, 0, -1),
@@ -375,11 +386,25 @@ func get_front_face() -> int:
 	var best_face := FACE_FRONT
 	var best_z := -1e9
 	for face_id in normals.keys():
-		var rn := _rotate_vec(normals[face_id])
+		var normal: Vector3 = normals[face_id]
+		var rn: Vector3 = basis * normal
 		if rn.z > best_z:
 			best_z = rn.z
 			best_face = face_id
 	return best_face
+
+func _basis_for_front_face(face_id: int) -> Basis:
+	var candidates: Array = _candidate_orientations()
+	var best: Basis = rotation_basis
+	var best_score := -1e9
+	for b in candidates:
+		if _front_face_for_basis(b) != face_id:
+			continue
+		var score := rotation_basis.x.dot(b.x) + rotation_basis.y.dot(b.y) + rotation_basis.z.dot(b.z)
+		if score > best_score:
+			best_score = score
+			best = b
+	return best
 
 func _fade_from_depth(z: float) -> float:
 	var max_dim := maxi(maxi(model.nx, model.ny), model.nz)

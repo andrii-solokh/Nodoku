@@ -13,6 +13,19 @@ const GAME_VERSION := "0.1.0"
 @onready var depth_option: OptionButton = $Menu/MenuPanel/MenuMargin/VBox/DepthRow/DepthOption
 @onready var difficulty_option: OptionButton = $Menu/MenuPanel/MenuMargin/VBox/DifficultyRow/DifficultyOption
 @onready var start_button: Button = $Menu/MenuPanel/MenuMargin/VBox/StartButton
+@onready var howto_button: Button = $Menu/MenuPanel/MenuMargin/VBox/HowToButton
+@onready var tutorial_overlay: Control = $Menu/TutorialOverlay
+@onready var tutorial_close: Button = $Menu/TutorialOverlay/TutorialContent/TutorialVBox/TutorialClose
+@onready var tutorial_demo: Control = $Menu/TutorialOverlay/TutorialContent/TutorialVBox/TutorialDemo
+@onready var tutorial_step1: Label = $Menu/TutorialOverlay/TutorialContent/TutorialVBox/TutorialStep1
+@onready var tutorial_step2: Label = $Menu/TutorialOverlay/TutorialContent/TutorialVBox/TutorialStep2
+@onready var tutorial_step3: Label = $Menu/TutorialOverlay/TutorialContent/TutorialVBox/TutorialStep3
+@onready var tutorial_step4: Label = $Menu/TutorialOverlay/TutorialContent/TutorialVBox/TutorialStep4
+
+var tutorial_shown: bool = false
+var tutorial_step: int = 0
+var tutorial_complete: bool = false
+const TUTORIAL_STEP_COUNT := 4
 
 func _ready() -> void:
 	menu.visible = true
@@ -23,11 +36,22 @@ func _ready() -> void:
 	_update_version_label()
 	_update_control_hints()
 	start_button.pressed.connect(_on_start_pressed)
+	howto_button.pressed.connect(_on_howto_pressed)
+	tutorial_close.pressed.connect(_on_tutorial_close)
+	if tutorial_demo != null and tutorial_demo.has_signal("step_completed"):
+		tutorial_demo.connect("step_completed", _on_tutorial_step_completed)
 	game.back_requested.connect(_on_game_back)
+	if not tutorial_shown:
+		_show_tutorial(false)
 
 func _update_control_hints() -> void:
-	var show := not DisplayServer.is_touchscreen_available()
-	control_hints.visible = show
+	var is_touch := DisplayServer.is_touchscreen_available()
+	control_hints.visible = true
+	control_hints.text = "- Double tap/click a node to connect/disconnect neighbors\n- W/A/S/D or arrow keys to rotate\n- Click or drag between two nodes to connect/disconnect"
+	var font_size := 18
+	if is_touch:
+		font_size = 20
+	control_hints.add_theme_font_size_override("font_size", font_size)
 
 func _update_version_label() -> void:
 	var version := GAME_VERSION
@@ -102,6 +126,7 @@ func _load_settings() -> void:
 	var size := int(cfg.get_value("game", "grid_size", 5))
 	var depth := int(cfg.get_value("game", "grid_depth", 2))
 	var difficulty := int(cfg.get_value("game", "difficulty", 1))
+	tutorial_shown = bool(cfg.get_value("game", "tutorial_shown", false))
 
 	_select_option_by_id(grid_size_option, size, 5)
 	_select_option_by_id(depth_option, depth, 2)
@@ -112,6 +137,7 @@ func _save_settings(size: int, depth: int, difficulty: int) -> void:
 	cfg.set_value("game", "grid_size", size)
 	cfg.set_value("game", "grid_depth", depth)
 	cfg.set_value("game", "difficulty", difficulty)
+	cfg.set_value("game", "tutorial_shown", tutorial_shown)
 	cfg.save(SETTINGS_PATH)
 
 func _apply_defaults() -> void:
@@ -141,8 +167,78 @@ func _on_start_pressed() -> void:
 	menu.visible = false
 	game.visible = true
 	game.set_hud_visible(true)
+	tutorial_overlay.visible = false
 
 func _on_game_back() -> void:
 	menu.visible = true
 	game.visible = false
 	game.set_hud_visible(false)
+
+func _show_tutorial(from_menu: bool) -> void:
+	tutorial_overlay.visible = true
+	tutorial_complete = false
+	tutorial_step = 0
+	tutorial_close.text = "Skip"
+	if tutorial_demo != null:
+		if tutorial_demo.has_method("reset_demo"):
+			tutorial_demo.call("reset_demo")
+		if tutorial_demo is Control:
+			(tutorial_demo as Control).grab_focus()
+	_apply_tutorial_step()
+	if not tutorial_shown and not from_menu:
+		tutorial_shown = true
+		_save_settings(
+			grid_size_option.get_item_id(grid_size_option.selected),
+			depth_option.get_item_id(depth_option.selected),
+			difficulty_option.get_item_id(difficulty_option.selected)
+		)
+
+func _on_howto_pressed() -> void:
+	_show_tutorial(true)
+
+func _on_tutorial_close() -> void:
+	tutorial_shown = true
+	_save_settings(
+		grid_size_option.get_item_id(grid_size_option.selected),
+		depth_option.get_item_id(depth_option.selected),
+		difficulty_option.get_item_id(difficulty_option.selected)
+	)
+	tutorial_overlay.visible = false
+	tutorial_complete = false
+
+func _on_tutorial_step_completed(step: int) -> void:
+	if tutorial_complete:
+		return
+	if step != tutorial_step:
+		return
+	tutorial_step += 1
+	if tutorial_step >= TUTORIAL_STEP_COUNT:
+		tutorial_complete = true
+		tutorial_close.text = "Got it"
+	_apply_tutorial_step()
+
+func _apply_tutorial_step() -> void:
+	if tutorial_demo == null:
+		return
+	if tutorial_demo.has_method("set_step"):
+		tutorial_demo.call("set_step", min(tutorial_step, TUTORIAL_STEP_COUNT - 1))
+	var c_active := Color(0.19, 0.24, 0.26, 1)
+	var c_dim := Color(0.42, 0.47, 0.5, 1)
+	if tutorial_complete:
+		tutorial_step1.modulate = c_active
+		tutorial_step2.modulate = c_active
+		tutorial_step3.modulate = c_active
+		tutorial_step4.modulate = c_active
+		tutorial_step1.visible = true
+		tutorial_step2.visible = true
+		tutorial_step3.visible = true
+		tutorial_step4.visible = true
+	else:
+		tutorial_step1.modulate = c_active if tutorial_step == 0 else c_dim
+		tutorial_step2.modulate = c_active if tutorial_step == 1 else c_dim
+		tutorial_step3.modulate = c_active if tutorial_step == 2 else c_dim
+		tutorial_step4.modulate = c_active if tutorial_step == 3 else c_dim
+		tutorial_step1.visible = true
+		tutorial_step2.visible = tutorial_step >= 1
+		tutorial_step3.visible = tutorial_step >= 2
+		tutorial_step4.visible = tutorial_step >= 3

@@ -38,8 +38,17 @@ var connect_start_pos: Vector2 = Vector2.ZERO
 var total_required_edges: int = 0
 var last_tap_time: float = 0.0
 var last_tap_node: int = -1
+var last_empty_tap_time: float = 0.0
+var undo_stack: Array = []
+var undo_pending: Dictionary = {}
+var undo_waiting: bool = false
+var suppress_record: bool = false
+var undo_delayed_action: Dictionary = {}
+const UNDO_ROTATE_DELAY := 0.12
 
 @onready var grid_view: GridView = $GridView
+@onready var hud_root: Control = $HUD/Root
+@onready var top_bar: Control = $HUD/Root/TopBar
 @onready var back_button: Button = $HUD/Root/TopBar/TopBarHBox/BackButton
 @onready var restart_button: Button = $HUD/Root/TopBar/TopBarHBox/RestartButton
 @onready var completion_panel: Panel = $HUD/Root/CompletionPanel
@@ -63,17 +72,51 @@ func _ready() -> void:
 	next_button.pressed.connect(_on_back_pressed)
 	replay_button.pressed.connect(_on_next_pressed)
 	completion_panel.visible = false
+	_init_hud_scale()
 	_log_debug("session start")
 
 func set_hud_visible(visible: bool) -> void:
 	if has_node("HUD"):
 		$HUD.visible = visible
 
+func _init_hud_scale() -> void:
+	var viewport := get_viewport()
+	if viewport != null:
+		viewport.size_changed.connect(_update_hud_scale)
+	call_deferred("_update_hud_scale")
+
+func _hud_scale_factor() -> float:
+	if not OS.has_feature("web"):
+		return 1.0
+	if not DisplayServer.is_touchscreen_available():
+		return 1.0
+	var size := get_viewport_rect().size
+	var short_side := minf(size.x, size.y)
+	if short_side <= 420.0:
+		return 1.35
+	if short_side <= 520.0:
+		return 1.25
+	return 1.15
+
+func _update_hud_scale() -> void:
+	if not is_instance_valid(hud_root):
+		return
+	var scale := _hud_scale_factor()
+	if is_instance_valid(top_bar):
+		top_bar.pivot_offset = Vector2.ZERO
+		top_bar.scale = Vector2(scale, scale)
+	if is_instance_valid(completion_panel):
+		completion_panel.pivot_offset = completion_panel.size * 0.5
+		completion_panel.scale = Vector2(scale, scale)
+
 func start_new_game(size: int, depth: int, difficulty: int) -> void:
 	current_size = size
 	current_depth = depth
 	current_difficulty = difficulty
 	selected_id = -1
+	undo_stack.clear()
+	undo_pending = {}
+	undo_waiting = false
 	_generate_model(-1)
 	completion_panel.visible = false
 	grid_view.selected_id = -1
@@ -85,6 +128,9 @@ func _generate_model(seed: int) -> void:
 	var gen := LevelGenerator.new()
 	model = gen.generate(current_size, current_size, current_depth, params.density, seed, params.min_nonzero_ratio, params.max_attempts)
 	grid_view.model = model
+	undo_stack.clear()
+	undo_pending = {}
+	undo_waiting = false
 	_compute_total_required_edges()
 
 func _compute_total_required_edges() -> void:
@@ -403,12 +449,14 @@ func _handle_connect_drag(pos: Vector2) -> void:
 		var before_a := model.remaining_dots(connect_anchor_id)
 		var before_b := model.remaining_dots(node_id)
 		if model.remove_placed_edge(connect_anchor_id, node_id):
+			_record_action(connect_anchor_id, node_id, false)
 			_play_edge_sfx(connect_anchor_id, node_id, false)
 			_maybe_play_node_complete(connect_anchor_id, node_id, before_a, before_b)
 	else:
 		var before_a := model.remaining_dots(connect_anchor_id)
 		var before_b := model.remaining_dots(node_id)
 		if model.add_placed_edge(connect_anchor_id, node_id):
+			_record_action(connect_anchor_id, node_id, true)
 			_play_edge_sfx(connect_anchor_id, node_id, true)
 			_maybe_play_node_complete(connect_anchor_id, node_id, before_a, before_b)
 	connect_anchor_id = node_id
@@ -433,7 +481,15 @@ func _handle_press(pos: Vector2) -> void:
 	var node_id: int = grid_view.pick_node(pos)
 	if node_id == -1:
 		_clear_selection()
+		var now := float(Time.get_ticks_msec()) / 1000.0
+		if (now - last_empty_tap_time) <= 0.35:
+			last_empty_tap_time = 0.0
+			_attempt_undo()
+			return
+		last_empty_tap_time = now
+		last_tap_node = -1
 		return
+	last_empty_tap_time = 0.0
 	var now := float(Time.get_ticks_msec()) / 1000.0
 	if node_id == last_tap_node and (now - last_tap_time) <= 0.35:
 		last_tap_time = 0.0
@@ -458,12 +514,14 @@ func _handle_press(pos: Vector2) -> void:
 			var before_a := model.remaining_dots(selected_id)
 			var before_b := model.remaining_dots(node_id)
 			if model.remove_placed_edge(selected_id, node_id):
+				_record_action(selected_id, node_id, false)
 				_play_edge_sfx(selected_id, node_id, false)
 				_maybe_play_node_complete(selected_id, node_id, before_a, before_b)
 		else:
 			var before_a := model.remaining_dots(selected_id)
 			var before_b := model.remaining_dots(node_id)
 			if model.add_placed_edge(selected_id, node_id):
+				_record_action(selected_id, node_id, true)
 				_play_edge_sfx(selected_id, node_id, true)
 				_maybe_play_node_complete(selected_id, node_id, before_a, before_b)
 
@@ -478,6 +536,7 @@ func _auto_fill_node(node_id: int) -> void:
 	if grid_view.is_rotating():
 		return
 	var remaining := model.remaining_dots(node_id)
+	var batch_actions: Array = []
 	if remaining <= 0:
 		var changed := false
 		for nb in model.neighbors(node_id):
@@ -485,9 +544,11 @@ func _auto_fill_node(node_id: int) -> void:
 				var before_a := model.remaining_dots(node_id)
 				var before_b := model.remaining_dots(nb)
 				if model.remove_placed_edge(node_id, nb):
+					batch_actions.append({"a": node_id, "b": nb, "connected": false})
 					_play_edge_sfx(node_id, nb, false)
 					_maybe_play_node_complete(node_id, nb, before_a, before_b)
 					changed = true
+		_record_actions(batch_actions)
 		if changed:
 			grid_view.queue_redraw()
 		_clear_selection()
@@ -504,9 +565,11 @@ func _auto_fill_node(node_id: int) -> void:
 		var before_a := model.remaining_dots(node_id)
 		var before_b := model.remaining_dots(nb)
 		if model.add_placed_edge(node_id, nb):
+			batch_actions.append({"a": node_id, "b": nb, "connected": true})
 			_play_edge_sfx(node_id, nb, true)
 			_maybe_play_node_complete(node_id, nb, before_a, before_b)
 			remaining = model.remaining_dots(node_id)
+	_record_actions(batch_actions)
 	grid_view.queue_redraw()
 	_clear_selection()
 	if model.is_solved():
@@ -526,6 +589,94 @@ func _show_completion() -> void:
 	completion_panel.modulate = Color(1, 1, 1, 0)
 	tween.tween_property(completion_panel, "modulate", Color(1, 1, 1, 1), 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
+func _record_action(a: int, b: int, connected: bool) -> void:
+	_record_actions([{"a": a, "b": b, "connected": connected}])
+
+func _record_actions(actions: Array) -> void:
+	if suppress_record:
+		return
+	if model == null:
+		return
+	if actions.is_empty():
+		return
+	var face := GridView.FACE_FRONT
+	if current_depth > 1:
+		face = grid_view.get_front_face()
+	undo_stack.append({"face": face, "actions": actions})
+
+func _attempt_undo() -> void:
+	if undo_waiting:
+		return
+	if undo_stack.is_empty():
+		return
+	var action: Dictionary = undo_stack.pop_back()
+	_start_undo(action)
+
+func _start_undo(action: Dictionary) -> void:
+	if action.is_empty():
+		return
+	if grid_view.is_rotating():
+		undo_pending = action
+		undo_waiting = true
+		grid_view.rotation_finished.connect(_on_undo_rotation_finished, Object.CONNECT_ONE_SHOT)
+		return
+	var target_face: int = int(action.face)
+	if current_depth > 1 and grid_view.get_front_face() != target_face:
+		undo_pending = action
+		undo_waiting = true
+		grid_view.rotation_finished.connect(_on_undo_rotation_finished, Object.CONNECT_ONE_SHOT)
+		grid_view.snap_to_face(target_face)
+		return
+	_apply_undo(action)
+
+func _on_undo_rotation_finished() -> void:
+	if not undo_waiting:
+		return
+	undo_waiting = false
+	var action: Dictionary = undo_pending
+	undo_pending = {}
+	undo_delayed_action = action
+	var timer := get_tree().create_timer(UNDO_ROTATE_DELAY)
+	timer.timeout.connect(_on_undo_delay_timeout, Object.CONNECT_ONE_SHOT)
+
+func _on_undo_delay_timeout() -> void:
+	if undo_delayed_action.is_empty():
+		return
+	var action := undo_delayed_action
+	undo_delayed_action = {}
+	_start_undo(action)
+
+func _apply_undo(action: Dictionary) -> void:
+	if model == null:
+		return
+	suppress_record = true
+	var changed := false
+	var actions: Array = []
+	if action.has("actions") and action.actions is Array:
+		actions = action.actions
+	for i in range(actions.size() - 1, -1, -1):
+		var item: Dictionary = actions[i]
+		var a: int = int(item.a)
+		var b: int = int(item.b)
+		var connected: bool = bool(item.connected)
+		var before_a := model.remaining_dots(a)
+		var before_b := model.remaining_dots(b)
+		if connected:
+			if model.remove_placed_edge(a, b):
+				_play_edge_sfx(a, b, false)
+				_maybe_play_node_complete(a, b, before_a, before_b)
+				changed = true
+		else:
+			if model.add_placed_edge(a, b):
+				_play_edge_sfx(a, b, true)
+				_maybe_play_node_complete(a, b, before_a, before_b)
+				changed = true
+	suppress_record = false
+	if changed:
+		completion_panel.visible = false
+		_clear_selection()
+		grid_view.queue_redraw()
+
 func _on_back_pressed() -> void:
 	_play_sfx(sfx_ui)
 	completion_panel.visible = false
@@ -533,6 +684,9 @@ func _on_back_pressed() -> void:
 
 func _on_restart_pressed() -> void:
 	_play_sfx(sfx_ui)
+	undo_stack.clear()
+	undo_pending = {}
+	undo_waiting = false
 	_generate_model(-1)
 	completion_panel.visible = false
 	grid_view.selected_id = -1
@@ -540,6 +694,9 @@ func _on_restart_pressed() -> void:
 
 func _on_next_pressed() -> void:
 	_play_sfx(sfx_ui)
+	undo_stack.clear()
+	undo_pending = {}
+	undo_waiting = false
 	_generate_model(int(Time.get_ticks_msec()))
 	completion_panel.visible = false
 	grid_view.selected_id = -1

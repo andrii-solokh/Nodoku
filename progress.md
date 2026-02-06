@@ -20,3 +20,25 @@ TODO
 2026-02-05 update
 - Updated dev_server.js to optionally brotli-decompress assets for local testing (DECOMPRESS_BROTLI=1) and added request/error logging.
 - Added .gitattributes to force wasm/pck as binary (avoid text conversion).
+
+2026-02-06
+- Increased HUD scale on mobile web by adding dynamic scaling for TopBar and CompletionPanel in scripts/game_controller.gd.
+- Tried running Playwright client from develop-web-game skill; fails to resolve playwright module when executed from skills path (local node_modules exists in repo).
+- Dev server requires escalated permissions to bind 127.0.0.1:8080 in sandbox; ran with approval.
+
+2026-02-06 update
+- Control hints now always visible with multi-line instructions (double tap/click, W/A/S/D or arrows, click/drag connect) and slightly larger font on touch devices.
+- Playwright run still blocked because browser binaries are missing; needs `npx playwright install`.
+
+2026-02-06 update
+- Tutorial is now interactive: steps advance only after required taps, with skip/complete handling and no auto-cycling.
+- Tutorial now marks as shown on first auto-display (skip works), hides the "Don't show again" checkbox, updates step copy to action prompts, and reveals steps sequentially.
+- Failed Playwright run: skill client cannot resolve `playwright` when executed from skills path (ERR_MODULE_NOT_FOUND). Dev server requires escalated permissions to bind 127.0.0.1:8080; started successfully with approval.
+
+2026-02-06 update
+- Tutorial overlay is now full-screen (no card panel), with updated layout/spacing and an extra step for rotation.
+- Tutorial demo supports swipe/drag/arrow rotation and shows layered depth; tutorial grabs focus when shown.
+- Tutorial demo now handles pan gestures (trackpad swipe) to trigger rotation step.
+
+2026-02-06 update
+- Added undo history for edge changes; double-tap on empty space undoes last edge and rotates to the face where it was created.
