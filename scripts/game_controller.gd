@@ -4,6 +4,9 @@ extends Control
 signal back_requested
 
 const DEBUG_LOG_PATH := "user://input_debug.log"
+const ENABLE_INPUT_DEBUG_LOG := false
+const START_WITH_UNSOLVED_CIRCLES := 3
+const STARTUP_CONNECTION_ANIM_DELAY := 0.012
 
 const DIFFICULTY_EASY := 0
 const DIFFICULTY_NORMAL := 1
@@ -49,6 +52,8 @@ var hint_pending: Dictionary = {}
 var hint_waiting: bool = false
 var hint_token: int = 0
 const HINT_HOLD_TIME := 2.2
+var startup_fill_in_progress: bool = false
+var startup_fill_token: int = 0
 
 @onready var grid_view: GridView = $GridView
 @onready var hud_root: Control = $HUD/Root
@@ -56,6 +61,7 @@ const HINT_HOLD_TIME := 2.2
 @onready var back_button: Button = $HUD/Root/TopBar/TopBarHBox/BackButton
 @onready var restart_button: Button = $HUD/Root/TopBar/TopBarHBox/RestartButton
 @onready var hint_button: Button = $HUD/Root/TopBar/TopBarHBox/HintButton
+@onready var solve_button: Button = $HUD/Root/TopBar/TopBarHBox/SolveButton
 @onready var completion_panel: Panel = $HUD/Root/CompletionPanel
 @onready var completion_label: Label = $HUD/Root/CompletionPanel/CompletionVBox/CompletionLabel
 @onready var next_button: Button = $HUD/Root/CompletionPanel/CompletionVBox/NextButton
@@ -75,6 +81,7 @@ func _ready() -> void:
 	back_button.pressed.connect(_on_back_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
 	hint_button.pressed.connect(_on_hint_pressed)
+	solve_button.pressed.connect(_on_solve_pressed)
 	next_button.pressed.connect(_on_back_pressed)
 	replay_button.pressed.connect(_on_next_pressed)
 	completion_panel.visible = false
@@ -134,9 +141,11 @@ func start_new_game(size: int, depth: int, difficulty: int) -> void:
 	_release_ui_focus()
 
 func _generate_model(seed: int) -> void:
+	_cancel_startup_prefill_animation()
 	var params := _difficulty_params(current_difficulty)
 	var gen := LevelGenerator.new()
 	model = gen.generate(current_size, current_size, current_depth, params.density, seed, params.min_nonzero_ratio, params.max_attempts)
+	model.placed_edges.clear()
 	grid_view.model = model
 	undo_stack.clear()
 	undo_pending = {}
@@ -145,6 +154,93 @@ func _generate_model(seed: int) -> void:
 	hint_waiting = false
 	hint_token += 1
 	_compute_total_required_edges()
+
+func _build_startup_prefill_edges(unsolved_circles: int) -> Array:
+	var out: Array = []
+	if model == null:
+		return out
+	var target_edges: Dictionary = {}
+	for key in model.solution_edges.keys():
+		target_edges[key] = true
+	if target_edges.is_empty():
+		return out
+	var candidates: Array = []
+	for node_id in range(model.total_nodes()):
+		if not model.is_active(node_id):
+			continue
+		if model.required[node_id] <= 0:
+			continue
+		candidates.append(node_id)
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	if not candidates.is_empty():
+		_shuffle_array(candidates, rng)
+	var target_unsolved := mini(maxi(unsolved_circles, 0), candidates.size())
+	var removed_any := false
+	for i in range(target_unsolved):
+		if _remove_random_solution_edge_for_node_from_set(int(candidates[i]), target_edges, rng):
+			removed_any = true
+	# Safety: never start fully solved.
+	if not removed_any and not target_edges.is_empty():
+		var target_keys := target_edges.keys()
+		var pick := rng.randi_range(0, target_keys.size() - 1)
+		target_edges.erase(target_keys[pick])
+	out = target_edges.keys()
+	_shuffle_array(out, rng)
+	return out
+
+func _remove_random_solution_edge_for_node_from_set(node_id: int, target_edges: Dictionary, rng: RandomNumberGenerator) -> bool:
+	var edge_keys: Array = []
+	for nb in model.neighbors(node_id):
+		var key := model.edge_key(node_id, nb)
+		if not model.solution_edges.has(key):
+			continue
+		if not target_edges.has(key):
+			continue
+		edge_keys.append(key)
+	if edge_keys.is_empty():
+		return false
+	var idx := rng.randi_range(0, edge_keys.size() - 1)
+	target_edges.erase(edge_keys[idx])
+	return true
+
+func _start_startup_prefill_animation(edge_keys: Array) -> void:
+	if model == null:
+		return
+	if edge_keys.is_empty():
+		startup_fill_in_progress = false
+		return
+	startup_fill_token += 1
+	var token := startup_fill_token
+	startup_fill_in_progress = true
+	_run_startup_prefill_animation(token, edge_keys)
+
+func _run_startup_prefill_animation(token: int, edge_keys: Array) -> void:
+	for key in edge_keys:
+		if token != startup_fill_token:
+			return
+		if model.placed_edges.has(key):
+			continue
+		model.placed_edges[key] = true
+		var pair := model.decode_edge(int(key))
+		_record_action(pair.x, pair.y, true)
+		grid_view.queue_redraw()
+		await get_tree().create_timer(STARTUP_CONNECTION_ANIM_DELAY).timeout
+	if token != startup_fill_token:
+		return
+	startup_fill_in_progress = false
+	grid_view.queue_redraw()
+
+func _cancel_startup_prefill_animation() -> void:
+	startup_fill_token += 1
+	startup_fill_in_progress = false
+
+func _shuffle_array(arr: Array, rng: RandomNumberGenerator) -> void:
+	for i in range(arr.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var tmp = arr[i]
+		arr[i] = arr[j]
+		arr[j] = tmp
 
 func _compute_total_required_edges() -> void:
 	total_required_edges = 0
@@ -167,6 +263,8 @@ func _difficulty_params(difficulty: int) -> Dictionary:
 			return {"density": 0.42, "min_nonzero_ratio": 0.45, "max_attempts": 14}
 
 func _input(event: InputEvent) -> void:
+	if startup_fill_in_progress:
+		return
 	last_event_time = float(Time.get_ticks_msec()) / 1000.0
 	if event is InputEventPanGesture:
 		_log_debug("pan gesture delta=%s" % [str(event.delta)])
@@ -608,6 +706,23 @@ func _on_hint_pressed() -> void:
 	_play_sfx(sfx_ui)
 	_show_hint()
 
+func _on_solve_pressed() -> void:
+	_play_sfx(sfx_ui)
+	if model == null:
+		return
+	_cancel_startup_prefill_animation()
+	completion_panel.visible = false
+	undo_stack.clear()
+	undo_pending = {}
+	undo_waiting = false
+	undo_delayed_action = {}
+	_clear_selection()
+	_clear_hint()
+	model.placed_edges.clear()
+	grid_view.queue_redraw()
+	var edge_keys := _build_startup_prefill_edges(START_WITH_UNSOLVED_CIRCLES)
+	_start_startup_prefill_animation(edge_keys)
+
 func _show_hint() -> void:
 	if model == null:
 		return
@@ -634,13 +749,7 @@ func _find_hint_node() -> int:
 		var remaining := model.remaining_dots(node_id)
 		if remaining <= 0:
 			continue
-		var free_neighbors := 0
-		for nb in model.neighbors(node_id):
-			if model.placed_edge_exists(node_id, nb):
-				continue
-			if model.remaining_dots(nb) <= 0:
-				continue
-			free_neighbors += 1
+		var free_neighbors := _free_neighbor_count(node_id)
 		if free_neighbors <= 0:
 			continue
 		if remaining != free_neighbors:
@@ -651,7 +760,40 @@ func _find_hint_node() -> int:
 		if score > best_score:
 			best_score = score
 			best_id = node_id
+	if best_id != -1:
+		return best_id
+	var best_slack := 9999
+	best_score = -1.0
+	for node_id in range(model.total_nodes()):
+		if not model.is_active(node_id):
+			continue
+		var remaining := model.remaining_dots(node_id)
+		if remaining <= 0:
+			continue
+		var free_neighbors := _free_neighbor_count(node_id)
+		if free_neighbors <= 0:
+			continue
+		if free_neighbors < remaining:
+			continue
+		var slack := free_neighbors - remaining
+		var score := float(remaining) * 0.5
+		if grid_view.is_node_on_front_face(node_id):
+			score += 2.0
+		if slack < best_slack or (slack == best_slack and score > best_score):
+			best_slack = slack
+			best_score = score
+			best_id = node_id
 	return best_id
+
+func _free_neighbor_count(node_id: int) -> int:
+	var count := 0
+	for nb in model.neighbors(node_id):
+		if model.placed_edge_exists(node_id, nb):
+			continue
+		if model.remaining_dots(nb) <= 0:
+			continue
+		count += 1
+	return count
 
 func _on_hint_rotation_finished() -> void:
 	if not hint_waiting:
@@ -771,11 +913,13 @@ func _apply_undo(action: Dictionary) -> void:
 		grid_view.queue_redraw()
 
 func _on_back_pressed() -> void:
+	_cancel_startup_prefill_animation()
 	_play_sfx(sfx_ui)
 	completion_panel.visible = false
 	back_requested.emit()
 
 func _on_restart_pressed() -> void:
+	_cancel_startup_prefill_animation()
 	_play_sfx(sfx_ui)
 	undo_stack.clear()
 	undo_pending = {}
@@ -786,6 +930,7 @@ func _on_restart_pressed() -> void:
 	grid_view.queue_redraw()
 
 func _on_next_pressed() -> void:
+	_cancel_startup_prefill_animation()
 	_play_sfx(sfx_ui)
 	undo_stack.clear()
 	undo_pending = {}
@@ -826,10 +971,28 @@ func _log_pointer(tag: String, pos: Vector2) -> void:
 	_log_debug(message)
 
 func _is_pointer_over_ui(pos: Vector2) -> bool:
-	var hovered := get_viewport().gui_get_hovered_control()
-	if hovered == null:
+	if _control_hit(back_button, pos):
+		return true
+	if _control_hit(restart_button, pos):
+		return true
+	if _control_hit(hint_button, pos):
+		return true
+	if _control_hit(solve_button, pos):
+		return true
+	if _control_hit(next_button, pos):
+		return true
+	if _control_hit(replay_button, pos):
+		return true
+	if _control_hit(completion_panel, pos):
+		return true
+	return false
+
+func _control_hit(control: Control, pos: Vector2) -> bool:
+	if not is_instance_valid(control):
 		return false
-	return _is_ui_control(hovered)
+	if not control.visible:
+		return false
+	return control.get_global_rect().has_point(pos)
 
 func _is_ui_control(node: Control) -> bool:
 	var current: Node = node
@@ -865,6 +1028,8 @@ func _focus_canvas_web() -> void:
 	""")
 
 func _log_debug(message: String) -> void:
+	if not ENABLE_INPUT_DEBUG_LOG:
+		return
 	var file := FileAccess.open(DEBUG_LOG_PATH, FileAccess.READ_WRITE)
 	if file == null:
 		file = FileAccess.open(DEBUG_LOG_PATH, FileAccess.WRITE)

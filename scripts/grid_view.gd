@@ -18,6 +18,8 @@ const COLOR_QUIET := Color("#DAD4CC")
 const FADE_BACK := 0.05
 const FADE_FRONT := 1.0
 const PICK_FADE_MIN := 0.45
+const PICK_BLUR_MAX := 0.5
+const DEPTH_BLUR_STEPS := 5
 
 var cell_size: float = 96.0
 var base_radius: float = 28.0
@@ -29,6 +31,8 @@ var hint_id: int = -1
 var rotation_basis: Basis = Basis()
 var rotation_active: bool = false
 var rotation_duration: float = 0.35
+var rotation_timeout_secs: float = 1.0
+var rotation_deadline: float = 0.0
 var _tween_from: Quaternion
 var _tween_to: Quaternion
 var dot_states: Dictionary = {}
@@ -54,6 +58,10 @@ func _set_model(value: GridModel) -> void:
 	queue_redraw()
 
 func _process(delta: float) -> void:
+	if rotation_active:
+		var now := float(Time.get_ticks_msec()) / 1000.0
+		if now > rotation_deadline:
+			_finish_rotation()
 	_sync_edge_states()
 	var dirty := false
 	float_time += delta * float_speed
@@ -135,6 +143,8 @@ func snap_to_nearest() -> void:
 
 func _animate_to_basis(target: Basis) -> void:
 	rotation_active = true
+	var now := float(Time.get_ticks_msec()) / 1000.0
+	rotation_deadline = now + maxf(rotation_duration + 0.25, rotation_timeout_secs)
 	_tween_from = rotation_basis.get_rotation_quaternion()
 	_tween_to = target.get_rotation_quaternion()
 	var tween := create_tween()
@@ -147,7 +157,10 @@ func _set_rotation_slerp(t: float) -> void:
 	queue_redraw()
 
 func _finish_rotation() -> void:
+	if not rotation_active:
+		return
 	rotation_active = false
+	rotation_deadline = 0.0
 	rotation_finished.emit()
 
 func _draw() -> void:
@@ -217,18 +230,22 @@ func pick_node(global_pos: Vector2) -> int:
 		return -1
 	var nodes := _compute_nodes()
 	var best_id := -1
-	var best_dist := 1e9
+	var best_score := 1e9
 	for n in nodes:
 		if n.fade < PICK_FADE_MIN:
 			continue
-		if not _is_node_on_front_face(n.id):
+		var blur := clampf(float(n.get("blur", 1.0)), 0.0, 1.0)
+		if blur > PICK_BLUR_MAX:
 			continue
 		var pos: Vector2 = n.pos
 		var radius: float = n.radius
 		var d := pos.distance_to(global_pos)
-		if d <= radius * 1.2 and d < best_dist:
-			best_dist = d
-			best_id = n.id
+		var pick_radius := radius * lerpf(1.2, 1.35, blur)
+		if d <= pick_radius:
+			var score := (d / maxf(1.0, radius)) + blur * 0.65
+			if score < best_score:
+				best_score = score
+				best_id = n.id
 	return best_id
 
 func _compute_nodes() -> Array:
@@ -251,7 +268,8 @@ func _compute_nodes() -> Array:
 		var face_z := _node_face_z(c)
 		var face_fade := clampf(face_z, 0.0, 1.0)
 		fade = maxf(fade, face_fade)
-		out.append({"id": node_id, "pos": screen, "depth": r.z, "radius": radius, "fade": fade})
+		var blur := clampf(pow(1.0 - face_fade, 1.15), 0.0, 1.0)
+		out.append({"id": node_id, "pos": screen, "depth": r.z, "radius": radius, "fade": fade, "blur": blur})
 	out.sort_custom(func(a, b): return a.depth < b.depth)
 	return out
 
@@ -285,22 +303,47 @@ func _draw_node_item(n: Dictionary) -> void:
 	var pos: Vector2 = n.pos
 	var radius: float = n.radius
 	var fade: float = n.fade
+	var blur_strength: float = clampf(float(n.get("blur", 0.0)), 0.0, 1.0)
+	if blur_strength > 0.02:
+		_draw_depth_blur(pos, radius, fade, blur_strength)
 	var fill_color := _tint_color(COLOR_BG, fade)
 	var quiet_color := _tint_color(COLOR_QUIET, fade)
 	var circle_color := _tint_color(COLOR_CIRCLE, fade)
 	var dot_color := _tint_color(COLOR_DOT, fade)
+	fill_color = fill_color.lerp(COLOR_BG, blur_strength * 0.34)
+	quiet_color = quiet_color.lerp(COLOR_BG, blur_strength * 0.45)
+	circle_color = circle_color.lerp(COLOR_BG, blur_strength * 0.62)
+	dot_color = dot_color.lerp(COLOR_BG, blur_strength * 0.74)
 	# Opaque fill to occlude nodes behind.
 	draw_circle(pos, maxf(2.0, radius - maxf(0.5, radius * 0.08)), fill_color)
 	if model.remaining_dots(node_id) == 0:
 		draw_circle(pos, maxf(2.0, radius - 1.2), quiet_color)
-	draw_arc(pos, radius, 0.0, TAU, 48, circle_color, maxf(1.6, radius * 0.12))
+	var ring_alpha := lerpf(1.0, 0.42, blur_strength)
+	var ring_width := maxf(1.6, radius * lerpf(0.12, 0.18, blur_strength))
+	circle_color.a *= ring_alpha
+	draw_arc(pos, radius, 0.0, TAU, 48, circle_color, ring_width)
 	if node_id == selected_id:
 		var sel_color := _tint_color(COLOR_SELECTED, maxf(fade, 0.6))
 		draw_arc(pos, radius + 4.0, 0.0, TAU, 48, sel_color, maxf(1.6, radius * 0.12))
 	if node_id == hint_id:
 		var hint_color := _tint_color(COLOR_SELECTED, maxf(fade, 0.55))
 		draw_arc(pos, radius + 8.0, 0.0, TAU, 48, hint_color, maxf(1.4, radius * 0.1))
-	_draw_dots(node_id, pos, model.remaining_dots(node_id), radius, dot_color)
+	dot_color.a *= lerpf(1.0, 0.14, blur_strength)
+	if dot_color.a > 0.02:
+		_draw_dots(node_id, pos, model.remaining_dots(node_id), radius, dot_color)
+
+func _draw_depth_blur(pos: Vector2, radius: float, fade: float, blur_strength: float) -> void:
+	var fog := clampf(1.0 - fade, 0.0, 1.0)
+	var base := _tint_color(COLOR_CIRCLE, maxf(0.15, fade * 0.75)).lerp(COLOR_BG, lerpf(0.45, 0.72, fog))
+	var layers := maxi(1, int(round(lerpf(1.0, float(DEPTH_BLUR_STEPS), blur_strength))))
+	for i in range(layers, 0, -1):
+		var t := float(i) / float(layers)
+		var blur_color := base
+		var max_alpha := lerpf(0.03, 0.22, blur_strength)
+		blur_color.a = max_alpha * t
+		var spread := radius * lerpf(0.05, 0.55, blur_strength) * t
+		var blur_radius := radius + spread
+		draw_circle(pos, blur_radius, blur_color)
 
 func _draw_dots(node_id: int, pos: Vector2, count: int, radius: float, color: Color) -> void:
 	if count <= 0:

@@ -42,3 +42,37 @@ TODO
 
 2026-02-06 update
 - Added undo history for edge changes; double-tap on empty space undoes last edge and rotates to the face where it was created.
+
+2026-02-09
+- Investigated large-level mid-game input freeze report (`6x6x6`, `7x7x7`).
+- Added defensive fixes:
+  - Disabled per-input `user://input_debug.log` writes by default (`ENABLE_INPUT_DEBUG_LOG := false`) to avoid web file I/O overhead during long sessions.
+  - Reworked pointer-vs-UI detection to use positional hit-testing (`Control.get_global_rect().has_point(pos)`) instead of viewport hovered-control state, reducing chances of false input blocking.
+  - Added GridView rotation timeout fallback so `rotation_active` cannot remain stuck forever if a tween completion signal is missed.
+- Validation:
+  - Installed local Playwright Chromium (`npx playwright install chromium`) and ran browser interaction scripts against `http://127.0.0.1:8080`.
+  - Verified game input still responds after repeated board clicks + keyboard rotations + intermittent top-bar hover.
+  - Ran `godot --headless --path . --quit-after 3 --verbose` to confirm project boots without runtime script errors.
+
+2026-02-09 update
+- Added a dedicated back-layer blur pass in `scripts/grid_view.gd` so non-front circles render softer while front-face circles remain crisp.
+
+2026-02-09 update
+- New game setup now starts from an almost-complete board:
+  - Added `START_WITH_UNSOLVED_CIRCLES := 3` in `scripts/game_controller.gd`.
+  - During generation, puzzle now pre-fills the whole solution and then removes edges touching a few circles, so the start state is almost solved but not complete.
+
+2026-02-09 update
+- Startup prefill is now animated:
+  - Level begins with no placed edges, then solution edges are added one-by-one with short delay (`STARTUP_CONNECTION_ANIM_DELAY`).
+  - Target state still leaves a few circles unsolved.
+  - Gameplay input is temporarily blocked during startup animation to avoid race conditions.
+  - Animated startup connections are now recorded in `undo_stack`, so they can be undone like normal player actions.
+  - Auto-start solve was removed. Added top-bar `Solve` button to trigger the same animated prefill on demand.
+- Increased blur/softening strength in both `scripts/grid_view.gd` and `scripts/tutorial_demo.gd` so back layers are visibly distinct in gameplay and tutorial preview.
+- Reworked back-layer visuals to be unmistakably non-front: blurred multi-offset ring strokes + suppressed back-layer dots in both game and tutorial renderers.
+- Replaced threshold-based front/back blur with continuous depth-of-field style blur in `scripts/grid_view.gd` and `scripts/tutorial_demo.gd`.
+- Blur strength now scales smoothly from face alignment/depth (`blur = pow(1 - face_fade, 1.15)`) so focus transitions continuously while rotating.
+- Verified project starts cleanly with `godot --headless --path . --quit-after 3 --verbose`.
+- Fixed node picking to match continuous focus model: replaced strict front-face-only hit test with blur-scored picking in `scripts/grid_view.gd` (`PICK_BLUR_MAX`, weighted score by distance+blur).
+- This should restore interaction on near-focus nodes that were previously visible but blocked by hard face-threshold picking.

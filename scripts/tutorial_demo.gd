@@ -10,6 +10,7 @@ signal step_completed(step: int)
 @export var layer_count: int = 4
 @export var layer_spacing: float = 18.0
 @export var rotation_lerp: float = 6.0
+const DEPTH_BLUR_STEPS := 5
 
 var expected_step: int = 0
 var selected_left: bool = false
@@ -165,27 +166,49 @@ func _draw() -> void:
 	for i in range(layers - 1, -1, -1):
 		var depth: float = float(i) / max(1.0, float(layers - 1))
 		var alpha: float = lerpf(0.35, 1.0, 1.0 - depth)
+		var blur_strength: float = clampf(pow(depth, 1.05), 0.0, 1.0)
 		var pos_offset: Vector2 = offset * i
 		var is_front: bool = i == 0
-		_draw_demo_node(left + pos_offset, r, left_dots, selected_left and is_front, alpha)
-		_draw_demo_node(right + pos_offset, r, right_dots, false, alpha)
+		_draw_demo_node(left + pos_offset, r, left_dots, selected_left and is_front, alpha, blur_strength)
+		_draw_demo_node(right + pos_offset, r, right_dots, false, alpha, blur_strength)
 		if line_t > 0.0 and is_front:
 			_draw_demo_line(left, right, r, line_t, line_t)
 
-func _draw_demo_node(pos: Vector2, r: float, dots: int, selected: bool, alpha: float) -> void:
+func _draw_demo_node(pos: Vector2, r: float, dots: int, selected: bool, alpha: float, blur_strength: float) -> void:
+	if blur_strength > 0.02:
+		_draw_demo_depth_blur(pos, r, alpha, blur_strength)
 	var fill := fill_color
 	fill.a *= alpha
 	var outline := circle_color
 	outline.a *= alpha
 	var dot := dot_color
 	dot.a *= alpha
+	fill = fill.lerp(fill_color, blur_strength * 0.12)
+	fill = fill.lerp(Color(fill_color.r, fill_color.g, fill_color.b, fill.a), blur_strength * 0.22)
+	outline = outline.lerp(fill_color, blur_strength * 0.58)
+	dot = dot.lerp(fill_color, blur_strength * 0.76)
 	draw_circle(pos, maxf(2.0, r - maxf(1.0, r * 0.12)), fill)
-	draw_arc(pos, r, 0.0, TAU, 48, outline, maxf(1.4, r * 0.12))
+	outline.a *= lerpf(1.0, 0.42, blur_strength)
+	draw_arc(pos, r, 0.0, TAU, 48, outline, maxf(1.4, r * lerpf(0.12, 0.18, blur_strength)))
 	if selected:
 		var select := selected_color
 		select.a *= alpha
 		draw_arc(pos, r + 3.5, 0.0, TAU, 48, select, maxf(1.4, r * 0.12))
-	_draw_demo_dots(pos, r, dots, dot)
+	dot.a *= lerpf(1.0, 0.16, blur_strength)
+	if dot.a > 0.02:
+		_draw_demo_dots(pos, r, dots, dot)
+
+func _draw_demo_depth_blur(pos: Vector2, r: float, alpha: float, blur_strength: float) -> void:
+	var fog := clampf(1.0 - alpha, 0.0, 1.0)
+	var base := circle_color.lerp(fill_color, lerpf(0.28, 0.68, fog))
+	var layers := maxi(1, int(round(lerpf(1.0, float(DEPTH_BLUR_STEPS), blur_strength))))
+	for i in range(layers, 0, -1):
+		var t := float(i) / float(layers)
+		var blur := base
+		var max_alpha := lerpf(0.04, 0.2, blur_strength)
+		blur.a = max_alpha * t
+		var blur_r := r + r * lerpf(0.06, 0.48, blur_strength) * t
+		draw_circle(pos, blur_r, blur)
 
 func _draw_demo_line(a: Vector2, b: Vector2, r: float, progress: float, alpha: float) -> void:
 	progress = clampf(progress, 0.0, 1.0)
