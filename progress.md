@@ -76,3 +76,42 @@ TODO
 - Verified project starts cleanly with `godot --headless --path . --quit-after 3 --verbose`.
 - Fixed node picking to match continuous focus model: replaced strict front-face-only hit test with blur-scored picking in `scripts/grid_view.gd` (`PICK_BLUR_MAX`, weighted score by distance+blur).
 - This should restore interaction on near-focus nodes that were previously visible but blocked by hard face-threshold picking.
+2026-02-09 update
+- Added Shift+click parity with double-click node behavior in `scripts/game_controller.gd`:
+  - Left mouse release now forwards `shift_pressed` through pointer release/drag-end paths.
+  - `_handle_press(..., force_node_auto_fill)` triggers `_auto_fill_node(node_id)` immediately when Shift is held.
+  - This makes single Shift+click on a node connect-all / disconnect-all for that node.
+- Added redo support and keyboard shortcuts:
+  - New `redo_stack` history stack.
+  - Added `Ctrl/Cmd + Z` -> undo and `Ctrl/Cmd + Shift + Z` -> redo in both event-key path and web polling path.
+  - Refactored history application into `_start_history_step(action, is_redo)` and `_apply_history_step(action, is_redo)` so face-snap/rotation wait logic works for both undo and redo.
+  - Clearing history now clears both stacks on new game/model generation, solve, restart, and next level.
+- Validation:
+  - `godot --headless --path . --quit-after 3 --verbose` passes after changes.
+  - Ran Playwright browser checks against `http://127.0.0.1:8090` (custom script) and captured screenshots:
+    - `output/manual-check/11-shift-click-autofill.png` (Shift+click action applied)
+    - `output/manual-check/12-undo-ctrl-z.png` (undo)
+    - `output/manual-check/13-redo-ctrl-shift-z.png` (redo)
+    - `output/manual-check/14-undo-cmd-z.png` (Cmd undo)
+    - `output/manual-check/15-redo-cmd-shift-z.png` (Cmd+Shift redo)
+2026-02-09 update
+- Added in-game side help panel in `scenes/Main.tscn` (`Game/HUD/Root/HelpPanel`) with full goal + controls list.
+- Added `H` keyboard toggle in `scripts/game_controller.gd` via `_toggle_help()`.
+- Fixed web double-toggle issue by handling `H` in only one path on web (`_poll_keyboard_web`) and skipping event-path toggle when polling is enabled.
+- Updated `scripts/main.gd` bottom HUD text to point players to the new help panel (`Press H`).
+- Validation:
+  - `godot --headless --path . --quit-after 3 --verbose` passes.
+  - Exported web build and verified in browser with Playwright.
+  - Confirmed help toggle visual states in screenshots:
+    - `output/web-game/help-toggle-check-2/01-before-help.png`
+    - `output/web-game/help-toggle-check-2/02-help-open.png`
+    - `output/web-game/help-toggle-check-2/03-help-closed.png`
+2026-02-09 update
+- Fixed Help panel layout warning from Godot: wrapped HelpText with a ScrollContainer and set `custom_minimum_size` on the label.
+- Added top-bar `Help` button for non-keyboard access; kept `H` shortcut.
+- Help panel remains bottom-right and now displays reliably without clipping issues.
+- Updated HUD hint copy to mention `Help` button.
+- Validation:
+  - `godot --headless --path . --quit-after 2 --verbose` passes.
+  - Browser screenshot confirms help visible via Help button:
+    - `output/web-game/help-button-check/02-help-open-via-button.png`

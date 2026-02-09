@@ -18,7 +18,7 @@ const COLOR_QUIET := Color("#DAD4CC")
 const FADE_BACK := 0.05
 const FADE_FRONT := 1.0
 const PICK_FADE_MIN := 0.45
-const PICK_BLUR_MAX := 0.5
+const PICK_BLUR_MAX := 0.75
 const DEPTH_BLUR_STEPS := 5
 
 var cell_size: float = 96.0
@@ -234,15 +234,20 @@ func pick_node(global_pos: Vector2) -> int:
 	for n in nodes:
 		if n.fade < PICK_FADE_MIN:
 			continue
+		var is_front_face := _is_node_on_front_face(int(n.id))
 		var blur := clampf(float(n.get("blur", 1.0)), 0.0, 1.0)
-		if blur > PICK_BLUR_MAX:
+		if not is_front_face and blur > PICK_BLUR_MAX:
 			continue
 		var pos: Vector2 = n.pos
 		var radius: float = n.radius
 		var d := pos.distance_to(global_pos)
 		var pick_radius := radius * lerpf(1.2, 1.35, blur)
 		if d <= pick_radius:
-			var score := (d / maxf(1.0, radius)) + blur * 0.65
+			var score := d / maxf(1.0, radius)
+			if is_front_face:
+				score += blur * 0.15
+			else:
+				score += 0.55 + blur * 0.7
 			if score < best_score:
 				best_score = score
 				best_id = n.id
