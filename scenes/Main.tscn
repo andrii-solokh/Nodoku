@@ -10,28 +10,38 @@
 [ext_resource type="Texture2D" path="res://assets/icons/back.svg" id="9"]
 [ext_resource type="Texture2D" path="res://assets/icons/restart.svg" id="10"]
 [ext_resource type="Script" path="res://scripts/tutorial_demo.gd" id="11"]
+[ext_resource type="Shader" path="res://shaders/live_background.gdshader" id="12"]
 
 [sub_resource type="SystemFont" id="3"]
-font_names = PackedStringArray("Avenir Next", "Avenir", "Segoe UI", "Noto Sans")
+font_names = PackedStringArray("Menlo", "Monaco", "Consolas", "Courier New", "Noto Sans Mono")
 font_weight = 600
 subpixel_positioning = 0
 
 [sub_resource type="Theme" id="4"]
 default_font = SubResource("3")
 default_font_size = 20
-Label/colors/font_color = Color(0.16, 0.2, 0.22, 1)
+Label/colors/font_color = Color(0.56, 0.92, 0.62, 1)
 
 [sub_resource type="Gradient" id="5"]
-colors = PackedColorArray(0.962, 0.942, 0.914, 1, 0.925, 0.937, 0.952, 1)
+colors = PackedColorArray(0.0117647, 0.0313726, 0.0196078, 1, 0.0235294, 0.0784314, 0.0431373, 1)
 
 [sub_resource type="GradientTexture2D" id="6"]
 gradient = SubResource("5")
 width = 2
 height = 2
 
+[sub_resource type="ShaderMaterial" id="13"]
+shader = ExtResource("12")
+shader_parameter/theme = 0
+shader_parameter/speed = 1.0
+shader_parameter/glow_strength = 1.0
+shader_parameter/scan_strength = 0.12
+shader_parameter/grid_strength = 0.1
+shader_parameter/grain_strength = 0.08
+
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(1, 1, 1, 0)
-border_color = Color(0.78, 0.72, 0.64, 0.6)
+border_color = Color(0.26, 0.68, 0.35, 0.4)
 shadow_color = Color(0, 0, 0, 0)
 
 [sub_resource type="StyleBoxFlat" id="10"]
@@ -39,12 +49,12 @@ content_margin_left = 18.0
 content_margin_top = 8.0
 content_margin_right = 24.0
 content_margin_bottom = 8.0
-bg_color = Color(0.95, 0.93, 0.89, 1)
+bg_color = Color(0.03, 0.11, 0.06, 0.92)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.78, 0.72, 0.64, 0.6)
+border_color = Color(0.34, 0.82, 0.45, 0.72)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
 corner_radius_bottom_right = 16
@@ -55,12 +65,12 @@ content_margin_left = 18.0
 content_margin_top = 8.0
 content_margin_right = 24.0
 content_margin_bottom = 8.0
-bg_color = Color(0.9, 0.86, 0.8, 1)
+bg_color = Color(0.02, 0.08, 0.04, 0.98)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.72, 0.66, 0.58, 0.7)
+border_color = Color(0.42, 0.95, 0.56, 0.9)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
 corner_radius_bottom_right = 16
@@ -71,19 +81,19 @@ content_margin_left = 18.0
 content_margin_top = 8.0
 content_margin_right = 24.0
 content_margin_bottom = 8.0
-bg_color = Color(0.93, 0.9, 0.85, 1)
+bg_color = Color(0.05, 0.17, 0.1, 0.96)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.78, 0.72, 0.64, 0.65)
+border_color = Color(0.38, 0.9, 0.5, 0.8)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
 [sub_resource type="StyleBoxFlat" id="7"]
-bg_color = Color(0.27, 0.35, 0.37, 1)
+bg_color = Color(0.16, 0.37, 0.22, 1)
 corner_radius_top_left = 18
 corner_radius_top_right = 18
 corner_radius_bottom_right = 18
@@ -93,26 +103,26 @@ shadow_size = 10
 shadow_offset = Vector2(0, 4)
 
 [sub_resource type="StyleBoxFlat" id="9"]
-bg_color = Color(0.23, 0.3, 0.32, 1)
+bg_color = Color(0.1, 0.26, 0.15, 1)
 corner_radius_top_left = 18
 corner_radius_top_right = 18
 corner_radius_bottom_right = 18
 corner_radius_bottom_left = 18
 
 [sub_resource type="StyleBoxFlat" id="8"]
-bg_color = Color(0.31, 0.4, 0.42, 1)
+bg_color = Color(0.22, 0.48, 0.3, 1)
 corner_radius_top_left = 18
 corner_radius_top_right = 18
 corner_radius_bottom_right = 18
 corner_radius_bottom_left = 18
 
 [sub_resource type="StyleBoxFlat" id="2"]
-bg_color = Color(1, 1, 1, 0.98)
+bg_color = Color(0.03, 0.12, 0.07, 0.96)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.78, 0.72, 0.64, 0.5)
+border_color = Color(0.3, 0.8, 0.42, 0.72)
 corner_radius_top_left = 22
 corner_radius_top_right = 22
 corner_radius_bottom_right = 22
@@ -136,6 +146,7 @@ layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
+material = SubResource("13")
 texture = SubResource("6")
 expand_mode = 1
 
@@ -170,14 +181,14 @@ alignment = 1
 
 [node name="Title" type="Label" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=352786825]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.17, 0.22, 0.24, 1)
+theme_override_colors/font_color = Color(0.74, 1, 0.78, 1)
 theme_override_font_sizes/font_size = 64
 text = "Nodes"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=2074178761]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.42, 0.47, 0.5, 1)
+theme_override_colors/font_color = Color(0.36, 0.58, 0.4, 1)
 theme_override_font_sizes/font_size = 20
 text = "Connect every dot"
 horizontal_alignment = 1
@@ -193,7 +204,7 @@ theme_override_constants/separation = 16
 [node name="GridSizeLabel" type="Label" parent="Menu/MenuPanel/MenuMargin/VBox/GridSizeRow" unique_id=295329560]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.26, 0.28, 1)
+theme_override_colors/font_color = Color(0.46, 0.76, 0.52, 1)
 theme_override_font_sizes/font_size = 22
 text = "Grid Size"
 
@@ -202,9 +213,9 @@ custom_minimum_size = Vector2(260, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -217,7 +228,7 @@ theme_override_constants/separation = 16
 [node name="DepthLabel" type="Label" parent="Menu/MenuPanel/MenuMargin/VBox/DepthRow" unique_id=615111199]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.26, 0.28, 1)
+theme_override_colors/font_color = Color(0.46, 0.76, 0.52, 1)
 theme_override_font_sizes/font_size = 22
 text = "Depth"
 
@@ -226,9 +237,9 @@ custom_minimum_size = Vector2(260, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -241,7 +252,7 @@ theme_override_constants/separation = 16
 [node name="DifficultyLabel" type="Label" parent="Menu/MenuPanel/MenuMargin/VBox/DifficultyRow" unique_id=1453352947]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.26, 0.28, 1)
+theme_override_colors/font_color = Color(0.46, 0.76, 0.52, 1)
 theme_override_font_sizes/font_size = 22
 text = "Difficulty"
 
@@ -250,9 +261,9 @@ custom_minimum_size = Vector2(260, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -267,9 +278,9 @@ custom_minimum_size = Vector2(0, 78)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
-theme_override_colors/font_color = Color(0.97, 0.96, 0.94, 1)
-theme_override_colors/font_pressed_color = Color(0.97, 0.96, 0.94, 1)
-theme_override_colors/font_hover_color = Color(0.97, 0.96, 0.94, 1)
+theme_override_colors/font_color = Color(0.12, 0.24, 0.16, 1)
+theme_override_colors/font_pressed_color = Color(0.12, 0.24, 0.16, 1)
+theme_override_colors/font_hover_color = Color(0.12, 0.24, 0.16, 1)
 theme_override_font_sizes/font_size = 30
 theme_override_styles/normal = SubResource("7")
 theme_override_styles/pressed = SubResource("9")
@@ -281,9 +292,9 @@ custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -307,7 +318,7 @@ offset_right = -24.0
 offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_color = Color(0.44, 0.46, 0.48, 1)
+theme_override_colors/font_color = Color(0.28, 0.45, 0.31, 1)
 theme_override_font_sizes/font_size = 18
 text = "v0.1.0"
 horizontal_alignment = 2
@@ -326,7 +337,7 @@ mouse_filter = 1
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0.97, 0.96, 0.94, 1)
+color = Color(0.02, 0.04, 0.03, 0.96)
 
 [node name="TutorialContent" type="MarginContainer" parent="Menu/TutorialOverlay"]
 layout_mode = 1
@@ -355,35 +366,35 @@ script = ExtResource("11")
 [node name="TutorialTitle" type="Label" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
 text = "How to play"
 horizontal_alignment = 1
 
 [node name="TutorialStep1" type="Label" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.22, 0.28, 0.3, 1)
+theme_override_colors/font_color = Color(0.38, 0.62, 0.43, 1)
 text = "Tap the left node to select it."
 horizontal_alignment = 1
 
 [node name="TutorialStep2" type="Label" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.22, 0.28, 0.3, 1)
+theme_override_colors/font_color = Color(0.38, 0.62, 0.43, 1)
 text = "Tap the right node to connect."
 horizontal_alignment = 1
 
 [node name="TutorialStep3" type="Label" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.22, 0.28, 0.3, 1)
+theme_override_colors/font_color = Color(0.38, 0.62, 0.43, 1)
 text = "Tap the right node again to remove."
 horizontal_alignment = 1
 
 [node name="TutorialStep4" type="Label" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.22, 0.28, 0.3, 1)
+theme_override_colors/font_color = Color(0.38, 0.62, 0.43, 1)
 text = "Swipe to rotate the structure."
 horizontal_alignment = 1
 
@@ -395,9 +406,9 @@ layout_mode = 2
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 focus_mode = 0
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -459,9 +470,9 @@ custom_minimum_size = Vector2(64, 52)
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("9")
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -474,9 +485,9 @@ custom_minimum_size = Vector2(64, 52)
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("10")
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -488,9 +499,9 @@ tooltip_text = "Restart"
 custom_minimum_size = Vector2(84, 52)
 layout_mode = 2
 focus_mode = 0
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -502,9 +513,9 @@ tooltip_text = "Hint"
 custom_minimum_size = Vector2(96, 52)
 layout_mode = 2
 focus_mode = 0
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -518,10 +529,10 @@ size_flags_horizontal = 3
 
 [node name="SideLabel" type="Label" parent="Game/HUD/Root/TopBar/TopBarHBox" unique_id=1492460377]
 visible = false
-custom_minimum_size = Vector2(200, 0)
+custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
 size_flags_horizontal = 2
-theme_override_colors/font_color = Color(0.25, 0.3, 0.32, 1)
+theme_override_colors/font_color = Color(0.44, 0.72, 0.5, 1)
 theme_override_font_sizes/font_size = 19
 text = "Side"
 horizontal_alignment = 1
@@ -531,7 +542,7 @@ layout_mode = 0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-theme_override_colors/font_color = Color(0.42, 0.47, 0.5, 1)
+theme_override_colors/font_color = Color(0.35, 0.56, 0.39, 1)
 theme_override_font_sizes/font_size = 18
 text = "Rotate: W / A / S / D or Arrow Keys"
 horizontal_alignment = 1
@@ -566,7 +577,7 @@ alignment = 1
 
 [node name="CompletionLabel" type="Label" parent="Game/HUD/Root/CompletionPanel/CompletionVBox" unique_id=422671316]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 28
 text = "Level Complete"
 horizontal_alignment = 1
@@ -579,9 +590,9 @@ layout_mode = 2
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 focus_mode = 0
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
@@ -592,9 +603,9 @@ text = "Back"
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 focus_mode = 0
-theme_override_colors/font_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_pressed_color = Color(0.19, 0.24, 0.26, 1)
-theme_override_colors/font_hover_color = Color(0.19, 0.24, 0.26, 1)
+theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")

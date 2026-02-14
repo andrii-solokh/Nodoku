@@ -144,6 +144,49 @@ func remaining_dots(node_id: int) -> int:
 		return 0
 	return max(required[node_id] - placed_degree(node_id), 0)
 
+func required_node_count() -> int:
+	var count := 0
+	for i in range(total_nodes()):
+		if not is_active(i):
+			continue
+		if required[i] <= 0:
+			continue
+		count += 1
+	return count
+
+func connected_required_count() -> int:
+	var start := -1
+	for i in range(total_nodes()):
+		if not is_active(i):
+			continue
+		if required[i] <= 0:
+			continue
+		start = i
+		break
+	if start == -1:
+		return 0
+	var visited := {}
+	var stack: Array = [start]
+	visited[start] = true
+	while not stack.is_empty():
+		var node_id := int(stack.pop_back())
+		for nb in neighbors(node_id):
+			if required[nb] <= 0:
+				continue
+			if not placed_edge_exists(node_id, nb):
+				continue
+			if visited.has(nb):
+				continue
+			visited[nb] = true
+			stack.append(nb)
+	return visited.size()
+
+func is_required_network_connected() -> bool:
+	var required_count := required_node_count()
+	if required_count <= 1:
+		return true
+	return connected_required_count() == required_count
+
 func is_solved() -> bool:
 	for i in range(total_nodes()):
 		if not is_active(i):

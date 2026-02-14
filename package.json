@@ -1,9 +1,11 @@
 {
   "scripts": {
-    "release:web": "bash scripts/release_web.sh"
+    "release:web": "bash scripts/release_web.sh",
+    "icons:generate": "node scripts/generate_icons.mjs"
   },
   "devDependencies": {
     "playwright": "^1.58.1",
+    "sharp": "^0.34.5",
     "wrangler": "^4.63.0"
   }
 }

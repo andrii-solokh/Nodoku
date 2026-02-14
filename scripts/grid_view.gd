@@ -1,6 +1,10 @@
 class_name GridView
 extends Node2D
 
+const THEME_CLASSIC := 0
+const THEME_WARM := 1
+const THEME_TERMINAL := 2
+
 const FACE_FRONT := 0
 const FACE_BACK := 1
 const FACE_LEFT := 2
@@ -8,18 +12,65 @@ const FACE_RIGHT := 3
 const FACE_TOP := 4
 const FACE_BOTTOM := 5
 
-const COLOR_BG := Color("#F4F1EC")
-const COLOR_CIRCLE := Color("#4A5A5E")
-const COLOR_DOT := Color("#2F3E46")
-const COLOR_EDGE := Color("#4A5A5E")
-const COLOR_SELECTED := Color("#C1A66A")
-const COLOR_QUIET := Color("#DAD4CC")
+const CLASSIC_BG := Color("#F4F1EC")
+const CLASSIC_CIRCLE := Color("#4A5A5E")
+const CLASSIC_DOT := Color("#2F3E46")
+const CLASSIC_EDGE := Color("#4A5A5E")
+const CLASSIC_SELECTED := Color("#C1A66A")
+const CLASSIC_QUIET := Color("#DAD4CC")
+
+const WARM_BG := Color("#090F18")
+const WARM_CIRCLE := Color("#EEA85C")
+const WARM_DOT := Color("#1C1A19")
+const WARM_EDGE := Color("#F4AE61")
+const WARM_SELECTED := Color("#FFECC8")
+const WARM_QUIET := Color("#1E2A3D")
+
+const TERMINAL_BG := Color("#040A05")
+const TERMINAL_CIRCLE := Color("#66D37C")
+const TERMINAL_DOT := Color("#060F08")
+const TERMINAL_EDGE := Color("#91FFAB")
+const TERMINAL_SELECTED := Color("#D2FFDB")
+const TERMINAL_QUIET := Color("#163320")
 
 const FADE_BACK := 0.05
 const FADE_FRONT := 1.0
 const PICK_FADE_MIN := 0.45
 const PICK_BLUR_MAX := 0.75
 const DEPTH_BLUR_STEPS := 5
+const TEMP_DISABLE_BLUR := false
+const WEB_DISABLE_AMBIENT_ANIMATION := false
+const WEB_DISABLE_DEPTH_BLUR := true
+const VFX_SHADER_BG := "shader_bg"
+const VFX_EDGE_SWEEP := "edge_sweep"
+const VFX_CONNECT_RIPPLE := "connect_ripple"
+const VFX_HINT_BEACON := "hint_beacon"
+const VFX_SOLVED_AURA := "solved_aura"
+const VFX_PARALLAX_FOG := "parallax_fog"
+const VFX_AMBIENT_PARTICLES := "ambient_particles"
+const VFX_PHOSPHOR_TRAIL := "phosphor_trail"
+const VFX_HEAT_SHIMMER := "heat_shimmer"
+const VFX_COMPLETION_SHOCKWAVE := "completion_shockwave"
+const VFX_DISCONNECT_DISSOLVE := "disconnect_dissolve"
+const VFX_UI_LIGHT_COUPLING := "ui_light_coupling"
+const DEFAULT_VFX_FLAGS := {
+	VFX_SHADER_BG: true,
+	VFX_EDGE_SWEEP: true,
+	VFX_CONNECT_RIPPLE: true,
+	VFX_HINT_BEACON: true,
+	VFX_SOLVED_AURA: true,
+	VFX_PARALLAX_FOG: true,
+	VFX_AMBIENT_PARTICLES: true,
+	VFX_PHOSPHOR_TRAIL: true,
+	VFX_HEAT_SHIMMER: true,
+	VFX_COMPLETION_SHOCKWAVE: true,
+	VFX_DISCONNECT_DISSOLVE: true,
+	VFX_UI_LIGHT_COUPLING: true
+}
+const DEFAULT_VFX_PROFILE := {"intensity": 1.0, "motion": 1.0}
+const VFX_INTENSITY_MAX := 6.0
+const VFX_MOTION_MIN := -6.0
+const VFX_MOTION_MAX := 6.0
 
 var cell_size: float = 96.0
 var base_radius: float = 28.0
@@ -27,6 +78,7 @@ var base_radius: float = 28.0
 var model: GridModel: set = _set_model
 var selected_id: int = -1
 var hint_id: int = -1
+var hint_ids: Array = []
 
 var rotation_basis: Basis = Basis()
 var rotation_active: bool = false
@@ -42,30 +94,280 @@ var edge_anim_speed: float = 8.0
 var float_time: float = 0.0
 var float_amp_factor: float = 0.018
 var float_speed: float = 0.25
+var color_bg: Color = CLASSIC_BG
+var color_circle: Color = CLASSIC_CIRCLE
+var color_dot: Color = CLASSIC_DOT
+var color_edge: Color = CLASSIC_EDGE
+var color_selected: Color = CLASSIC_SELECTED
+var color_quiet: Color = CLASSIC_QUIET
+var current_theme_id: int = THEME_CLASSIC
+var force_unsolved_white_fill: bool = false
+var glow_texture: Texture2D = null
+var use_shader_background: bool = false
+var vfx_flags: Dictionary = DEFAULT_VFX_FLAGS.duplicate(true)
+var vfx_profiles: Dictionary = {}
+var edge_sweeps: Array = []
+var edge_ripples: Array = []
+var edge_afterimages: Array = []
+var completion_waves: Array = []
+var ui_light_bias: float = 0.0
+var ui_light_target: float = 0.0
+var solved_aura_level: float = 0.0
+var vfx_intensity: float = 1.0
+var vfx_motion: float = 1.0
 
 signal rotation_finished
 
+func reset_style_palette() -> void:
+	set_theme(THEME_CLASSIC)
+
+func set_theme(theme_id: int) -> void:
+	current_theme_id = clampi(theme_id, THEME_CLASSIC, THEME_TERMINAL)
+	match current_theme_id:
+		THEME_WARM:
+			color_bg = WARM_BG
+			color_circle = WARM_CIRCLE
+			color_dot = WARM_DOT
+			color_edge = WARM_EDGE
+			color_selected = WARM_SELECTED
+			color_quiet = WARM_QUIET
+		THEME_TERMINAL:
+			color_bg = TERMINAL_BG
+			color_circle = TERMINAL_CIRCLE
+			color_dot = TERMINAL_DOT
+			color_edge = TERMINAL_EDGE
+			color_selected = TERMINAL_SELECTED
+			color_quiet = TERMINAL_QUIET
+		_:
+			color_bg = CLASSIC_BG
+			color_circle = CLASSIC_CIRCLE
+			color_dot = CLASSIC_DOT
+			color_edge = CLASSIC_EDGE
+			color_selected = CLASSIC_SELECTED
+			color_quiet = CLASSIC_QUIET
+	queue_redraw()
+
+func set_style_palette(palette: Dictionary) -> void:
+	if palette.has("bg"):
+		color_bg = palette["bg"]
+	if palette.has("circle"):
+		color_circle = palette["circle"]
+	if palette.has("dot"):
+		color_dot = palette["dot"]
+	if palette.has("edge"):
+		color_edge = palette["edge"]
+	if palette.has("selected"):
+		color_selected = palette["selected"]
+	if palette.has("quiet"):
+		color_quiet = palette["quiet"]
+	queue_redraw()
+
+func _ensure_vfx_profile_key(key: String) -> void:
+	if vfx_profiles.has(key):
+		return
+	vfx_profiles[key] = DEFAULT_VFX_PROFILE.duplicate(true)
+
+func _ensure_all_vfx_profiles() -> void:
+	for key in DEFAULT_VFX_FLAGS.keys():
+		_ensure_vfx_profile_key(String(key))
+
+func vfx_entries() -> Array:
+	return [
+		{"key": VFX_SHADER_BG, "label": "Shader Background"},
+		{"key": VFX_EDGE_SWEEP, "label": "Edge Energy Sweep"},
+		{"key": VFX_CONNECT_RIPPLE, "label": "Connection Ripple"},
+		{"key": VFX_HINT_BEACON, "label": "Hint Beacon"},
+		{"key": VFX_SOLVED_AURA, "label": "Solved Aura"},
+		{"key": VFX_PARALLAX_FOG, "label": "Parallax Fog"},
+		{"key": VFX_AMBIENT_PARTICLES, "label": "Ambient Particles"},
+		{"key": VFX_PHOSPHOR_TRAIL, "label": "Phosphor Trail"},
+		{"key": VFX_HEAT_SHIMMER, "label": "Heat Shimmer"},
+		{"key": VFX_COMPLETION_SHOCKWAVE, "label": "Completion Shockwave"},
+		{"key": VFX_DISCONNECT_DISSOLVE, "label": "Disconnect Dissolve"},
+		{"key": VFX_UI_LIGHT_COUPLING, "label": "UI Light Coupling"}
+	]
+
+func set_vfx_enabled(key: String, enabled: bool) -> void:
+	_ensure_vfx_profile_key(key)
+	vfx_flags[key] = enabled
+	if key == VFX_SHADER_BG:
+		use_shader_background = enabled
+	if not enabled:
+		match key:
+			VFX_EDGE_SWEEP:
+				edge_sweeps.clear()
+			VFX_CONNECT_RIPPLE:
+				edge_ripples.clear()
+			VFX_PHOSPHOR_TRAIL, VFX_DISCONNECT_DISSOLVE:
+				edge_afterimages.clear()
+			VFX_COMPLETION_SHOCKWAVE:
+				completion_waves.clear()
+			VFX_UI_LIGHT_COUPLING:
+				ui_light_bias = 0.0
+				ui_light_target = 0.0
+	queue_redraw()
+
+func get_vfx_enabled(key: String) -> bool:
+	return _vfx_enabled(key)
+
+func has_vfx_key(key: String) -> bool:
+	return DEFAULT_VFX_FLAGS.has(key)
+
+func set_vfx_profile_intensity(key: String, value: float) -> void:
+	if not has_vfx_key(key):
+		return
+	_ensure_vfx_profile_key(key)
+	var profile: Dictionary = vfx_profiles[key]
+	profile["intensity"] = clampf(value, 0.0, VFX_INTENSITY_MAX)
+	vfx_profiles[key] = profile
+	queue_redraw()
+
+func set_vfx_profile_motion(key: String, value: float) -> void:
+	if not has_vfx_key(key):
+		return
+	_ensure_vfx_profile_key(key)
+	var profile: Dictionary = vfx_profiles[key]
+	profile["motion"] = clampf(value, VFX_MOTION_MIN, VFX_MOTION_MAX)
+	vfx_profiles[key] = profile
+	queue_redraw()
+
+func get_vfx_profile_intensity(key: String) -> float:
+	if not vfx_profiles.has(key):
+		return 1.0
+	var profile: Dictionary = vfx_profiles[key]
+	return clampf(float(profile.get("intensity", 1.0)), 0.0, VFX_INTENSITY_MAX)
+
+func get_vfx_profile_motion(key: String) -> float:
+	if not vfx_profiles.has(key):
+		return 1.0
+	var profile: Dictionary = vfx_profiles[key]
+	return clampf(float(profile.get("motion", 1.0)), VFX_MOTION_MIN, VFX_MOTION_MAX)
+
+func get_vfx_flags_snapshot() -> Dictionary:
+	return vfx_flags.duplicate(true)
+
+func get_vfx_profiles_snapshot() -> Dictionary:
+	return vfx_profiles.duplicate(true)
+
+func set_ui_light_bias(strength: float) -> void:
+	ui_light_target = clampf(strength, 0.0, 1.0)
+	queue_redraw()
+
+func set_vfx_intensity(value: float) -> void:
+	vfx_intensity = clampf(value, 0.0, VFX_INTENSITY_MAX)
+	queue_redraw()
+
+func get_vfx_intensity() -> float:
+	return vfx_intensity
+
+func set_vfx_motion(value: float) -> void:
+	vfx_motion = clampf(value, VFX_MOTION_MIN, VFX_MOTION_MAX)
+	queue_redraw()
+
+func get_vfx_motion() -> float:
+	return vfx_motion
+
+func pulse_ui_light(strength: float = 1.0) -> void:
+	ui_light_bias = maxf(ui_light_bias, clampf(strength, 0.0, 1.0))
+	queue_redraw()
+
+func trigger_edge_feedback(a: int, b: int, connected: bool) -> void:
+	if model == null:
+		return
+	var key := model.edge_key(a, b)
+	if connected and _vfx_enabled(VFX_EDGE_SWEEP):
+		var sweep_motion := _vfx_speed_factor(VFX_EDGE_SWEEP)
+		edge_sweeps.append({"key": key, "a": a, "b": b, "age": 0.0, "duration": 0.58 / sweep_motion})
+	if _vfx_enabled(VFX_CONNECT_RIPPLE):
+		var ripple_motion := _vfx_speed_factor(VFX_CONNECT_RIPPLE)
+		var ripple_duration := (0.4 if connected else 0.34) / ripple_motion
+		edge_ripples.append({"a": a, "b": b, "age": 0.0, "duration": ripple_duration})
+	if connected and _vfx_enabled(VFX_PHOSPHOR_TRAIL):
+		var trail_motion := _vfx_speed_factor(VFX_PHOSPHOR_TRAIL)
+		edge_afterimages.append({"a": a, "b": b, "kind": "trail", "age": 0.0, "duration": 0.85 / trail_motion})
+	if not connected and _vfx_enabled(VFX_DISCONNECT_DISSOLVE):
+		var dissolve_motion := _vfx_speed_factor(VFX_DISCONNECT_DISSOLVE)
+		edge_afterimages.append({"a": a, "b": b, "kind": "dissolve", "age": 0.0, "duration": 0.56 / dissolve_motion})
+	queue_redraw()
+
+func trigger_completion_wave() -> void:
+	if not _vfx_enabled(VFX_COMPLETION_SHOCKWAVE):
+		return
+	var wave_motion := _vfx_speed_factor(VFX_COMPLETION_SHOCKWAVE)
+	completion_waves.append({"age": 0.0, "duration": 0.95 / wave_motion})
+	queue_redraw()
+
+func _vfx_enabled(key: String) -> bool:
+	if not vfx_flags.has(key):
+		return true
+	return bool(vfx_flags[key])
+
+func _vfx_intensity_factor(key: String = "") -> float:
+	var master := clampf(vfx_intensity, 0.0, VFX_INTENSITY_MAX)
+	if key == "":
+		return master
+	return master * get_vfx_profile_intensity(key)
+
+func _vfx_motion_factor(key: String = "") -> float:
+	var master := clampf(vfx_motion, VFX_MOTION_MIN, VFX_MOTION_MAX)
+	if key == "":
+		return master
+	return master * get_vfx_profile_motion(key)
+
+func _vfx_speed_factor(key: String = "") -> float:
+	return maxf(0.05, absf(_vfx_motion_factor(key)))
+
+func _clear_vfx_buffers() -> void:
+	_ensure_all_vfx_profiles()
+	edge_sweeps.clear()
+	edge_ripples.clear()
+	edge_afterimages.clear()
+	completion_waves.clear()
+	ui_light_bias = 0.0
+	ui_light_target = 0.0
+	solved_aura_level = 0.0
+
 func _ready() -> void:
 	set_process(true)
+	_ensure_all_vfx_profiles()
+	use_shader_background = _vfx_enabled(VFX_SHADER_BG)
+
+func _ambient_animation_enabled() -> bool:
+	if WEB_DISABLE_AMBIENT_ANIMATION and OS.has_feature("web"):
+		return false
+	return true
+
+func _depth_blur_disabled() -> bool:
+	return TEMP_DISABLE_BLUR or (WEB_DISABLE_DEPTH_BLUR and OS.has_feature("web"))
 
 func _set_model(value: GridModel) -> void:
 	model = value
 	rotation_basis = Basis()
 	dot_states.clear()
 	edge_states.clear()
+	_clear_vfx_buffers()
 	hint_id = -1
+	hint_ids.clear()
 	_update_metrics()
 	queue_redraw()
 
 func _process(delta: float) -> void:
+	if not is_visible_in_tree():
+		return
 	if rotation_active:
 		var now := float(Time.get_ticks_msec()) / 1000.0
 		if now > rotation_deadline:
 			_finish_rotation()
-	_sync_edge_states()
 	var dirty := false
-	float_time += delta * float_speed
-	dirty = true
+	_sync_edge_states()
+	if _advance_vfx_timers(delta):
+		dirty = true
+	if _ambient_animation_enabled() or _has_time_driven_vfx():
+		var motion_signed := _vfx_motion_factor()
+		var motion_mix := clampf(absf(motion_signed) * 0.5, 0.0, 1.0)
+		var direction := -1.0 if motion_signed < 0.0 else 1.0
+		float_time += delta * float_speed * lerpf(0.25, 2.2, motion_mix) * direction
+		dirty = true
 	for key in dot_states.keys():
 		var state: Dictionary = dot_states[key]
 		if float(state.t) < 1.0:
@@ -85,6 +387,63 @@ func _process(delta: float) -> void:
 			edge_states.erase(key)
 	if dirty:
 		queue_redraw()
+
+func _has_time_driven_vfx() -> bool:
+	return _vfx_enabled(VFX_PARALLAX_FOG) \
+		or _vfx_enabled(VFX_AMBIENT_PARTICLES) \
+		or _vfx_enabled(VFX_HINT_BEACON) \
+		or (_vfx_enabled(VFX_HEAT_SHIMMER) and current_theme_id == THEME_WARM) \
+		or (_vfx_enabled(VFX_UI_LIGHT_COUPLING) and (ui_light_bias > 0.001 or ui_light_target > 0.001)) \
+		or not edge_sweeps.is_empty() \
+		or not edge_ripples.is_empty() \
+		or not edge_afterimages.is_empty() \
+		or not completion_waves.is_empty() \
+		or solved_aura_level > 0.001
+
+func _advance_vfx_timers(delta: float) -> bool:
+	var dirty := false
+	if _advance_effect_list(edge_sweeps, delta):
+		dirty = true
+	if _advance_effect_list(edge_ripples, delta):
+		dirty = true
+	if _advance_effect_list(edge_afterimages, delta):
+		dirty = true
+	if _advance_effect_list(completion_waves, delta):
+		dirty = true
+	var prev_ui := ui_light_bias
+	if _vfx_enabled(VFX_UI_LIGHT_COUPLING):
+		var ui_motion := _vfx_speed_factor(VFX_UI_LIGHT_COUPLING)
+		ui_light_bias = move_toward(ui_light_bias, ui_light_target, delta * 4.0 * ui_motion)
+	else:
+		ui_light_target = 0.0
+		ui_light_bias = move_toward(ui_light_bias, 0.0, delta * 3.5)
+	if absf(prev_ui - ui_light_bias) > 0.0005:
+		dirty = true
+	var prev_aura := solved_aura_level
+	var aura_target := 0.0
+	if _vfx_enabled(VFX_SOLVED_AURA) and model != null:
+		var required := model.required_node_count()
+		if required > 0:
+			aura_target = float(model.connected_required_count()) / float(required)
+	var aura_motion := _vfx_speed_factor(VFX_SOLVED_AURA)
+	solved_aura_level = move_toward(solved_aura_level, clampf(aura_target, 0.0, 1.0), delta * 1.6 * aura_motion)
+	if absf(prev_aura - solved_aura_level) > 0.0005:
+		dirty = true
+	return dirty
+
+func _advance_effect_list(list: Array, delta: float) -> bool:
+	var dirty := false
+	for i in range(list.size() - 1, -1, -1):
+		var fx: Dictionary = list[i]
+		fx.age = float(fx.get("age", 0.0)) + delta
+		var duration := maxf(0.001, float(fx.get("duration", 0.4)))
+		if float(fx.age) >= duration:
+			list.remove_at(i)
+			dirty = true
+		else:
+			list[i] = fx
+			dirty = true
+	return dirty
 
 func _update_metrics() -> void:
 	if model == null:
@@ -169,12 +528,23 @@ func _draw() -> void:
 	_update_metrics()
 	var nodes := _compute_nodes()
 	_sync_edge_states()
-	draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), COLOR_BG)
+	var viewport_size := get_viewport_rect().size
+	if not use_shader_background:
+		_draw_theme_background(viewport_size)
+	if _vfx_enabled(VFX_PARALLAX_FOG):
+		_draw_parallax_fog(viewport_size)
+	if _vfx_enabled(VFX_AMBIENT_PARTICLES):
+		_draw_ambient_particles(viewport_size)
+	if _vfx_enabled(VFX_HEAT_SHIMMER) and current_theme_id == THEME_WARM:
+		_draw_heat_shimmer(viewport_size)
+	if _vfx_enabled(VFX_UI_LIGHT_COUPLING):
+		_draw_ui_light_glaze(viewport_size)
 	var positions := {}
 	var items: Array = []
 	for n in nodes:
 		positions[n.id] = n
 		items.append({"kind": "node", "depth": n.depth, "node": n})
+	_draw_solved_aura(positions, viewport_size)
 	for key in edge_states.keys():
 		var state: Dictionary = edge_states[key]
 		var t: float = float(state.t)
@@ -192,6 +562,7 @@ func _draw() -> void:
 		items.append({
 			"kind": "edge",
 			"depth": depth,
+			"key": key,
 			"a": a,
 			"b": b,
 			"fade": fade,
@@ -203,6 +574,251 @@ func _draw() -> void:
 			_draw_edge_item(item, positions)
 		else:
 			_draw_node_item(item.node)
+	_draw_edge_afterimages(positions)
+	_draw_edge_ripples(positions)
+	_draw_completion_waves(positions, viewport_size)
+
+func _draw_neon_background(size: Vector2) -> void:
+	_draw_warm_background(size)
+
+func _draw_theme_background(size: Vector2) -> void:
+	match current_theme_id:
+		THEME_TERMINAL:
+			_draw_terminal_background(size)
+		THEME_WARM:
+			_draw_warm_background(size)
+		_:
+			_draw_classic_background(size)
+
+func _draw_classic_background(size: Vector2) -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), color_bg)
+	var top_light := Color("#FFFFFF")
+	top_light.a = 0.045
+	_draw_soft_radial(Vector2(size.x * 0.5, size.y * 0.15), minf(size.x, size.y) * 0.82, top_light, 10)
+	var side_light := Color("#DAD2C4")
+	side_light.a = 0.032
+	_draw_soft_radial(Vector2(size.x * 0.08, size.y * 0.55), minf(size.x, size.y) * 0.48, side_light, 8)
+	var band := Color("#E8E4DC")
+	band.a = 0.36
+	draw_rect(Rect2(0.0, size.y * 0.64, size.x, size.y * 0.2), band)
+	for i in range(72):
+		var fi := float(i)
+		var x := _hash01(fi * 11.39 + 0.7)
+		var y := _hash01(fi * 37.21 + 2.3)
+		var dust := Color("#A29A8D")
+		dust.a = lerpf(0.015, 0.055, _hash01(fi * 2.13 + 0.31))
+		draw_circle(Vector2(size.x * x, size.y * y), lerpf(0.5, 1.4, _hash01(fi * 0.91 + 0.6)), dust)
+	var vignette := Color("#9D9384")
+	vignette.a = 0.038
+	_draw_vignette(size, vignette, 11, 1.6)
+
+func _draw_warm_background(size: Vector2) -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), color_bg)
+	var glow_center := Vector2(size.x * 0.5, size.y * 0.42)
+	var glow_base := Color("#A6632B")
+	for i in range(12, 0, -1):
+		var t := float(i) / 12.0
+		var c := glow_base
+		c.a = 0.012 * t
+		draw_circle(glow_center, min(size.x, size.y) * 0.13 * float(13 - i), c)
+	var horizon_glow := Color("#FFB971")
+	horizon_glow.a = 0.03
+	_draw_soft_radial(Vector2(size.x * 0.5, size.y * 0.8), minf(size.x, size.y) * 0.58, horizon_glow, 10)
+	var ember := Color("#FFBE72")
+	ember.a = 0.024
+	_draw_wisp_trail(size, 2.1, ember, minf(size.x, size.y) * 0.11, 0.12)
+	_draw_wisp_trail(size, 7.4, ember, minf(size.x, size.y) * 0.09, -0.1)
+	for i in range(90):
+		var fi := float(i)
+		var x := _hash01(fi * 27.13 + 1.7)
+		var y := _hash01(fi * 45.71 + 3.1)
+		var twinkle := 0.5 + 0.5 * sin(float_time * 1.9 + fi * 0.37)
+		var alpha := lerpf(0.03, 0.16, _hash01(fi * 0.93 + 0.4)) * twinkle
+		var r := lerpf(0.8, 2.0, _hash01(fi * 1.77 + 0.9))
+		var star := Color("#F6BE79")
+		star.a = alpha
+		draw_circle(Vector2(size.x * x, size.y * y), r, star)
+	var warm_vignette := Color("#3B2516")
+	warm_vignette.a = 0.055
+	_draw_vignette(size, warm_vignette, 11, 1.7)
+
+func _draw_terminal_background(size: Vector2) -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), color_bg)
+	var core_glow := Color("#62F089")
+	core_glow.a = 0.022
+	_draw_soft_radial(Vector2(size.x * 0.5, size.y * 0.45), minf(size.x, size.y) * 0.66, core_glow, 10)
+	var crt_glow := Color("#65FF90")
+	for i in range(11, 0, -1):
+		var t := float(i) / 11.0
+		var band := crt_glow
+		band.a = 0.006 * t
+		draw_rect(Rect2(0.0, size.y * 0.18 * t, size.x, size.y * 0.025), band)
+	for y in range(0, int(size.y), 4):
+		var scan := Color("#0A2A12")
+		scan.a = 0.18
+		draw_line(Vector2(0.0, float(y)), Vector2(size.x, float(y)), scan, 1.0)
+	for y in range(0, int(size.y), 22):
+		var row := Color("#123C1E")
+		row.a = 0.08
+		draw_line(Vector2(0.0, float(y)), Vector2(size.x, float(y)), row, 1.0)
+	var grid_top := size.y * 0.56
+	var grid := Color("#1E5E33")
+	grid.a = 0.11
+	for x_step in range(0, 13):
+		var tx := float(x_step) / 12.0
+		var x := size.x * tx
+		draw_line(Vector2(x, grid_top), Vector2(x, size.y), grid, 1.0)
+	var stream := Color("#7DF89A")
+	stream.a = 0.018
+	_draw_wisp_trail(size, 4.3, stream, minf(size.x, size.y) * 0.07, 0.09)
+	for i in range(120):
+		var fi := float(i)
+		var x := _hash01(fi * 21.13 + 1.7)
+		var y := _hash01(fi * 42.71 + 3.1)
+		var twinkle := 0.5 + 0.5 * sin(float_time * 1.7 + fi * 0.33)
+		var alpha := lerpf(0.02, 0.11, _hash01(fi * 0.83 + 0.4)) * twinkle
+		var star := Color("#77E88E")
+		star.a = alpha
+		draw_circle(Vector2(size.x * x, size.y * y), 1.0, star)
+	var terminal_vignette := Color("#001505")
+	terminal_vignette.a = 0.06
+	_draw_vignette(size, terminal_vignette, 12, 1.6)
+
+func _draw_parallax_fog(size: Vector2) -> void:
+	var intensity := _vfx_intensity_factor(VFX_PARALLAX_FOG)
+	var motion_signed := _vfx_motion_factor(VFX_PARALLAX_FOG)
+	var motion := absf(motion_signed)
+	var motion_mix := clampf(motion * 0.5, 0.0, 1.0)
+	var direction := -1.0 if motion_signed < 0.0 else 1.0
+	var fog_base := Color("#7A9CC3")
+	match current_theme_id:
+		THEME_WARM:
+			fog_base = Color("#FFAD73")
+		THEME_TERMINAL:
+			fog_base = Color("#68E091")
+		_:
+			fog_base = Color("#A8B6C8")
+	for i in range(4):
+		var fi := float(i)
+		var x := size.x * (0.16 + fi * 0.21 + sin(float_time * direction * (0.18 + motion * 0.12) + fi * 1.47) * lerpf(0.01, 0.06, motion_mix))
+		var y := size.y * (0.18 + fi * 0.16 + cos(float_time * direction * (0.14 + motion * 0.11) + fi * 1.83) * lerpf(0.015, 0.075, motion_mix))
+		var color := fog_base
+		color.a = (0.008 + 0.022 * (0.5 + 0.5 * sin(float_time * (0.46 + motion * 0.28) + fi))) * intensity
+		var radius := minf(size.x, size.y) * (0.24 + fi * 0.09)
+		draw_circle(Vector2(x, y), radius, color)
+
+func _draw_ambient_particles(size: Vector2) -> void:
+	var intensity := _vfx_intensity_factor(VFX_AMBIENT_PARTICLES)
+	var motion_signed := _vfx_motion_factor(VFX_AMBIENT_PARTICLES)
+	var motion := absf(motion_signed)
+	var direction := -1.0 if motion_signed < 0.0 else 1.0
+	var particle_color := Color("#9FB7CE")
+	match current_theme_id:
+		THEME_WARM:
+			particle_color = Color("#FFC388")
+		THEME_TERMINAL:
+			particle_color = Color("#84F6A0")
+		_:
+			particle_color = Color("#A9B7C8")
+	var count := int(round(lerpf(16.0, 36.0, intensity * 0.5)))
+	for i in range(count):
+		var fi := float(i)
+		var speed := 0.08 + _hash01(fi * 4.13 + 1.7) * 0.4
+		var phase := _hash01(fi * 15.37 + 0.2) * TAU
+		var drift := float_time * speed * direction * (0.3 + motion * 0.95)
+		var x := fposmod(_hash01(fi * 19.91 + 0.4) + drift * 0.03, 1.04) - 0.02
+		var y := fposmod(_hash01(fi * 23.77 + 1.3) + sin(float_time * (0.2 + motion * 0.35) + phase) * 0.02, 1.02)
+		var pulse := 0.45 + 0.55 * sin(float_time * (1.2 + motion * 0.9) + phase * 1.3)
+		var alpha := (0.012 + 0.055 * pulse) * intensity
+		var radius := lerpf(0.8, 2.4, _hash01(fi * 6.1 + 0.7))
+		var c := particle_color
+		c.a = alpha
+		var pos := Vector2(size.x * x, size.y * y)
+		draw_circle(pos, radius, c)
+		if pulse > 0.7:
+			var tail := c
+			tail.a *= 0.22
+			draw_circle(pos + Vector2(radius * 2.2, 0.0), radius * 1.1, tail)
+
+func _draw_heat_shimmer(size: Vector2) -> void:
+	var intensity := _vfx_intensity_factor(VFX_HEAT_SHIMMER)
+	var motion_signed := _vfx_motion_factor(VFX_HEAT_SHIMMER)
+	var motion := absf(motion_signed)
+	var motion_mix := clampf(motion * 0.5, 0.0, 1.0)
+	var direction := -1.0 if motion_signed < 0.0 else 1.0
+	for i in range(6):
+		var fi := float(i)
+		var y := size.y * (0.28 + fi * 0.09 + sin(float_time * direction * (0.46 + motion * 0.82) + fi * 1.33) * lerpf(0.006, 0.02, motion_mix))
+		var alpha := (0.014 + 0.03 * (0.5 + 0.5 * sin(float_time * (0.82 + motion * 0.65) + fi * 0.7))) * intensity
+		var c := Color("#FFC98D")
+		c.a = alpha
+		draw_line(Vector2(0.0, y), Vector2(size.x, y), c, 1.0)
+
+func _draw_ui_light_glaze(size: Vector2) -> void:
+	if ui_light_bias <= 0.001:
+		return
+	var intensity := _vfx_intensity_factor(VFX_UI_LIGHT_COUPLING)
+	var beam := _tint_color(color_selected, 1.0)
+	beam.a = (0.012 + ui_light_bias * 0.09) * intensity
+	_draw_soft_radial(
+		Vector2(size.x * 0.5, size.y * 0.04),
+		minf(size.x, size.y) * (0.2 + ui_light_bias * 0.32),
+		beam,
+		10
+	)
+
+func _draw_soft_radial(center: Vector2, radius: float, color: Color, layers: int) -> void:
+	if radius <= 0.1 or color.a <= 0.001:
+		return
+	var count := maxi(1, layers)
+	for i in range(count, 0, -1):
+		var t := float(i) / float(count)
+		var c := color
+		c.a *= t * t
+		draw_circle(center, radius * t, c)
+
+func _draw_vignette(size: Vector2, color: Color, rings: int, width: float) -> void:
+	if color.a <= 0.001:
+		return
+	var count := maxi(1, rings)
+	var max_inset := minf(size.x, size.y) * 0.2
+	for i in range(count):
+		var t := float(i + 1) / float(count)
+		var inset := max_inset * t
+		var rect_size := size - Vector2.ONE * inset * 2.0
+		if rect_size.x <= 2.0 or rect_size.y <= 2.0:
+			break
+		var c := color
+		c.a *= pow(t, 1.3)
+		draw_rect(Rect2(Vector2(inset, inset), rect_size), c, false, width)
+
+func _draw_wisp_trail(size: Vector2, seed: float, color: Color, thickness: float, arc_scale: float) -> void:
+	if color.a <= 0.001:
+		return
+	var start := Vector2(
+		size.x * lerpf(0.02, 0.28, _hash01(seed * 2.17 + 0.31)),
+		size.y * lerpf(0.18, 0.82, _hash01(seed * 1.13 + 0.91))
+	)
+	var end := Vector2(
+		size.x * lerpf(0.66, 0.98, _hash01(seed * 3.47 + 0.63)),
+		size.y * lerpf(0.14, 0.86, _hash01(seed * 5.73 + 0.27))
+	)
+	var arc := size.y * arc_scale
+	var steps := 18
+	for i in range(steps):
+		var t := float(i) / float(steps - 1)
+		var p := start.lerp(end, t)
+		var sway := sin(float_time * 0.4 + seed * 1.9 + t * TAU) * size.x * 0.012
+		p.x += sway
+		p.y += sin(t * PI) * arc
+		var focus := sin(t * PI)
+		var c := color
+		c.a *= focus * focus
+		var radius := thickness * lerpf(0.35, 1.0, focus)
+		draw_circle(p, radius, c)
+
+func _hash01(seed: float) -> float:
+	return fposmod(sin(seed) * 43758.5453, 1.0)
 
 func _sync_edge_states() -> void:
 	if model == null:
@@ -281,6 +897,7 @@ func _compute_nodes() -> Array:
 func _draw_edge_item(item: Dictionary, positions: Dictionary) -> void:
 	var a: int = item.a
 	var b: int = item.b
+	var edge_key: int = int(item.get("key", -1))
 	var t: float = clampf(float(item.t), 0.0, 1.0)
 	var color := _edge_color(float(item.fade))
 	color.a *= t
@@ -297,49 +914,382 @@ func _draw_edge_item(item: Dictionary, positions: Dictionary) -> void:
 	var inset_b := minf(rb * 0.9, len * 0.45)
 	start += unit * inset_a
 	end -= unit * inset_b
+	var fx_start := start
+	var fx_end := end
 	var mid := (start + end) * 0.5
 	var half := (end - start) * 0.5 * t
 	start = mid - half
 	end = mid + half
-	draw_line(start, end, color, maxf(2.0, base_radius * 0.18))
+	if current_theme_id == THEME_TERMINAL:
+		var glow_outer := color
+		glow_outer.a *= 0.26
+		var hot := color.lerp(Color("#E8FFEE"), 0.42)
+		hot.a *= 0.8
+		_draw_dashed_line(start, end, glow_outer, maxf(4.8, base_radius * 0.42), maxf(8.0, base_radius * 0.4), maxf(4.2, base_radius * 0.2))
+		_draw_dashed_line(start, end, hot, maxf(1.9, base_radius * 0.15), maxf(5.0, base_radius * 0.24), maxf(3.0, base_radius * 0.14))
+	elif current_theme_id == THEME_WARM:
+		var glow_outer := color
+		glow_outer.a *= 0.24
+		var hot := color.lerp(Color("#FFF2D2"), 0.45)
+		hot.a *= 0.82
+		draw_line(start, end, glow_outer, maxf(5.2, base_radius * 0.46))
+		draw_line(start, end, hot, maxf(2.0, base_radius * 0.16))
+	else:
+		draw_line(start, end, color, maxf(1.8, base_radius * 0.15))
+	_draw_edge_sweep(edge_key, fx_start, fx_end, color)
+
+func _draw_edge_sweep(edge_key: int, start: Vector2, end: Vector2, color: Color) -> void:
+	if edge_key == -1 or not _vfx_enabled(VFX_EDGE_SWEEP):
+		return
+	var intensity := _vfx_intensity_factor(VFX_EDGE_SWEEP)
+	var best_t := -1.0
+	for fx in edge_sweeps:
+		if int(fx.get("key", -1)) != edge_key:
+			continue
+		var duration := maxf(0.001, float(fx.get("duration", 0.58)))
+		var t := clampf(float(fx.get("age", 0.0)) / duration, 0.0, 1.0)
+		best_t = maxf(best_t, t)
+	if best_t < 0.0:
+		return
+	var sweep_head := start.lerp(end, best_t)
+	var sweep_tail := start.lerp(end, clampf(best_t - 0.24, 0.0, 1.0))
+	var power := 1.0 - absf(best_t - 0.5) * 1.8
+	if power <= 0.0:
+		return
+	var beam := color.lerp(Color.WHITE, 0.62)
+	beam.a = (0.1 + power * 0.32) * (1.0 + ui_light_bias * 0.45) * intensity
+	var inner := Color.WHITE
+	inner.a = beam.a * 0.75
+	var outer_width := maxf(3.2, base_radius * 0.3) * lerpf(0.82, 1.55, intensity * 0.5)
+	var inner_width := maxf(1.5, base_radius * 0.15) * lerpf(0.86, 1.3, intensity * 0.5)
+	draw_line(sweep_tail, sweep_head, beam, outer_width)
+	draw_line(sweep_tail, sweep_head, inner, inner_width)
+
+func _draw_dashed_line(start: Vector2, end: Vector2, color: Color, width: float, dash_len: float, gap_len: float) -> void:
+	var dir := end - start
+	var length := dir.length()
+	if length <= 0.001:
+		return
+	var unit := dir / length
+	var cursor := 0.0
+	while cursor < length:
+		var seg_end := minf(cursor + dash_len, length)
+		draw_line(start + unit * cursor, start + unit * seg_end, color, width)
+		cursor += dash_len + gap_len
 
 func _draw_node_item(n: Dictionary) -> void:
+	if current_theme_id == THEME_TERMINAL:
+		_draw_terminal_node_item(n)
+	else:
+		_draw_round_node_item(n, current_theme_id == THEME_WARM)
+
+func _draw_round_node_item(n: Dictionary, warm_mode: bool) -> void:
 	var node_id: int = n.id
 	var pos: Vector2 = n.pos
 	var radius: float = n.radius
 	var fade: float = n.fade
-	var blur_strength: float = clampf(float(n.get("blur", 0.0)), 0.0, 1.0)
+	var blur_strength: float = 0.0 if _depth_blur_disabled() else clampf(float(n.get("blur", 0.0)), 0.0, 1.0)
+	var remaining := model.remaining_dots(node_id)
+	var unsolved_white := force_unsolved_white_fill and remaining > 0
 	if blur_strength > 0.02:
 		_draw_depth_blur(pos, radius, fade, blur_strength)
-	var fill_color := _tint_color(COLOR_BG, fade)
-	var quiet_color := _tint_color(COLOR_QUIET, fade)
-	var circle_color := _tint_color(COLOR_CIRCLE, fade)
-	var dot_color := _tint_color(COLOR_DOT, fade)
-	fill_color = fill_color.lerp(COLOR_BG, blur_strength * 0.34)
-	quiet_color = quiet_color.lerp(COLOR_BG, blur_strength * 0.45)
-	circle_color = circle_color.lerp(COLOR_BG, blur_strength * 0.62)
-	dot_color = dot_color.lerp(COLOR_BG, blur_strength * 0.74)
-	# Opaque fill to occlude nodes behind.
+	var frame_color := _tint_color(color_circle, fade)
+	var fill_mix := 0.72 + blur_strength * 0.12
+	if warm_mode:
+		fill_mix = 0.56 + blur_strength * 0.08
+	var fill_color := frame_color.lerp(color_bg, fill_mix)
+	var quiet_color := _tint_color(color_quiet, fade)
+	var dot_color := _tint_color(color_dot, fade)
+	var glow_color := _tint_color(color_edge, maxf(fade, 0.55))
+	if unsolved_white:
+		fill_color = Color(1, 1, 1, 1)
+	elif warm_mode:
+		fill_color = fill_color.lerp(Color("#FFC67A"), 0.16)
+		fill_color.a = 1.0
+	if warm_mode:
+		_draw_full_node_glow(pos, radius, glow_color, blur_strength)
+	quiet_color = quiet_color.lerp(color_bg, blur_strength * 0.28)
+	frame_color = frame_color.lerp(color_bg, blur_strength * 0.35)
+	dot_color = dot_color.lerp(color_bg, blur_strength * 0.22)
 	draw_circle(pos, maxf(2.0, radius - maxf(0.5, radius * 0.08)), fill_color)
-	if model.remaining_dots(node_id) == 0:
+	if remaining == 0:
 		draw_circle(pos, maxf(2.0, radius - 1.2), quiet_color)
-	var ring_alpha := lerpf(1.0, 0.42, blur_strength)
-	var ring_width := maxf(1.6, radius * lerpf(0.12, 0.18, blur_strength))
-	circle_color.a *= ring_alpha
-	draw_arc(pos, radius, 0.0, TAU, 48, circle_color, ring_width)
+	elif warm_mode and not unsolved_white:
+		var core := fill_color.lerp(Color("#FFF0C6"), 0.28)
+		core.a *= lerpf(0.65, 0.84, fade)
+		draw_circle(pos, maxf(2.0, radius * 0.8), core)
+		var hot := Color("#FFF9E8")
+		hot.a = lerpf(0.07, 0.18, fade) * lerpf(1.0, 0.65, blur_strength)
+		draw_circle(pos, maxf(2.0, radius * 0.5), hot)
+	var ring_alpha := lerpf(1.0, 0.55 if warm_mode else 0.42, blur_strength)
+	var ring_width := maxf(1.6, radius * lerpf(0.12 if warm_mode else 0.11, 0.2 if warm_mode else 0.18, blur_strength))
+	frame_color.a *= ring_alpha
+	draw_arc(pos, radius, 0.0, TAU, 48, frame_color, ring_width)
 	if node_id == selected_id:
-		var sel_color := _tint_color(COLOR_SELECTED, maxf(fade, 0.6))
+		var sel_color := _tint_color(color_selected, maxf(fade, 0.6))
 		draw_arc(pos, radius + 4.0, 0.0, TAU, 48, sel_color, maxf(1.6, radius * 0.12))
-	if node_id == hint_id:
-		var hint_color := _tint_color(COLOR_SELECTED, maxf(fade, 0.55))
-		draw_arc(pos, radius + 8.0, 0.0, TAU, 48, hint_color, maxf(1.4, radius * 0.1))
-	dot_color.a *= lerpf(1.0, 0.14, blur_strength)
+	if _is_hint_node(node_id):
+		var hint_color := _tint_color(color_selected, maxf(fade, 0.55))
+		if _vfx_enabled(VFX_HINT_BEACON):
+			var hint_intensity := _vfx_intensity_factor(VFX_HINT_BEACON)
+			var hint_motion := _vfx_speed_factor(VFX_HINT_BEACON)
+			var pulse := 0.5 + 0.5 * sin(float_time * (5.2 + hint_motion * 1.1) + float(node_id) * 0.73)
+			var ring_radius := radius + 6.0 + pulse * 7.0
+			var hint_width := maxf(1.5, radius * (0.08 + pulse * 0.05))
+			hint_color.a *= (0.6 + pulse * 0.4) * hint_intensity
+			draw_arc(pos, ring_radius, 0.0, TAU, 64, hint_color, hint_width)
+			var outer := hint_color
+			outer.a *= 0.35
+			draw_arc(pos, ring_radius + 5.0, 0.0, TAU, 64, outer, maxf(1.2, hint_width * 0.65))
+		else:
+			draw_arc(pos, radius + 8.0, 0.0, TAU, 48, hint_color, maxf(1.4, radius * 0.1))
+	dot_color.a *= lerpf(0.95, 0.24, blur_strength)
 	if dot_color.a > 0.02:
-		_draw_dots(node_id, pos, model.remaining_dots(node_id), radius, dot_color)
+		_draw_dots(node_id, pos, remaining, radius, dot_color)
+
+func _draw_terminal_node_item(n: Dictionary) -> void:
+	var node_id: int = n.id
+	var pos: Vector2 = n.pos
+	var radius: float = n.radius
+	var fade: float = n.fade
+	var blur_strength: float = 0.0 if _depth_blur_disabled() else clampf(float(n.get("blur", 0.0)), 0.0, 1.0)
+	var remaining := model.remaining_dots(node_id)
+	var unsolved_white := force_unsolved_white_fill and remaining > 0
+	if blur_strength > 0.02:
+		_draw_depth_blur(pos, radius, fade, blur_strength)
+	var frame_color := _tint_color(color_circle, fade)
+	var fill_color := frame_color.lerp(color_bg, 0.58 + blur_strength * 0.08)
+	var quiet_color := _tint_color(color_quiet, fade)
+	var dot_color := _tint_color(color_dot, fade)
+	var glow_color := _tint_color(color_edge, maxf(fade, 0.55))
+	if unsolved_white:
+		fill_color = Color(1, 1, 1, 1)
+	else:
+		fill_color = fill_color.lerp(Color("#74E48A"), 0.12)
+		fill_color.a = 1.0
+	_draw_full_node_glow(pos, radius, glow_color, blur_strength)
+	quiet_color = quiet_color.lerp(color_bg, blur_strength * 0.28)
+	frame_color = frame_color.lerp(color_bg, blur_strength * 0.35)
+	dot_color = dot_color.lerp(color_bg, blur_strength * 0.16)
+	var half := maxf(6.0, radius * 0.9)
+	var rect := Rect2(pos - Vector2(half, half), Vector2(half * 2.0, half * 2.0))
+	draw_rect(rect, fill_color, true)
+	if not unsolved_white:
+		var hot_rect := rect.grow(-maxf(2.0, radius * 0.26))
+		if hot_rect.size.x > 0.0 and hot_rect.size.y > 0.0:
+			var hot := fill_color.lerp(Color("#D5FFDF"), 0.42)
+			hot.a *= lerpf(0.48, 0.3, blur_strength)
+			draw_rect(hot_rect, hot, true)
+	draw_rect(rect, frame_color, false, maxf(1.4, radius * 0.09))
+	if remaining == 0:
+		draw_rect(rect.grow(-maxf(2.0, radius * 0.18)), quiet_color, true)
+	if node_id == selected_id:
+		var sel_color := _tint_color(color_selected, maxf(fade, 0.6))
+		draw_rect(rect.grow(4.0), sel_color, false, maxf(1.6, radius * 0.12))
+	if _is_hint_node(node_id):
+		var hint_color := _tint_color(color_selected, maxf(fade, 0.55))
+		if _vfx_enabled(VFX_HINT_BEACON):
+			var hint_intensity := _vfx_intensity_factor(VFX_HINT_BEACON)
+			var hint_motion := _vfx_speed_factor(VFX_HINT_BEACON)
+			var pulse := 0.5 + 0.5 * sin(float_time * (5.5 + hint_motion * 1.2) + float(node_id) * 0.81)
+			var growth := 7.0 + pulse * 6.0
+			hint_color.a *= (0.55 + pulse * 0.45) * hint_intensity
+			draw_rect(rect.grow(growth), hint_color, false, maxf(1.2, radius * (0.07 + pulse * 0.05)))
+		else:
+			draw_rect(rect.grow(8.0), hint_color, false, maxf(1.4, radius * 0.1))
+	dot_color.a *= lerpf(0.95, 0.32, blur_strength)
+	if dot_color.a > 0.02:
+		_draw_ascii_centered(pos, _ascii_marker(remaining), dot_color, int(clampf(radius * 0.72, 12.0, 44.0)))
+
+func _draw_full_node_glow(pos: Vector2, radius: float, color: Color, blur_strength: float) -> void:
+	var tex := _ensure_glow_texture()
+	if tex == null:
+		return
+	var intensity := _vfx_intensity_factor()
+	var pulse := 0.94 + 0.06 * sin(float_time * 3.1 + pos.x * 0.012 + pos.y * 0.01)
+	var ui_boost := 1.0 + (ui_light_bias * 0.8 if _vfx_enabled(VFX_UI_LIGHT_COUPLING) else 0.0)
+	var aura := color.lerp(Color.WHITE, 0.1)
+	aura.a = lerpf(0.04, 0.12, 1.0 - blur_strength) * pulse * ui_boost * intensity
+	_draw_glow_sprite(tex, pos, radius * lerpf(1.9, 1.55, blur_strength), aura)
+	var bloom := color.lerp(Color.WHITE, 0.22)
+	bloom.a = lerpf(0.03, 0.09, 1.0 - blur_strength) * pulse * ui_boost * intensity
+	_draw_glow_sprite(tex, pos, radius * lerpf(1.32, 1.12, blur_strength), bloom)
+	var hot_core := color.lerp(Color.WHITE, 0.66)
+	hot_core.a = lerpf(0.08, 0.2, 1.0 - blur_strength) * pulse * ui_boost * intensity
+	_draw_glow_sprite(tex, pos, radius * 0.86, hot_core)
+	var spark := Color.WHITE
+	spark.a = lerpf(0.01, 0.045, 1.0 - blur_strength) * pulse * ui_boost * intensity
+	_draw_glow_sprite(tex, pos, radius * 0.42, spark)
+
+func _draw_glow_sprite(tex: Texture2D, pos: Vector2, radius: float, modulate: Color) -> void:
+	if tex == null:
+		return
+	if radius <= 0.1 or modulate.a <= 0.001:
+		return
+	var size := Vector2.ONE * radius * 2.0
+	draw_texture_rect(tex, Rect2(pos - size * 0.5, size), false, modulate)
+
+func _ensure_glow_texture() -> Texture2D:
+	if glow_texture != null:
+		return glow_texture
+	var tex_size := 128
+	var image := Image.create(tex_size, tex_size, false, Image.FORMAT_RGBA8)
+	var center := Vector2(float(tex_size - 1) * 0.5, float(tex_size - 1) * 0.5)
+	var inv_radius := 1.0 / maxf(1.0, center.length())
+	for y in range(tex_size):
+		for x in range(tex_size):
+			var d := (Vector2(float(x), float(y)) - center).length() * inv_radius
+			var t := clampf(1.0 - d, 0.0, 1.0)
+			var smooth := t * t * (3.0 - 2.0 * t)
+			var a := pow(smooth, 1.9)
+			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, a))
+	glow_texture = ImageTexture.create_from_image(image)
+	return glow_texture
+
+func _is_hint_node(node_id: int) -> bool:
+	if node_id == hint_id:
+		return true
+	return hint_ids.has(node_id)
+
+func _draw_edge_afterimages(positions: Dictionary) -> void:
+	if edge_afterimages.is_empty():
+		return
+	for fx in edge_afterimages:
+		var a := int(fx.get("a", -1))
+		var b := int(fx.get("b", -1))
+		if not positions.has(a) or not positions.has(b):
+			continue
+		var points := _edge_points(a, b, positions)
+		if points.is_empty():
+			continue
+		var t := clampf(float(fx.get("age", 0.0)) / maxf(0.001, float(fx.get("duration", 0.6))), 0.0, 1.0)
+		var kind := String(fx.get("kind", "trail"))
+		if kind == "dissolve":
+			if _vfx_enabled(VFX_DISCONNECT_DISSOLVE):
+				_draw_dissolve_pass(points.start, points.end, t)
+		elif _vfx_enabled(VFX_PHOSPHOR_TRAIL):
+			_draw_phosphor_pass(points.start, points.end, t)
+
+func _draw_phosphor_pass(start: Vector2, end: Vector2, t: float) -> void:
+	var intensity := _vfx_intensity_factor(VFX_PHOSPHOR_TRAIL)
+	var hold := pow(1.0 - t, 1.7)
+	var color := _tint_color(color_edge, 0.95).lerp(Color.WHITE, 0.32)
+	color.a = (0.06 + 0.22 * hold) * (1.0 + ui_light_bias * 0.35) * intensity
+	var width := maxf(2.2, base_radius * 0.2) * lerpf(0.8, 1.45, intensity * 0.5)
+	if current_theme_id == THEME_TERMINAL:
+		_draw_dashed_line(start, end, color, width, maxf(6.0, base_radius * 0.33), maxf(3.0, base_radius * 0.16))
+	else:
+		draw_line(start, end, color, width)
+
+func _draw_dissolve_pass(start: Vector2, end: Vector2, t: float) -> void:
+	var intensity := _vfx_intensity_factor(VFX_DISCONNECT_DISSOLVE)
+	var fade := pow(1.0 - t, 1.5)
+	if fade <= 0.01:
+		return
+	var line_color := _tint_color(color_edge, 0.85)
+	line_color.a = 0.18 * fade * intensity
+	draw_line(start, end, line_color, maxf(1.5, base_radius * 0.14))
+	var axis := end - start
+	var length := axis.length()
+	if length <= 0.001:
+		return
+	var tangent := axis / length
+	var normal := Vector2(-tangent.y, tangent.x)
+	for i in range(8):
+		var fi := float(i)
+		var u := (fi + 0.5) / 8.0
+		var p := start.lerp(end, u)
+		var drift := (0.5 - _hash01(fi * 13.11 + t * 57.0 + start.x * 0.01)) * length * 0.08
+		p += normal * drift * t
+		var particle := _tint_color(color_edge, 0.95)
+		particle.a = 0.1 * fade * intensity
+		draw_circle(p, maxf(1.0, base_radius * 0.045 * (1.0 + t * 1.6)) * lerpf(0.8, 1.4, intensity * 0.5), particle)
+
+func _draw_edge_ripples(positions: Dictionary) -> void:
+	if not _vfx_enabled(VFX_CONNECT_RIPPLE):
+		return
+	var intensity := _vfx_intensity_factor(VFX_CONNECT_RIPPLE)
+	for fx in edge_ripples:
+		var t := clampf(float(fx.get("age", 0.0)) / maxf(0.001, float(fx.get("duration", 0.4))), 0.0, 1.0)
+		var alpha := pow(1.0 - t, 1.8) * 0.28 * intensity
+		var ripple := _tint_color(color_selected, 0.95)
+		ripple.a = alpha
+		for id_key in ["a", "b"]:
+			var node_id := int(fx.get(id_key, -1))
+			if not positions.has(node_id):
+				continue
+			var node: Dictionary = positions[node_id]
+			var radius := float(node.radius) * (1.1 + t * 2.4)
+			var width := maxf(1.2, float(node.radius) * (0.08 + 0.03 * (1.0 - t)))
+			draw_arc(node.pos, radius, 0.0, TAU, 64, ripple, width)
+
+func _draw_completion_waves(positions: Dictionary, viewport_size: Vector2) -> void:
+	if completion_waves.is_empty() or not _vfx_enabled(VFX_COMPLETION_SHOCKWAVE):
+		return
+	var intensity := _vfx_intensity_factor(VFX_COMPLETION_SHOCKWAVE)
+	var center := _board_center(positions, viewport_size)
+	for fx in completion_waves:
+		var t := clampf(float(fx.get("age", 0.0)) / maxf(0.001, float(fx.get("duration", 0.9))), 0.0, 1.0)
+		var alpha := pow(1.0 - t, 1.9) * 0.3 * intensity
+		var radius := minf(viewport_size.x, viewport_size.y) * (0.18 + t * 0.72)
+		var ring := _tint_color(color_selected, 1.0)
+		ring.a = alpha
+		draw_arc(center, radius, 0.0, TAU, 96, ring, maxf(2.0, base_radius * 0.14))
+		var halo := ring
+		halo.a *= 0.25
+		draw_circle(center, radius * 0.92, halo)
+
+func _draw_solved_aura(positions: Dictionary, viewport_size: Vector2) -> void:
+	if solved_aura_level <= 0.001 or not _vfx_enabled(VFX_SOLVED_AURA):
+		return
+	var intensity := _vfx_intensity_factor(VFX_SOLVED_AURA)
+	var center := _board_center(positions, viewport_size)
+	var aura := _tint_color(color_selected, 1.0)
+	aura.a = (0.01 + 0.08 * solved_aura_level * solved_aura_level) * intensity
+	var radius := minf(viewport_size.x, viewport_size.y) * (0.2 + solved_aura_level * 0.35)
+	_draw_soft_radial(center, radius, aura, 8)
+
+func _board_center(positions: Dictionary, viewport_size: Vector2) -> Vector2:
+	if positions.is_empty():
+		return viewport_size * 0.5
+	var sum := Vector2.ZERO
+	for node in positions.values():
+		sum += node.pos
+	return sum / float(positions.size())
+
+func _edge_points(a: int, b: int, positions: Dictionary) -> Dictionary:
+	if not positions.has(a) or not positions.has(b):
+		return {}
+	var start: Vector2 = positions[a].pos
+	var end: Vector2 = positions[b].pos
+	var dir := end - start
+	var length := dir.length()
+	if length <= 0.001:
+		return {}
+	var unit := dir / length
+	var inset_a := minf(float(positions[a].radius) * 0.9, length * 0.45)
+	var inset_b := minf(float(positions[b].radius) * 0.9, length * 0.45)
+	start += unit * inset_a
+	end -= unit * inset_b
+	return {"start": start, "end": end}
+
+func _ascii_marker(remaining: int) -> String:
+	if remaining <= 0:
+		return "OK"
+	return "+".repeat(clampi(remaining, 1, 4))
+
+func _draw_ascii_centered(pos: Vector2, text: String, color: Color, font_size: int) -> void:
+	var font := ThemeDB.fallback_font
+	if font == null:
+		return
+	var sz := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var ascent := font.get_ascent(font_size)
+	var origin := Vector2(pos.x - sz.x * 0.5, pos.y + ascent * 0.38)
+	draw_string(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 func _draw_depth_blur(pos: Vector2, radius: float, fade: float, blur_strength: float) -> void:
 	var fog := clampf(1.0 - fade, 0.0, 1.0)
-	var base := _tint_color(COLOR_CIRCLE, maxf(0.15, fade * 0.75)).lerp(COLOR_BG, lerpf(0.45, 0.72, fog))
+	var base := _tint_color(color_circle, maxf(0.15, fade * 0.75)).lerp(color_bg, lerpf(0.45, 0.72, fog))
 	var layers := maxi(1, int(round(lerpf(1.0, float(DEPTH_BLUR_STEPS), blur_strength))))
 	for i in range(layers, 0, -1):
 		var t := float(i) / float(layers)
@@ -410,10 +1360,14 @@ func _interpolate_offsets(from: Array, to: Array, t: float) -> Array:
 	return out
 
 func _float_offset(node_id: int) -> Vector3:
-	var amp := cell_size * float_amp_factor
+	var motion_signed := _vfx_motion_factor()
+	var motion_mix := clampf(absf(motion_signed) * 0.5, 0.0, 1.0)
+	var direction := -1.0 if motion_signed < 0.0 else 1.0
+	var amp := cell_size * float_amp_factor * lerpf(0.25, 1.8, motion_mix)
 	var seed := float(node_id)
-	var ox := sin(float_time + seed * 0.37) * amp
-	var oy := cos(float_time * 0.8 + seed * 0.53) * amp * 0.8
+	var motion := absf(motion_signed)
+	var ox := sin(float_time * direction * (0.8 + motion * 0.5) + seed * 0.37) * amp
+	var oy := cos(float_time * direction * (0.55 + motion * 0.4) + seed * 0.53) * amp * 0.8
 	return Vector3(ox, oy, 0.0)
 
 func get_front_face() -> int:
@@ -518,15 +1472,15 @@ func _fade_from_depth(z: float) -> float:
 
 func _tint_color(base: Color, fade: float) -> Color:
 	var t := clampf(1.0 - fade, 0.0, 1.0)
-	var washed := base.lerp(COLOR_BG, t * 0.85)
+	var washed := base.lerp(color_bg, t * 0.85)
 	var factor := lerpf(0.6, 1.0, fade)
 	return Color(washed.r * factor, washed.g * factor, washed.b * factor, 1.0)
 
 func _edge_color(fade: float) -> Color:
-	var color := _tint_color(COLOR_EDGE, fade)
+	var color := _tint_color(color_edge, fade)
 	var fog := clampf(1.0 - fade, 0.0, 1.0)
-	var fog_color := COLOR_BG
-	var fog_strength := lerpf(0.15, 0.7, fog)
+	var fog_color := color_bg
+	var fog_strength := lerpf(0.08, 0.52, fog)
 	return color.lerp(fog_color, fog_strength)
 
 func _is_node_on_front_face(node_id: int) -> bool:

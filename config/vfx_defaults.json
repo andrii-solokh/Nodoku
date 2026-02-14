@@ -1,0 +1,88 @@
+{
+	"developer_mode": true,
+	"gameplay": {
+		"profiles": {
+			"ambient_particles": {
+				"intensity": 6.0,
+				"motion": 4.0
+			},
+			"completion_shockwave": {
+				"intensity": 1.40981838893096,
+				"motion": 1.76685420272847
+			},
+			"connect_ripple": {
+				"intensity": 0.487304870604434,
+				"motion": 1.0
+			},
+			"disconnect_dissolve": {
+				"intensity": 0.0725647740339852,
+				"motion": 6.0
+			},
+			"edge_sweep": {
+				"intensity": 0.0746539206999228,
+				"motion": 0.0
+			},
+			"heat_shimmer": {
+				"intensity": 6.0,
+				"motion": 2.15547383292213
+			},
+			"hint_beacon": {
+				"intensity": 0.130423497871629,
+				"motion": 1.0
+			},
+			"parallax_fog": {
+				"intensity": 0.534339864429126,
+				"motion": 1.50272367814099
+			},
+			"phosphor_trail": {
+				"intensity": 0.064248721882967,
+				"motion": 0.0
+			},
+			"shader_bg": {
+				"intensity": 0.69772235326834,
+				"motion": 1.0
+			},
+			"solved_aura": {
+				"intensity": 0.0,
+				"motion": 1.0
+			},
+			"ui_light_coupling": {
+				"intensity": 3.23704177259664,
+				"motion": 1.0
+			}
+		}
+	},
+	"post": {
+		"profiles": {
+			"post_bloom_lift": {
+				"intensity": 2.87942739531155,
+				"motion": 1.0
+			},
+			"post_chromatic": {
+				"intensity": 0.181321386054077,
+				"motion": 1.0
+			},
+			"post_color_grade": {
+				"intensity": 4.0,
+				"motion": 1.0
+			},
+			"post_grain": {
+				"intensity": 2.77013466754334,
+				"motion": 2.73363082195468
+			},
+			"post_lens_warp": {
+				"intensity": 0.379729661461215,
+				"motion": 0.27289375846294
+			},
+			"post_scanlines": {
+				"intensity": 0.288774630485015,
+				"motion": 0.0
+			},
+			"post_vignette": {
+				"intensity": 1.17922203758752,
+				"motion": 1.0
+			}
+		}
+	},
+	"version": 1
+}
