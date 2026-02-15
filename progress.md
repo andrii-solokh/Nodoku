@@ -646,3 +646,12 @@ TODO
 - Removed temporary 3D cube helper stack (`_draw_terminal_cube_3d`, projection/quad helpers) and restored direct rect-based selection/hint overlays.
 - Kept prior ASCII adjustments (square markers, no text markers, no circular glow/back-layer artifacts, square ripple handling).
 - Validation: `godot --headless --path . --quit-after 1` passes.
+2026-02-15 update
+- Replaced main-menu Grid Size and Difficulty center controls from HSliders to segmented bar strips in `scripts/main.gd`.
+- Layout now uses `-` button, middle rectangle bars, `+` button; bars are gray when inactive and accent-glow when active.
+- Grid Size bars: 7 segments, active count equals selected size.
+- Difficulty bars: 3 segments, active count maps Easy/Normal/Hard (1/2/3 lit).
+- Depth remains Flat/3D dual toggle buttons.
+- Validation: `godot --headless --path /Users/andriisolokh/Projects/dotcon --quit-after 1`.
+2026-02-15 update
+- Menu sliders cleanup: removed visible Grid Size numeric value and Difficulty text label from the right side of controls; now only segmented bars communicate value.

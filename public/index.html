@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
-		<title>DotCon</title>
-		<style>
+		<head>
+			<meta charset="utf-8">
+			<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+			<title>Nodoku</title>
+			<style>
 html, body, #canvas {
 	margin: 0;
 	padding: 0;
@@ -12,10 +12,11 @@ html, body, #canvas {
 }
 
 body {
-	color: white;
-	background-color: black;
+	color: #8efaaa;
+	background: radial-gradient(1200px 700px at 50% 35%, #0a2415 0%, #05140d 50%, #020b07 100%);
 	overflow: hidden;
 	touch-action: none;
+	font-family: "Menlo", "Monaco", "Consolas", "Courier New", monospace;
 }
 
 #canvas {
@@ -26,73 +27,121 @@ body {
 	outline: none;
 }
 
-#status, #status-splash, #status-progress {
-	position: absolute;
-	left: 0;
-	right: 0;
-}
-
-#status, #status-splash {
-	top: 0;
-	bottom: 0;
-}
-
 #status {
-	background-color: #242424;
+	position: absolute;
+	inset: 0;
 	display: flex;
-	flex-direction: column;
 	justify-content: center;
 	align-items: center;
 	visibility: hidden;
+	backdrop-filter: blur(2px);
 }
 
-#status-splash {
-	max-height: 100%;
-	max-width: 100%;
-	margin: auto;
+#status-card {
+	width: min(560px, 88vw);
+	padding: 24px 24px 18px;
+	border: 2px solid rgba(91, 226, 125, 0.85);
+	border-radius: 20px;
+	background: linear-gradient(180deg, rgba(3, 20, 13, 0.92), rgba(1, 12, 8, 0.96));
+	box-shadow:
+		0 18px 60px rgba(0, 0, 0, 0.45),
+		0 0 56px rgba(91, 226, 125, 0.18),
+		inset 0 0 20px rgba(91, 226, 125, 0.07);
 }
 
-#status-splash.show-image--false {
-	display: none;
+#status-topline {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 10px;
 }
 
-#status-splash.fullsize--true {
-	height: 100%;
-	width: 100%;
-	object-fit: contain;
+#status-brand {
+	font-size: clamp(34px, 5vw, 48px);
+	line-height: 1.1;
+	font-weight: 700;
+	color: #c8ffd2;
+	text-shadow: 0 0 20px rgba(142, 250, 170, 0.35);
 }
 
-#status-splash.use-filter--false {
-	image-rendering: pixelated;
+#status-subtitle {
+	font-size: clamp(14px, 2vw, 18px);
+	color: #6bcf88;
+	opacity: 0.9;
 }
+
+#status-pixels {
+	display: grid;
+	grid-template-columns: repeat(3, 12px);
+	gap: 5px;
+}
+
+#status-pixels span {
+	width: 12px;
+	height: 12px;
+	border: 2px solid #5be27d;
+	background: rgba(91, 226, 125, 0.15);
+	animation: nodokuPulse 1.2s ease-in-out infinite;
+}
+
+#status-pixels span:nth-child(2) { animation-delay: .15s; }
+#status-pixels span:nth-child(3) { animation-delay: .30s; }
 
 #status-progress, #status-notice {
 	display: none;
 }
 
 #status-progress {
-	bottom: 10%;
-	width: 50%;
-	margin: 0 auto;
+	width: 100%;
+	height: 14px;
+	appearance: none;
+	border: 1px solid rgba(91, 226, 125, 0.75);
+	border-radius: 10px;
+	background: rgba(4, 23, 14, 0.8);
+	overflow: hidden;
+	margin-top: 12px;
+}
+
+#status-progress::-webkit-progress-bar {
+	background: rgba(4, 23, 14, 0.8);
+}
+
+#status-progress::-webkit-progress-value {
+	background: linear-gradient(90deg, #49bc66, #8efaaa);
+}
+
+#status-progress::-moz-progress-bar {
+	background: linear-gradient(90deg, #49bc66, #8efaaa);
+}
+
+#status-percent {
+	margin-top: 10px;
+	font-size: 16px;
+	color: #8efaaa;
+	text-align: right;
 }
 
 #status-notice {
-	background-color: #5b3943;
-	border-radius: 0.5rem;
-	border: 1px solid #9b3943;
-	color: #e0e0e0;
-	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
-	line-height: 1.3;
-	margin: 0 2rem;
-	overflow: hidden;
-	padding: 1rem;
-	text-align: center;
-	z-index: 1;
+	margin-top: 14px;
+	background: rgba(76, 16, 16, 0.62);
+	border: 1px solid rgba(255, 120, 120, 0.68);
+	border-radius: 10px;
+	color: #ffd7d7;
+	line-height: 1.35;
+	padding: 10px 12px;
+	text-align: left;
+	white-space: pre-line;
 }
-		</style>
+
+@keyframes nodokuPulse {
+	0%, 100% { transform: scale(1.0); opacity: 0.45; }
+	50% { transform: scale(1.08); opacity: 1; }
+}
+			</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
-<style>html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#F4F1EC;}#canvas{width:100%;height:100%;display:block;}</style><script>(function(){function f(){var c=document.getElementById('canvas');if(!c)return;if(!c.hasAttribute('tabindex'))c.setAttribute('tabindex','0');if(document.activeElement!==c)c.focus();}function p(e){var k=e.key||'';var kl=k.toLowerCase();if(k.startsWith('Arrow')||kl==='w'||kl==='a'||kl==='s'||kl==='d'||k==='['||k===']'||k===' ')e.preventDefault();}window.addEventListener('pointerdown',f,true);window.addEventListener('mousedown',f,true);window.addEventListener('touchstart',f,{passive:true,capture:true});window.addEventListener('keydown',p,{passive:false,capture:true});window.addEventListener('keydown',f,true);})();</script>
+<style>html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#020b07;}#canvas{width:100%;height:100%;display:block;}</style><script>(function(){function f(){var c=document.getElementById('canvas');if(!c)return;if(!c.hasAttribute('tabindex'))c.setAttribute('tabindex','0');if(document.activeElement!==c)c.focus();}function p(e){var k=e.key||'';var kl=k.toLowerCase();if(k.startsWith('Arrow')||kl==='w'||kl==='a'||kl==='s'||kl==='d'||k==='['||k===']'||k===' ')e.preventDefault();}window.addEventListener('pointerdown',f,true);window.addEventListener('mousedown',f,true);window.addEventListener('touchstart',f,{passive:true,capture:true});window.addEventListener('keydown',p,{passive:false,capture:true});window.addEventListener('keydown',f,true);})();</script>
 	</head>
 	<body>
 		<canvas id="canvas">
@@ -103,11 +152,22 @@ body {
 			Your browser does not support JavaScript.
 		</noscript>
 
-		<div id="status">
-			<img id="status-splash" class="show-image--true fullsize--true use-filter--true" src="index.png" alt="">
-			<progress id="status-progress"></progress>
-			<div id="status-notice"></div>
-		</div>
+			<div id="status">
+				<div id="status-card">
+					<div id="status-topline">
+						<div>
+							<div id="status-brand">Nodoku</div>
+							<div id="status-subtitle">Connect all nodes</div>
+						</div>
+						<div id="status-pixels" aria-hidden="true">
+							<span></span><span></span><span></span>
+						</div>
+					</div>
+					<progress id="status-progress"></progress>
+					<div id="status-percent">Loading 0%</div>
+					<div id="status-notice"></div>
+				</div>
+			</div>
 
 		<script src="index.js"></script>
 		<script>
@@ -115,10 +175,11 @@ const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"e
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
-(function () {
-	const statusOverlay = document.getElementById('status');
-	const statusProgress = document.getElementById('status-progress');
-	const statusNotice = document.getElementById('status-notice');
+	(function () {
+		const statusOverlay = document.getElementById('status');
+		const statusProgress = document.getElementById('status-progress');
+		const statusNotice = document.getElementById('status-notice');
+		const statusPercent = document.getElementById('status-percent');
 
 	let initializing = true;
 	let statusMode = '';
@@ -132,11 +193,14 @@ const engine = new Engine(GODOT_CONFIG);
 			initializing = false;
 			return;
 		}
-		statusOverlay.style.visibility = 'visible';
-		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
-		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
-		statusMode = mode;
-	}
+			statusOverlay.style.visibility = 'visible';
+			statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
+			statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+			if (statusPercent) {
+				statusPercent.style.display = mode === 'progress' ? 'block' : 'none';
+			}
+			statusMode = mode;
+		}
 
 	function setStatusNotice(text) {
 		while (statusNotice.lastChild) {
@@ -200,15 +264,22 @@ const engine = new Engine(GODOT_CONFIG);
 	} else {
 		setStatusMode('progress');
 		engine.startGame({
-			'onProgress': function (current, total) {
-				if (current > 0 && total > 0) {
-					statusProgress.value = current;
-					statusProgress.max = total;
-				} else {
-					statusProgress.removeAttribute('value');
-					statusProgress.removeAttribute('max');
-				}
-			},
+				'onProgress': function (current, total) {
+					if (current > 0 && total > 0) {
+						statusProgress.value = current;
+						statusProgress.max = total;
+						if (statusPercent) {
+							const pct = Math.round((current / total) * 100);
+							statusPercent.textContent = `Loading ${pct}%`;
+						}
+					} else {
+						statusProgress.removeAttribute('value');
+						statusProgress.removeAttribute('max');
+						if (statusPercent) {
+							statusPercent.textContent = 'Loading...';
+						}
+					}
+				},
 		}).then(() => {
 			setStatusMode('hidden');
 		}, displayFailureNotice);
@@ -217,4 +288,3 @@ const engine = new Engine(GODOT_CONFIG);
 		</script>
 	</body>
 </html>
-

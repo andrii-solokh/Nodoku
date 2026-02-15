@@ -145,10 +145,7 @@ func _ready() -> void:
 	solve_button.pressed.connect(_on_solve_pressed)
 	next_button.pressed.connect(_on_back_pressed)
 	replay_button.pressed.connect(_on_next_pressed)
-	_ensure_theme_button()
 	_ensure_post_fx_overlay()
-	_ensure_vfx_button()
-	_ensure_dev_button()
 	grid_view.set_vfx_intensity(1.0)
 	grid_view.set_vfx_motion(1.0)
 	_apply_developer_mode_visibility()
@@ -257,11 +254,13 @@ func _on_dev_pressed() -> void:
 func _apply_developer_mode_visibility() -> void:
 	var enabled := developer_mode
 	if is_instance_valid(solve_button):
-		solve_button.visible = enabled
+		solve_button.visible = false
 	if is_instance_valid(theme_button):
-		theme_button.visible = enabled
+		theme_button.visible = false
 	if is_instance_valid(vfx_button):
-		vfx_button.visible = enabled
+		vfx_button.visible = false
+	if is_instance_valid(dev_button):
+		dev_button.visible = false
 	if not enabled:
 		solve_hover_active = false
 		_hide_vfx_popup()
@@ -1090,9 +1089,7 @@ func _on_solve_hover_exited() -> void:
 
 func _update_ui_light_bias() -> void:
 	var strength := 0.0
-	if hint_hover_active:
-		strength = maxf(strength, 0.55)
-	if solve_hover_active:
+	if solve_hover_active and is_instance_valid(solve_button) and solve_button.is_visible_in_tree():
 		strength = maxf(strength, 0.82)
 	grid_view.set_ui_light_bias(strength)
 
@@ -1139,6 +1136,15 @@ func _apply_hud_theme() -> void:
 		node.add_theme_color_override("font_color", accent)
 		node.add_theme_color_override("font_hover_color", accent)
 		node.add_theme_color_override("font_pressed_color", accent)
+	var nav_icon_color := hint_button.get_theme_color("font_color") if is_instance_valid(hint_button) else accent
+	for icon_button in [back_button, restart_button]:
+		if not is_instance_valid(icon_button):
+			continue
+		icon_button.add_theme_color_override("icon_normal_color", nav_icon_color)
+		icon_button.add_theme_color_override("icon_hover_color", nav_icon_color)
+		icon_button.add_theme_color_override("icon_pressed_color", nav_icon_color)
+		icon_button.add_theme_color_override("icon_focus_color", nav_icon_color)
+		icon_button.add_theme_color_override("icon_disabled_color", text_dim)
 	if is_instance_valid(vfx_popup):
 		for lbl_node in vfx_popup.find_children("*", "Label", true, false):
 			var lbl := lbl_node as Label
@@ -1164,18 +1170,18 @@ func _apply_hud_theme() -> void:
 			if slider == null:
 				continue
 			slider.modulate = popup_text
-		var panel := StyleBoxFlat.new()
-		panel.bg_color = popup_bg
-		panel.border_width_left = 2
-		panel.border_width_top = 2
-		panel.border_width_right = 2
-		panel.border_width_bottom = 2
-		panel.border_color = accent
-		panel.corner_radius_top_left = 14
-		panel.corner_radius_top_right = 14
-		panel.corner_radius_bottom_right = 14
-		panel.corner_radius_bottom_left = 14
-		vfx_popup.add_theme_stylebox_override("panel", panel)
+			var panel := StyleBoxFlat.new()
+			panel.bg_color = popup_bg
+			panel.border_width_left = 2
+			panel.border_width_top = 2
+			panel.border_width_right = 2
+			panel.border_width_bottom = 2
+			panel.border_color = accent
+			panel.corner_radius_top_left = 14
+			panel.corner_radius_top_right = 14
+			panel.corner_radius_bottom_right = 14
+			panel.corner_radius_bottom_left = 14
+			vfx_popup.add_theme_stylebox_override("panel", panel)
 	if is_instance_valid(control_hints_label):
 		control_hints_label.add_theme_color_override("font_color", text_dim)
 	if is_instance_valid(completion_label):
