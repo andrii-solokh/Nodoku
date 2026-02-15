@@ -597,3 +597,52 @@ TODO
   - Preview chooses a real edge from current board state (prefers a placed edge, falls back to a valid neighbor edge) and does not modify puzzle state.
 - Validation:
   - `godot --headless --path . --quit-after 1` passes.
+2026-02-15 update (terminal connect shape + directional edge sweep)
+- Updated `scripts/grid_view.gd` connection VFX behavior:
+  - Terminal theme connection ripple now renders square aura for connect events (instead of circular arcs).
+  - Edge sweep now preserves action direction (`a -> b`) so energy flow follows source-selected node to target node.
+- Added `connected` flag to ripple events so connect/disconnect visual treatment can differ.
+- Validation: `godot --headless --path . --quit-after 1` passes.
+2026-02-15 update (terminal node markers)
+- Replaced Terminal node text markers in `scripts/grid_view.gd`:
+  - Removed `+` text markers and now render small cube pips using the same positional layout logic as round-node dots.
+  - Removed `OK` text; solved (`0`) nodes now render a compact square solved badge (double-square motif) instead of text.
+- Removed unused ASCII text helper methods tied to old marker rendering.
+- Validation: `godot --headless --path . --quit-after 1` passes.
+2026-02-15 update (terminal glow removal)
+- Removed circular node halo glow in Terminal/ASCII theme by disabling `_draw_full_node_glow` call in `_draw_terminal_node_item`.
+- Kept square node styling and marker rendering unchanged.
+- Validation: `godot --headless --path . --quit-after 1` passes.
+2026-02-15 update (terminal solved cubes style)
+- Updated terminal node solved style in `scripts/grid_view.gd`:
+  - Solved nodes now render with the same cube body as unsolved nodes.
+  - Removed special solved badge/overlay and keep solved state indicated by absence of internal cube markers.
+- Validation: `godot --headless --path . --quit-after 1` passes.
+2026-02-15 update (terminal square aura cleanup)
+- Updated `scripts/grid_view.gd` terminal visuals:
+  - Depth blur/back-layer aura now renders square layers in Terminal theme (removed circular blur halos behind square nodes).
+  - Connection ripple in Terminal theme now uses square aura for both connect and disconnect events (disconnect no longer uses circular arc).
+- Validation: `godot --headless --path . --quit-after 1` passes.
+2026-02-15 update (terminal artifact cleanup)
+- Removed terminal node depth-blur pass in `_draw_terminal_node_item` to eliminate square ghost artifacts in the back layer.
+- Updated terminal disconnect dissolve particles to square sprites in `_draw_dissolve_pass` (no circular particle cues in ASCII theme).
+- Validation: `godot --headless --path . --quit-after 1` passes.
+2026-02-15 update (terminal faux-3D cubes prototype)
+- Added faux 3D volume pass for terminal nodes in `scripts/grid_view.gd`:
+  - Draws a back face with up-left offset.
+  - Draws top + left side faces with separate shading.
+  - Keeps existing front-face styling and inner markers.
+- New helper: `_draw_terminal_cube_volume(rect, offset, frame_color, fill_color, blur_strength)`.
+- Validation: `godot --headless --path . --quit-after 1` passes.
+2026-02-15 update (terminal real 3D cube geometry)
+- Replaced terminal node faux-offset cube with projected 3D cube rendering in `scripts/grid_view.gd`:
+  - New `_draw_terminal_cube_3d()` builds 8 cube corners in world space, projects to screen, culls faces by camera-facing normal, sorts visible faces by depth, and shades each face.
+  - Front-face overlays (selection/hint outlines and inner markers) now anchor to the projected front quad instead of flat axis-aligned rects.
+  - Added helpers: `_project_world_point`, `_scale_quad`, `_draw_quad_outline`, plus flat marker fallback helper.
+- Validation:
+  - `godot --headless --path . --quit-after 1` passes.
+2026-02-15 update (rollback terminal nodes to flat squares)
+- Rolled back terminal node rendering from projected 3D cubes to flat square style in `scripts/grid_view.gd`.
+- Removed temporary 3D cube helper stack (`_draw_terminal_cube_3d`, projection/quad helpers) and restored direct rect-based selection/hint overlays.
+- Kept prior ASCII adjustments (square markers, no text markers, no circular glow/back-layer artifacts, square ripple handling).
+- Validation: `godot --headless --path . --quit-after 1` passes.

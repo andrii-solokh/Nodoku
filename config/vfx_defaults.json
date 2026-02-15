@@ -11,7 +11,7 @@
 				"motion": 1.76685420272847
 			},
 			"connect_ripple": {
-				"intensity": 0.487304870604434,
+				"intensity": 0.0872745328920219,
 				"motion": 1.0
 			},
 			"disconnect_dissolve": {
@@ -27,7 +27,7 @@
 				"motion": 2.15547383292213
 			},
 			"hint_beacon": {
-				"intensity": 0.130423497871629,
+				"intensity": 0.177574073688179,
 				"motion": 1.0
 			},
 			"parallax_fog": {

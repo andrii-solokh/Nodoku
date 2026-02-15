@@ -12,7 +12,7 @@ const DEPTH_MODE_CUBE := 2
 
 @onready var menu: Control = $Menu
 @onready var game: GameController = $Game
-@onready var background: TextureRect = $Background
+@onready var background: TextureRect	 = $Background
 @onready var menu_vbox: VBoxContainer = $Menu/MenuPanel/MenuMargin/VBox
 @onready var title_label: Label = $Menu/MenuPanel/MenuMargin/VBox/Title
 @onready var subtitle_label: Label = $Menu/MenuPanel/MenuMargin/VBox/Subtitle

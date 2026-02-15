@@ -281,7 +281,7 @@ func trigger_edge_feedback(a: int, b: int, connected: bool) -> void:
 	if _vfx_enabled(VFX_CONNECT_RIPPLE):
 		var ripple_motion := _vfx_speed_factor(VFX_CONNECT_RIPPLE)
 		var ripple_duration := (0.4 if connected else 0.34) / ripple_motion
-		edge_ripples.append({"a": a, "b": b, "age": 0.0, "duration": ripple_duration})
+		edge_ripples.append({"a": a, "b": b, "connected": connected, "age": 0.0, "duration": ripple_duration})
 	if connected and _vfx_enabled(VFX_PHOSPHOR_TRAIL):
 		var trail_motion := _vfx_speed_factor(VFX_PHOSPHOR_TRAIL)
 		edge_afterimages.append({"a": a, "b": b, "kind": "trail", "age": 0.0, "duration": 0.85 / trail_motion})
@@ -936,34 +936,34 @@ func _draw_edge_item(item: Dictionary, positions: Dictionary) -> void:
 		draw_line(start, end, hot, maxf(2.0, base_radius * 0.16))
 	else:
 		draw_line(start, end, color, maxf(1.8, base_radius * 0.15))
-	_draw_edge_sweep(edge_key, fx_start, fx_end, color)
+	_draw_edge_sweep(edge_key, a, b, fx_start, fx_end, color)
 
-func _draw_edge_sweep(edge_key: int, start: Vector2, end: Vector2, color: Color) -> void:
+func _draw_edge_sweep(edge_key: int, edge_a: int, edge_b: int, start: Vector2, end: Vector2, color: Color) -> void:
 	if edge_key == -1 or not _vfx_enabled(VFX_EDGE_SWEEP):
 		return
 	var intensity := _vfx_intensity_factor(VFX_EDGE_SWEEP)
-	var best_t := -1.0
 	for fx in edge_sweeps:
 		if int(fx.get("key", -1)) != edge_key:
 			continue
 		var duration := maxf(0.001, float(fx.get("duration", 0.58)))
 		var t := clampf(float(fx.get("age", 0.0)) / duration, 0.0, 1.0)
-		best_t = maxf(best_t, t)
-	if best_t < 0.0:
-		return
-	var sweep_head := start.lerp(end, best_t)
-	var sweep_tail := start.lerp(end, clampf(best_t - 0.24, 0.0, 1.0))
-	var power := 1.0 - absf(best_t - 0.5) * 1.8
-	if power <= 0.0:
-		return
-	var beam := color.lerp(Color.WHITE, 0.62)
-	beam.a = (0.1 + power * 0.32) * (1.0 + ui_light_bias * 0.45) * intensity
-	var inner := Color.WHITE
-	inner.a = beam.a * 0.75
-	var outer_width := maxf(3.2, base_radius * 0.3) * lerpf(0.82, 1.55, intensity * 0.5)
-	var inner_width := maxf(1.5, base_radius * 0.15) * lerpf(0.86, 1.3, intensity * 0.5)
-	draw_line(sweep_tail, sweep_head, beam, outer_width)
-	draw_line(sweep_tail, sweep_head, inner, inner_width)
+		# Keep sweep direction from action order (selected/source -> target).
+		var dir_forward := int(fx.get("a", edge_a)) == edge_a and int(fx.get("b", edge_b)) == edge_b
+		var travel_t := t if dir_forward else 1.0 - t
+		var sweep_head := start.lerp(end, travel_t)
+		var tail_t := clampf(travel_t - 0.24, 0.0, 1.0) if dir_forward else clampf(travel_t + 0.24, 0.0, 1.0)
+		var sweep_tail := start.lerp(end, tail_t)
+		var power := 1.0 - absf(t - 0.5) * 1.8
+		if power <= 0.0:
+			continue
+		var beam := color.lerp(Color.WHITE, 0.62)
+		beam.a = (0.1 + power * 0.32) * (1.0 + ui_light_bias * 0.45) * intensity
+		var inner := Color.WHITE
+		inner.a = beam.a * 0.75
+		var outer_width := maxf(3.2, base_radius * 0.3) * lerpf(0.82, 1.55, intensity * 0.5)
+		var inner_width := maxf(1.5, base_radius * 0.15) * lerpf(0.86, 1.3, intensity * 0.5)
+		draw_line(sweep_tail, sweep_head, beam, outer_width)
+		draw_line(sweep_tail, sweep_head, inner, inner_width)
 
 func _draw_dashed_line(start: Vector2, end: Vector2, color: Color, width: float, dash_len: float, gap_len: float) -> void:
 	var dir := end - start
@@ -1055,20 +1055,14 @@ func _draw_terminal_node_item(n: Dictionary) -> void:
 	var blur_strength: float = 0.0 if _depth_blur_disabled() else clampf(float(n.get("blur", 0.0)), 0.0, 1.0)
 	var remaining := model.remaining_dots(node_id)
 	var unsolved_white := force_unsolved_white_fill and remaining > 0
-	if blur_strength > 0.02:
-		_draw_depth_blur(pos, radius, fade, blur_strength)
 	var frame_color := _tint_color(color_circle, fade)
 	var fill_color := frame_color.lerp(color_bg, 0.58 + blur_strength * 0.08)
-	var quiet_color := _tint_color(color_quiet, fade)
 	var dot_color := _tint_color(color_dot, fade)
-	var glow_color := _tint_color(color_edge, maxf(fade, 0.55))
 	if unsolved_white:
 		fill_color = Color(1, 1, 1, 1)
 	else:
 		fill_color = fill_color.lerp(Color("#74E48A"), 0.12)
 		fill_color.a = 1.0
-	_draw_full_node_glow(pos, radius, glow_color, blur_strength)
-	quiet_color = quiet_color.lerp(color_bg, blur_strength * 0.28)
 	frame_color = frame_color.lerp(color_bg, blur_strength * 0.35)
 	dot_color = dot_color.lerp(color_bg, blur_strength * 0.16)
 	var half := maxf(6.0, radius * 0.9)
@@ -1081,8 +1075,6 @@ func _draw_terminal_node_item(n: Dictionary) -> void:
 			hot.a *= lerpf(0.48, 0.3, blur_strength)
 			draw_rect(hot_rect, hot, true)
 	draw_rect(rect, frame_color, false, maxf(1.4, radius * 0.09))
-	if remaining == 0:
-		draw_rect(rect.grow(-maxf(2.0, radius * 0.18)), quiet_color, true)
 	if node_id == selected_id:
 		var sel_color := _tint_color(color_selected, maxf(fade, 0.6))
 		draw_rect(rect.grow(4.0), sel_color, false, maxf(1.6, radius * 0.12))
@@ -1092,14 +1084,28 @@ func _draw_terminal_node_item(n: Dictionary) -> void:
 			var hint_intensity := _vfx_intensity_factor(VFX_HINT_BEACON)
 			var hint_motion := _vfx_speed_factor(VFX_HINT_BEACON)
 			var pulse := 0.5 + 0.5 * sin(float_time * (5.5 + hint_motion * 1.2) + float(node_id) * 0.81)
-			var growth := 7.0 + pulse * 6.0
 			hint_color.a *= (0.55 + pulse * 0.45) * hint_intensity
+			var growth := 7.0 + pulse * 6.0
 			draw_rect(rect.grow(growth), hint_color, false, maxf(1.2, radius * (0.07 + pulse * 0.05)))
 		else:
 			draw_rect(rect.grow(8.0), hint_color, false, maxf(1.4, radius * 0.1))
-	dot_color.a *= lerpf(0.95, 0.32, blur_strength)
-	if dot_color.a > 0.02:
-		_draw_ascii_centered(pos, _ascii_marker(remaining), dot_color, int(clampf(radius * 0.72, 12.0, 44.0)))
+	if remaining > 0:
+		dot_color.a *= lerpf(0.95, 0.32, blur_strength)
+		if dot_color.a > 0.02:
+			_draw_terminal_cube_markers(pos, remaining, radius, dot_color)
+
+func _draw_terminal_cube_markers(pos: Vector2, count: int, radius: float, color: Color) -> void:
+	var marker_count := clampi(count, 1, 4)
+	var spacing := radius * 0.35
+	var offsets := _dot_offsets(marker_count, spacing)
+	var half := maxf(1.8, radius * 0.14)
+	for offset in offsets:
+		var center := pos + Vector2(offset)
+		var cube_rect := Rect2(center - Vector2.ONE * half, Vector2.ONE * half * 2.0)
+		draw_rect(cube_rect, color, true)
+		var rim := color.lerp(Color.WHITE, 0.22)
+		rim.a *= 0.88
+		draw_rect(cube_rect, rim, false, maxf(1.0, half * 0.22))
 
 func _draw_full_node_glow(pos: Vector2, radius: float, color: Color, blur_strength: float) -> void:
 	var tex := _ensure_glow_texture()
@@ -1203,7 +1209,13 @@ func _draw_dissolve_pass(start: Vector2, end: Vector2, t: float) -> void:
 		p += normal * drift * t
 		var particle := _tint_color(color_edge, 0.95)
 		particle.a = 0.1 * fade * intensity
-		draw_circle(p, maxf(1.0, base_radius * 0.045 * (1.0 + t * 1.6)) * lerpf(0.8, 1.4, intensity * 0.5), particle)
+		var particle_radius := maxf(1.0, base_radius * 0.045 * (1.0 + t * 1.6)) * lerpf(0.8, 1.4, intensity * 0.5)
+		if current_theme_id == THEME_TERMINAL:
+			var half := particle_radius
+			var rect := Rect2(p - Vector2.ONE * half, Vector2.ONE * half * 2.0)
+			draw_rect(rect, particle, true)
+		else:
+			draw_circle(p, particle_radius, particle)
 
 func _draw_edge_ripples(positions: Dictionary) -> void:
 	if not _vfx_enabled(VFX_CONNECT_RIPPLE):
@@ -1214,6 +1226,7 @@ func _draw_edge_ripples(positions: Dictionary) -> void:
 		var alpha := pow(1.0 - t, 1.8) * 0.28 * intensity
 		var ripple := _tint_color(color_selected, 0.95)
 		ripple.a = alpha
+		var connected := bool(fx.get("connected", true))
 		for id_key in ["a", "b"]:
 			var node_id := int(fx.get(id_key, -1))
 			if not positions.has(node_id):
@@ -1221,7 +1234,15 @@ func _draw_edge_ripples(positions: Dictionary) -> void:
 			var node: Dictionary = positions[node_id]
 			var radius := float(node.radius) * (1.1 + t * 2.4)
 			var width := maxf(1.2, float(node.radius) * (0.08 + 0.03 * (1.0 - t)))
-			draw_arc(node.pos, radius, 0.0, TAU, 64, ripple, width)
+			if current_theme_id == THEME_TERMINAL:
+				var scale := 1.0 if connected else 1.08
+				var ripple_strength := 1.0 if connected else 0.82
+				ripple.a *= ripple_strength
+				radius *= scale
+				var rect := Rect2(node.pos - Vector2(radius, radius), Vector2(radius * 2.0, radius * 2.0))
+				draw_rect(rect, ripple, false, width)
+			else:
+				draw_arc(node.pos, radius, 0.0, TAU, 64, ripple, width)
 
 func _draw_completion_waves(positions: Dictionary, viewport_size: Vector2) -> void:
 	if completion_waves.is_empty() or not _vfx_enabled(VFX_COMPLETION_SHOCKWAVE):
@@ -1273,20 +1294,6 @@ func _edge_points(a: int, b: int, positions: Dictionary) -> Dictionary:
 	end -= unit * inset_b
 	return {"start": start, "end": end}
 
-func _ascii_marker(remaining: int) -> String:
-	if remaining <= 0:
-		return "OK"
-	return "+".repeat(clampi(remaining, 1, 4))
-
-func _draw_ascii_centered(pos: Vector2, text: String, color: Color, font_size: int) -> void:
-	var font := ThemeDB.fallback_font
-	if font == null:
-		return
-	var sz := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	var ascent := font.get_ascent(font_size)
-	var origin := Vector2(pos.x - sz.x * 0.5, pos.y + ascent * 0.38)
-	draw_string(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
-
 func _draw_depth_blur(pos: Vector2, radius: float, fade: float, blur_strength: float) -> void:
 	var fog := clampf(1.0 - fade, 0.0, 1.0)
 	var base := _tint_color(color_circle, maxf(0.15, fade * 0.75)).lerp(color_bg, lerpf(0.45, 0.72, fog))
@@ -1298,7 +1305,11 @@ func _draw_depth_blur(pos: Vector2, radius: float, fade: float, blur_strength: f
 		blur_color.a = max_alpha * t
 		var spread := radius * lerpf(0.05, 0.55, blur_strength) * t
 		var blur_radius := radius + spread
-		draw_circle(pos, blur_radius, blur_color)
+		if current_theme_id == THEME_TERMINAL:
+			var rect_size := Vector2.ONE * blur_radius * 2.0
+			draw_rect(Rect2(pos - rect_size * 0.5, rect_size), blur_color, true)
+		else:
+			draw_circle(pos, blur_radius, blur_color)
 
 func _draw_dots(node_id: int, pos: Vector2, count: int, radius: float, color: Color) -> void:
 	if count <= 0:
