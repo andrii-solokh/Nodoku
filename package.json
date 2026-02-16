@@ -1,4 +1,5 @@
 {
+  "name": "nodoku",
   "scripts": {
     "release:web": "bash scripts/release_web.sh",
     "icons:generate": "node scripts/generate_icons.mjs"

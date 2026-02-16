@@ -1,4 +1,4 @@
-# DotCon (prototype)
+# Nodoku
 
 This is a minimal Godot 4 prototype for the dot-connection puzzle.
 
