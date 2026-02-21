@@ -27,3 +27,8 @@ tmp_screens/
 .worktrees/
 .security-key
 logs/security/
+
+# Build artifacts
+output/
+public/index.pck
+public/index.wasm
