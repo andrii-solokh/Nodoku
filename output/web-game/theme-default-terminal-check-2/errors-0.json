@@ -1,0 +1,6 @@
+[
+  {
+    "type": "pageerror",
+    "text": "AbortError: Unable to load a worklet's module."
+  }
+]

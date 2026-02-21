@@ -17,8 +17,8 @@ config/icon="res://assets/app_icons/ios/icon_1024x1024.png"
 
 [display]
 
-window/size/viewport_width=1280
-window/size/viewport_height=720
+window/size/viewport_width=412
+window/size/viewport_height=915
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 

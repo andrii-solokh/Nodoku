@@ -6,35 +6,51 @@ const THEME_CLASSIC := 0
 const THEME_WARM := 1
 const THEME_TERMINAL := 2
 
+const GUIDE_MODE_BASIC_4X4 := 0
+const GUIDE_MODE_ROTATION_4X4X4 := 1
+const BASIC_GRID_SIZE := 4
+const BASIC_DEPTH_LAYERS := 1
+const ROTATION_GRID_SIZE := 4
+const ROTATION_DEPTH_LAYERS := 4
+const TARGET_A := Vector2i(1, 1)
+const TARGET_B := Vector2i(2, 1)
+
 @export var circle_color: Color = Color("#4A5A5E")
 @export var dot_color: Color = Color("#2F3E46")
 @export var line_color: Color = Color("#4A5A5E")
 @export var fill_color: Color = Color("#F4F1EC")
 @export var selected_color: Color = Color("#C1A66A")
-@export var layer_count: int = 4
 @export var layer_spacing: float = 18.0
 @export var rotation_lerp: float = 6.0
-const DEPTH_BLUR_STEPS := 5
+
+const DEPTH_BLUR_STEPS := 4
 const TEMP_DISABLE_BLUR := false
 const WEB_DISABLE_AMBIENT_ANIMATION := true
 const WEB_DISABLE_DEPTH_BLUR := true
 
+var guide_mode: int = GUIDE_MODE_BASIC_4X4
+var grid_size: int = BASIC_GRID_SIZE
+var depth_layers: int = BASIC_DEPTH_LAYERS
 var expected_step: int = 0
+
 var selected_left: bool = false
 var connected: bool = false
 var line_t: float = 0.0
 var line_target: float = 0.0
+
 var drag_active: bool = false
 var drag_accum: Vector2 = Vector2.ZERO
 var rotation_vec: Vector2 = Vector2(1, 1)
 var rotation_target: Vector2 = Vector2(1, 1)
 var rotation_triggered: bool = false
+
 var current_theme_id: int = THEME_CLASSIC
 var demo_time: float = 0.0
 var demo_glow_texture: Texture2D = null
 
 func _ready() -> void:
 	set_process(is_visible_in_tree())
+	_set_guide_mode(GUIDE_MODE_BASIC_4X4)
 	apply_theme(THEME_CLASSIC)
 
 func _notification(what: int) -> void:
@@ -76,6 +92,7 @@ func apply_theme(theme_id: int) -> void:
 
 func reset_demo() -> void:
 	expected_step = 0
+	_set_guide_mode(GUIDE_MODE_BASIC_4X4)
 	selected_left = false
 	connected = false
 	line_t = 0.0
@@ -88,13 +105,29 @@ func reset_demo() -> void:
 	queue_redraw()
 
 func set_step(value: int) -> void:
-	expected_step = value
+	expected_step = clampi(value, 0, 3)
+	var mode := GUIDE_MODE_ROTATION_4X4X4 if expected_step >= 3 else GUIDE_MODE_BASIC_4X4
+	if mode != guide_mode:
+		_set_guide_mode(mode)
 	if expected_step == 0:
 		selected_left = false
 		connected = false
 		line_t = 0.0
 		line_target = 0.0
+	if expected_step < 3:
 		rotation_triggered = false
+	else:
+		selected_left = false
+	queue_redraw()
+
+func _set_guide_mode(mode: int) -> void:
+	guide_mode = mode
+	if guide_mode == GUIDE_MODE_ROTATION_4X4X4:
+		grid_size = ROTATION_GRID_SIZE
+		depth_layers = ROTATION_DEPTH_LAYERS
+	else:
+		grid_size = BASIC_GRID_SIZE
+		depth_layers = BASIC_DEPTH_LAYERS
 
 func _process(delta: float) -> void:
 	if not is_visible_in_tree():
@@ -137,17 +170,30 @@ func _gui_input(event: InputEvent) -> void:
 		_try_rotation_from_keys(event.keycode)
 
 func _handle_tap(pos: Vector2) -> void:
-	var rect := get_rect()
-	var center := rect.size * 0.5
-	var r := minf(rect.size.x, rect.size.y) * 0.22
-	var left := center + Vector2(-r * 2.1, 0)
-	var right := center + Vector2(r * 2.1, 0)
-	if pos.distance_to(left) <= r * 1.05:
+	if guide_mode != GUIDE_MODE_BASIC_4X4:
+		return
+	var hit := _pick_front_node(pos)
+	if hit == TARGET_A:
 		_on_left_tap()
-		return
-	if pos.distance_to(right) <= r * 1.05:
+	elif hit == TARGET_B:
 		_on_right_tap()
-		return
+
+func _pick_front_node(pos: Vector2) -> Vector2i:
+	var size := get_rect().size
+	var span := _board_span(size, GUIDE_MODE_BASIC_4X4)
+	var step := span / float(BASIC_GRID_SIZE - 1)
+	var origin := _board_origin(size, span)
+	var radius := maxf(16.0, step * 0.35)
+	var best := Vector2i(-1, -1)
+	var best_dist := radius * 1.25
+	for y in range(BASIC_GRID_SIZE):
+		for x in range(BASIC_GRID_SIZE):
+			var p := origin + Vector2(float(x) * step, float(y) * step)
+			var dist := p.distance_to(pos)
+			if dist < best_dist:
+				best_dist = dist
+				best = Vector2i(x, y)
+	return best
 
 func _on_left_tap() -> void:
 	if expected_step == 0:
@@ -180,13 +226,13 @@ func _try_rotation_from_drag(delta: Vector2) -> void:
 
 func _try_rotation_from_keys(keycode: int) -> void:
 	match keycode:
-		KEY_LEFT:
+		KEY_LEFT, KEY_A:
 			_apply_rotation_delta(Vector2(-1, 0))
-		KEY_RIGHT:
+		KEY_RIGHT, KEY_D:
 			_apply_rotation_delta(Vector2(1, 0))
-		KEY_UP:
+		KEY_UP, KEY_W:
 			_apply_rotation_delta(Vector2(0, -1))
-		KEY_DOWN:
+		KEY_DOWN, KEY_S:
 			_apply_rotation_delta(Vector2(0, 1))
 		_:
 			return
@@ -207,32 +253,104 @@ func _apply_rotation_delta(delta: Vector2) -> void:
 func _draw() -> void:
 	var rect := get_rect()
 	_draw_demo_background(rect.size)
-	var center := rect.size * 0.5
-	var r := minf(rect.size.x, rect.size.y) * 0.22
-	var left := center + Vector2(-r * 2.1, 0)
-	var right := center + Vector2(r * 2.1, 0)
+	if guide_mode == GUIDE_MODE_ROTATION_4X4X4:
+		_draw_rotation_demo(rect.size)
+	else:
+		_draw_basic_demo(rect.size)
 
-	var left_dots := 2
-	var right_dots := 2
-	if connected:
-		left_dots = 1
-		right_dots = 1
+func _draw_basic_demo(size: Vector2) -> void:
+	var span := _board_span(size, GUIDE_MODE_BASIC_4X4)
+	var step := span / float(BASIC_GRID_SIZE - 1)
+	var origin := _board_origin(size, span)
+	var radius := maxf(10.0, step * 0.2)
+	var lattice := line_color
+	lattice.a = 0.13
+	_draw_board_lattice(origin, step, BASIC_GRID_SIZE, lattice)
+	for y in range(BASIC_GRID_SIZE):
+		for x in range(BASIC_GRID_SIZE):
+			var coord := Vector2i(x, y)
+			var pos := origin + Vector2(float(x) * step, float(y) * step)
+			var dots := _demo_dot_count(coord)
+			var selected := selected_left and coord == TARGET_A
+			_draw_demo_node(pos, radius, dots, selected, 1.0, 0.0)
+			if coord == TARGET_A or coord == TARGET_B:
+				_draw_target_ring(pos, radius, coord)
+	if line_t > 0.0:
+		var start := origin + Vector2(float(TARGET_A.x) * step, float(TARGET_A.y) * step)
+		var stop := origin + Vector2(float(TARGET_B.x) * step, float(TARGET_B.y) * step)
+		_draw_demo_line(start, stop, radius, line_t, 1.0)
 
-	var layers: int = max(1, layer_count)
-	var dir: Vector2 = rotation_vec
-	if dir.length() < 0.01:
-		dir = Vector2(1, 1)
-	var offset := dir.normalized() * layer_spacing
-	for i in range(layers - 1, -1, -1):
-		var depth: float = float(i) / max(1.0, float(layers - 1))
-		var alpha: float = lerpf(0.35, 1.0, 1.0 - depth)
-		var blur_strength: float = 0.0 if _depth_blur_disabled() else clampf(pow(depth, 1.05), 0.0, 1.0)
-		var pos_offset: Vector2 = offset * i
-		var is_front: bool = i == 0
-		_draw_demo_node(left + pos_offset, r, left_dots, selected_left and is_front, alpha, blur_strength)
-		_draw_demo_node(right + pos_offset, r, right_dots, false, alpha, blur_strength)
-		if line_t > 0.0 and is_front:
-			_draw_demo_line(left, right, r, line_t, line_t)
+func _draw_rotation_demo(size: Vector2) -> void:
+	var span := _board_span(size, GUIDE_MODE_ROTATION_4X4X4)
+	var step := span / float(ROTATION_GRID_SIZE - 1)
+	var origin := _board_origin(size, span)
+	var radius := maxf(9.0, step * 0.19)
+	var visual_dir := _rotation_visual_dir(rotation_vec)
+	var layer_offset := visual_dir * maxf(layer_spacing, step * 0.34)
+	for i in range(depth_layers - 1, -1, -1):
+		var depth: float = float(i) / maxf(1.0, float(depth_layers - 1))
+		var alpha := lerpf(0.42, 1.0, 1.0 - depth)
+		var blur_strength := 0.0 if _depth_blur_disabled() else clampf(pow(depth, 1.1), 0.0, 1.0)
+		var layer_origin := origin + layer_offset * float(i)
+		var lattice := line_color
+		lattice.a = lerpf(0.09, 0.15, 1.0 - depth)
+		_draw_board_lattice(layer_origin, step, ROTATION_GRID_SIZE, lattice)
+		for y in range(ROTATION_GRID_SIZE):
+			for x in range(ROTATION_GRID_SIZE):
+				var coord := Vector2i(x, y)
+				var pos := layer_origin + Vector2(float(x) * step, float(y) * step)
+				var dots := _demo_dot_count(coord)
+				var is_front := i == 0
+				var selected := selected_left and is_front and coord == TARGET_A
+				_draw_demo_node(pos, radius, dots, selected, alpha, blur_strength)
+				if is_front and (coord == TARGET_A or coord == TARGET_B):
+					_draw_target_ring(pos, radius, coord)
+		if i == 0 and line_t > 0.0:
+			var start := layer_origin + Vector2(float(TARGET_A.x) * step, float(TARGET_A.y) * step)
+			var stop := layer_origin + Vector2(float(TARGET_B.x) * step, float(TARGET_B.y) * step)
+			_draw_demo_line(start, stop, radius, line_t, 1.0)
+
+func _draw_target_ring(pos: Vector2, radius: float, coord: Vector2i) -> void:
+	var highlight := selected_color
+	var base := 0.26
+	if coord == TARGET_A and expected_step == 0:
+		base = 0.42
+	elif expected_step >= 3:
+		base = 0.2
+	var pulse := 0.5 + 0.5 * sin(demo_time * 3.1 + float(coord.x * 7 + coord.y * 3))
+	highlight.a = base + pulse * 0.2
+	draw_arc(pos, radius + 5.0, 0.0, TAU, 40, highlight, maxf(1.2, radius * 0.1))
+
+func _demo_dot_count(coord: Vector2i) -> int:
+	if coord == TARGET_A or coord == TARGET_B:
+		return 1 if connected else 2
+	if guide_mode == GUIDE_MODE_BASIC_4X4:
+		return 1 if ((coord.x + coord.y) % 3 == 0) else 0
+	return 1 if ((coord.x + coord.y) % 2 == 0) else 0
+
+func _board_span(size: Vector2, mode: int) -> float:
+	if mode == GUIDE_MODE_BASIC_4X4:
+		return minf(size.x * 0.46, size.y * 0.84)
+	return minf(size.x * 0.42, size.y * 0.74)
+
+func _board_origin(size: Vector2, span: float) -> Vector2:
+	return size * 0.5 - Vector2(span * 0.5, span * 0.5)
+
+func _rotation_visual_dir(dir: Vector2) -> Vector2:
+	var v := dir
+	if v.length() < 0.01:
+		v = Vector2(1.0, 1.0)
+	if absf(v.x) < 0.12:
+		v.x = 0.45 * signf(v.y if v.y != 0.0 else 1.0)
+	if absf(v.y) < 0.12:
+		v.y = 0.45 * signf(v.x if v.x != 0.0 else 1.0)
+	return v.normalized()
+
+func _draw_board_lattice(origin: Vector2, step: float, grid: int, color: Color) -> void:
+	for i in range(grid):
+		var t := float(i) * step
+		draw_line(origin + Vector2(0.0, t), origin + Vector2(step * float(grid - 1), t), color, 1.0)
+		draw_line(origin + Vector2(t, 0.0), origin + Vector2(t, step * float(grid - 1)), color, 1.0)
 
 func _draw_demo_background(size: Vector2) -> void:
 	match current_theme_id:
@@ -246,83 +364,83 @@ func _draw_demo_background(size: Vector2) -> void:
 func _draw_demo_classic_background(size: Vector2) -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), fill_color)
 	var top_light := Color("#FFFFFF")
-	top_light.a = 0.038
-	_draw_demo_soft_radial(Vector2(size.x * 0.5, size.y * 0.16), minf(size.x, size.y) * 0.8, top_light, 8)
+	top_light.a = 0.02
+	_draw_demo_soft_radial(Vector2(size.x * 0.5, size.y * 0.18), minf(size.x, size.y) * 0.68, top_light, 6)
 	var band := Color("#E8E4DC")
-	band.a = 0.3
-	draw_rect(Rect2(0.0, size.y * 0.64, size.x, size.y * 0.2), band)
-	for i in range(44):
+	band.a = 0.16
+	draw_rect(Rect2(0.0, size.y * 0.68, size.x, size.y * 0.16), band)
+	for i in range(28):
 		var fi := float(i)
 		var dust := Color("#A29A8D")
-		dust.a = lerpf(0.01, 0.04, _demo_hash01(fi * 1.97 + 0.5))
+		dust.a = lerpf(0.008, 0.022, _demo_hash01(fi * 1.97 + 0.5))
 		draw_circle(
 			Vector2(size.x * _demo_hash01(fi * 10.31 + 0.2), size.y * _demo_hash01(fi * 17.83 + 1.6)),
-			lerpf(0.4, 1.0, _demo_hash01(fi * 0.79 + 0.9)),
+			lerpf(0.4, 0.9, _demo_hash01(fi * 0.79 + 0.9)),
 			dust
 		)
 	var vignette := Color("#9D9384")
-	vignette.a = 0.03
-	_draw_demo_vignette(size, vignette, 9, 1.4)
+	vignette.a = 0.02
+	_draw_demo_vignette(size, vignette, 7, 1.0)
 
 func _draw_demo_warm_background(size: Vector2) -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), fill_color)
 	var glow := Color("#A6632B")
-	glow.a = 0.02
-	_draw_demo_soft_radial(Vector2(size.x * 0.5, size.y * 0.42), minf(size.x, size.y) * 0.68, glow, 9)
+	glow.a = 0.014
+	_draw_demo_soft_radial(Vector2(size.x * 0.5, size.y * 0.42), minf(size.x, size.y) * 0.6, glow, 6)
 	var ember := Color("#FFBE72")
-	ember.a = 0.02
-	_draw_demo_wisp_trail(size, 2.0, ember, minf(size.x, size.y) * 0.09, 0.11)
-	_draw_demo_wisp_trail(size, 6.8, ember, minf(size.x, size.y) * 0.07, -0.09)
-	for i in range(62):
+	ember.a = 0.012
+	_draw_demo_wisp_trail(size, 2.0, ember, minf(size.x, size.y) * 0.07, 0.09)
+	_draw_demo_wisp_trail(size, 6.8, ember, minf(size.x, size.y) * 0.06, -0.08)
+	for i in range(36):
 		var fi := float(i)
-		var twinkle := 0.5 + 0.5 * sin(demo_time * 1.8 + fi * 0.37)
+		var twinkle := 0.5 + 0.5 * sin(demo_time * 1.5 + fi * 0.37)
 		var star := Color("#F6BE79")
-		star.a = lerpf(0.02, 0.12, _demo_hash01(fi * 0.83 + 0.4)) * twinkle
+		star.a = lerpf(0.01, 0.05, _demo_hash01(fi * 0.83 + 0.4)) * twinkle
 		draw_circle(
 			Vector2(size.x * _demo_hash01(fi * 13.7 + 1.7), size.y * _demo_hash01(fi * 27.2 + 3.1)),
-			lerpf(0.7, 1.6, _demo_hash01(fi * 1.41 + 0.2)),
+			lerpf(0.6, 1.2, _demo_hash01(fi * 1.41 + 0.2)),
 			star
 		)
 	var vignette := Color("#3B2516")
-	vignette.a = 0.048
-	_draw_demo_vignette(size, vignette, 10, 1.5)
+	vignette.a = 0.03
+	_draw_demo_vignette(size, vignette, 8, 1.1)
 
 func _draw_demo_terminal_background(size: Vector2) -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), fill_color)
 	var core := Color("#62F089")
-	core.a = 0.02
-	_draw_demo_soft_radial(Vector2(size.x * 0.5, size.y * 0.45), minf(size.x, size.y) * 0.66, core, 9)
-	for y in range(0, int(size.y), 4):
+	core.a = 0.014
+	_draw_demo_soft_radial(Vector2(size.x * 0.5, size.y * 0.45), minf(size.x, size.y) * 0.62, core, 7)
+	for y in range(0, int(size.y), 5):
 		var scan := Color("#0A2A12")
-		scan.a = 0.16
+		scan.a = 0.08
 		draw_line(Vector2(0.0, float(y)), Vector2(size.x, float(y)), scan, 1.0)
-	for y in range(0, int(size.y), 24):
+	for y in range(0, int(size.y), 26):
 		var row := Color("#123C1E")
-		row.a = 0.07
+		row.a = 0.035
 		draw_line(Vector2(0.0, float(y)), Vector2(size.x, float(y)), row, 1.0)
 	var grid := Color("#1E5E33")
-	grid.a = 0.1
-	var grid_top := size.y * 0.56
+	grid.a = 0.045
+	var grid_top := size.y * 0.62
 	for x_step in range(0, 11):
 		var tx := float(x_step) / 10.0
 		var x := size.x * tx
 		draw_line(Vector2(x, grid_top), Vector2(x, size.y), grid, 1.0)
 	var stream := Color("#7DF89A")
-	stream.a = 0.016
-	_draw_demo_wisp_trail(size, 4.0, stream, minf(size.x, size.y) * 0.06, 0.08)
-	for i in range(84):
+	stream.a = 0.01
+	_draw_demo_wisp_trail(size, 4.0, stream, minf(size.x, size.y) * 0.05, 0.06)
+	for i in range(42):
 		var fi := float(i)
-		var twinkle := 0.5 + 0.5 * sin(demo_time * 1.6 + fi * 0.33)
+		var twinkle := 0.5 + 0.5 * sin(demo_time * 1.5 + fi * 0.33)
 		var star := Color("#77E88E")
-		star.a = lerpf(0.02, 0.09, _demo_hash01(fi * 0.79 + 0.4)) * twinkle
+		star.a = lerpf(0.01, 0.04, _demo_hash01(fi * 0.79 + 0.4)) * twinkle
 		draw_circle(
 			Vector2(size.x * _demo_hash01(fi * 11.9 + 1.7), size.y * _demo_hash01(fi * 20.6 + 3.1)),
-			1.0,
+			0.9,
 			star
 		)
 	var vignette := Color("#001505")
-	vignette.a = 0.052
-	_draw_demo_vignette(size, vignette, 10, 1.4)
+	vignette.a = 0.04
+	_draw_demo_vignette(size, vignette, 8, 1.0)
 
 func _draw_demo_soft_radial(center: Vector2, radius: float, color: Color, layers: int) -> void:
 	if radius <= 0.1 or color.a <= 0.001:
@@ -353,19 +471,19 @@ func _draw_demo_wisp_trail(size: Vector2, seed: float, color: Color, thickness: 
 	if color.a <= 0.001:
 		return
 	var start := Vector2(
-		size.x * lerpf(0.02, 0.28, _demo_hash01(seed * 2.17 + 0.31)),
-		size.y * lerpf(0.18, 0.82, _demo_hash01(seed * 1.13 + 0.91))
+		size.x * lerpf(0.04, 0.24, _demo_hash01(seed * 2.17 + 0.31)),
+		size.y * lerpf(0.2, 0.8, _demo_hash01(seed * 1.13 + 0.91))
 	)
 	var end := Vector2(
-		size.x * lerpf(0.66, 0.98, _demo_hash01(seed * 3.47 + 0.63)),
-		size.y * lerpf(0.14, 0.86, _demo_hash01(seed * 5.73 + 0.27))
+		size.x * lerpf(0.74, 0.96, _demo_hash01(seed * 3.47 + 0.63)),
+		size.y * lerpf(0.2, 0.8, _demo_hash01(seed * 5.73 + 0.27))
 	)
 	var arc := size.y * arc_scale
-	var steps := 16
+	var steps := 14
 	for i in range(steps):
 		var t := float(i) / float(steps - 1)
 		var p := start.lerp(end, t)
-		var sway := sin(demo_time * 0.4 + seed * 1.9 + t * TAU) * size.x * 0.012
+		var sway := sin(demo_time * 0.35 + seed * 1.9 + t * TAU) * size.x * 0.009
 		p.x += sway
 		p.y += sin(t * PI) * arc
 		var focus := sin(t * PI)
@@ -390,34 +508,31 @@ func _draw_demo_round_node(pos: Vector2, r: float, dots: int, selected: bool, al
 	glow.a = alpha
 	if current_theme_id == THEME_WARM:
 		_draw_demo_full_glow(pos, r, glow, blur_strength)
-	var fill_mix := 0.72 + blur_strength * 0.12
+	var fill_mix := 0.72 + blur_strength * 0.1
 	if current_theme_id == THEME_WARM:
-		fill_mix = 0.56 + blur_strength * 0.08
+		fill_mix = 0.58 + blur_strength * 0.08
 	var fill := circle_color.lerp(fill_color, fill_mix)
 	if current_theme_id == THEME_WARM:
-		fill = fill.lerp(Color("#FFC67A"), 0.16)
+		fill = fill.lerp(Color("#FFC67A"), 0.12)
 	fill.a = alpha
 	var outline := circle_color
 	outline.a *= alpha
 	var dot := dot_color
 	dot.a *= alpha
-	outline = outline.lerp(fill_color, blur_strength * 0.38)
-	dot = dot.lerp(fill_color, blur_strength * 0.16)
+	outline = outline.lerp(fill_color, blur_strength * 0.34)
+	dot = dot.lerp(fill_color, blur_strength * 0.14)
 	draw_circle(pos, maxf(2.0, r - maxf(1.0, r * 0.12)), fill)
 	if current_theme_id == THEME_WARM:
-		var core := fill.lerp(Color("#FFF0C6"), 0.28)
-		core.a *= alpha * 0.82
-		draw_circle(pos, maxf(2.0, r * 0.8), core)
-		var hot := Color("#FFF9E8")
-		hot.a = alpha * lerpf(0.07, 0.18, 1.0 - blur_strength)
-		draw_circle(pos, maxf(2.0, r * 0.5), hot)
-	outline.a *= lerpf(1.0, 0.55 if current_theme_id == THEME_WARM else 0.42, blur_strength)
-	draw_arc(pos, r, 0.0, TAU, 48, outline, maxf(1.4, r * lerpf(0.12 if current_theme_id == THEME_WARM else 0.11, 0.2 if current_theme_id == THEME_WARM else 0.18, blur_strength)))
+		var core := fill.lerp(Color("#FFF0C6"), 0.2)
+		core.a *= alpha * 0.7
+		draw_circle(pos, maxf(2.0, r * 0.78), core)
+	outline.a *= lerpf(1.0, 0.5, blur_strength)
+	draw_arc(pos, r, 0.0, TAU, 48, outline, maxf(1.2, r * lerpf(0.1, 0.17, blur_strength)))
 	if selected:
 		var select := selected_color
 		select.a *= alpha
-		draw_arc(pos, r + 3.5, 0.0, TAU, 48, select, maxf(1.4, r * 0.12))
-	dot.a *= lerpf(0.95, 0.22, blur_strength)
+		draw_arc(pos, r + 3.2, 0.0, TAU, 48, select, maxf(1.2, r * 0.11))
+	dot.a *= lerpf(0.95, 0.25, blur_strength)
 	if dot.a > 0.02:
 		_draw_demo_dots(pos, r, dots, dot)
 
@@ -425,49 +540,48 @@ func _draw_demo_terminal_node(pos: Vector2, r: float, dots: int, selected: bool,
 	var glow := line_color
 	glow.a = alpha
 	_draw_demo_full_glow(pos, r, glow, blur_strength)
-	var fill := circle_color.lerp(fill_color, 0.58 + blur_strength * 0.08)
-	fill = fill.lerp(Color("#74E48A"), 0.12)
+	var fill := circle_color.lerp(fill_color, 0.58 + blur_strength * 0.06)
+	fill = fill.lerp(Color("#74E48A"), 0.1)
 	fill.a = alpha
 	var outline := circle_color
 	outline.a *= alpha
 	var dot := dot_color
 	dot.a *= alpha
-	outline = outline.lerp(fill_color, blur_strength * 0.38)
+	outline = outline.lerp(fill_color, blur_strength * 0.34)
 	dot = dot.lerp(fill_color, blur_strength * 0.16)
-	var half := maxf(6.0, r * 0.9)
+	var half := maxf(6.0, r * 0.88)
 	var rect := Rect2(pos - Vector2(half, half), Vector2(half * 2.0, half * 2.0))
 	draw_rect(rect, fill, true)
-	var hot_rect := rect.grow(-maxf(2.0, r * 0.26))
+	var hot_rect := rect.grow(-maxf(2.0, r * 0.28))
 	if hot_rect.size.x > 0.0 and hot_rect.size.y > 0.0:
-		var hot := fill.lerp(Color("#D5FFDF"), 0.42)
-		hot.a *= lerpf(0.48, 0.3, blur_strength)
+		var hot := fill.lerp(Color("#D5FFDF"), 0.36)
+		hot.a *= lerpf(0.42, 0.28, blur_strength)
 		draw_rect(hot_rect, hot, true)
-	draw_rect(rect, outline, false, maxf(1.4, r * 0.1))
+	draw_rect(rect, outline, false, maxf(1.2, r * 0.09))
 	if selected:
 		var select := selected_color
 		select.a *= alpha
-		draw_rect(rect.grow(3.5), select, false, maxf(1.4, r * 0.12))
+		draw_rect(rect.grow(3.2), select, false, maxf(1.2, r * 0.11))
 	dot.a *= lerpf(0.95, 0.28, blur_strength)
 	if dot.a > 0.02:
-		_draw_demo_ascii_centered(pos, _demo_ascii_marker(dots), dot, int(clampf(r * 0.72, 12.0, 44.0)))
+		var marker := _demo_ascii_marker(dots)
+		if marker != "":
+			_draw_demo_ascii_centered(pos, marker, dot, int(clampf(r * 0.68, 11.0, 38.0)))
 
 func _draw_demo_full_glow(pos: Vector2, r: float, color: Color, blur_strength: float) -> void:
 	var tex := _ensure_demo_glow_texture()
 	if tex == null:
 		return
-	var pulse := 0.94 + 0.06 * sin(demo_time * 3.2 + pos.x * 0.012 + pos.y * 0.01)
-	var aura := color.lerp(Color.WHITE, 0.1)
-	aura.a = color.a * lerpf(0.04, 0.12, 1.0 - blur_strength) * pulse
-	_draw_demo_glow_sprite(tex, pos, r * lerpf(1.9, 1.55, blur_strength), aura)
-	var bloom := color.lerp(Color.WHITE, 0.22)
-	bloom.a = color.a * lerpf(0.03, 0.09, 1.0 - blur_strength) * pulse
-	_draw_demo_glow_sprite(tex, pos, r * lerpf(1.32, 1.12, blur_strength), bloom)
-	var hot_core := color.lerp(Color.WHITE, 0.66)
-	hot_core.a = color.a * lerpf(0.08, 0.2, 1.0 - blur_strength) * pulse
-	_draw_demo_glow_sprite(tex, pos, r * 0.86, hot_core)
-	var spark := Color.WHITE
-	spark.a = color.a * lerpf(0.01, 0.045, 1.0 - blur_strength) * pulse
-	_draw_demo_glow_sprite(tex, pos, r * 0.42, spark)
+	var pulse := 0.94 + 0.06 * sin(demo_time * 3.0 + pos.x * 0.012 + pos.y * 0.01)
+	var aura := color.lerp(Color.WHITE, 0.08)
+	aura.a = color.a * lerpf(0.022, 0.064, 1.0 - blur_strength) * pulse
+	_draw_demo_glow_sprite(tex, pos, r * lerpf(1.76, 1.5, blur_strength), aura)
+	var bloom := color.lerp(Color.WHITE, 0.2)
+	bloom.a = color.a * lerpf(0.02, 0.054, 1.0 - blur_strength) * pulse
+	_draw_demo_glow_sprite(tex, pos, r * lerpf(1.24, 1.06, blur_strength), bloom)
+	var hot_core := color.lerp(Color.WHITE, 0.6)
+	hot_core.a = color.a * lerpf(0.045, 0.11, 1.0 - blur_strength) * pulse
+	_draw_demo_glow_sprite(tex, pos, r * 0.82, hot_core)
 
 func _draw_demo_glow_sprite(tex: Texture2D, pos: Vector2, radius: float, modulate: Color) -> void:
 	if tex == null:
@@ -496,14 +610,14 @@ func _ensure_demo_glow_texture() -> Texture2D:
 
 func _draw_demo_depth_blur(pos: Vector2, r: float, alpha: float, blur_strength: float) -> void:
 	var fog := clampf(1.0 - alpha, 0.0, 1.0)
-	var base := circle_color.lerp(fill_color, lerpf(0.28, 0.68, fog))
+	var base := circle_color.lerp(fill_color, lerpf(0.3, 0.64, fog))
 	var layers := maxi(1, int(round(lerpf(1.0, float(DEPTH_BLUR_STEPS), blur_strength))))
 	for i in range(layers, 0, -1):
 		var t := float(i) / float(layers)
 		var blur := base
-		var max_alpha := lerpf(0.04, 0.2, blur_strength)
+		var max_alpha := lerpf(0.03, 0.14, blur_strength)
 		blur.a = max_alpha * t
-		var blur_r := r + r * lerpf(0.06, 0.48, blur_strength) * t
+		var blur_r := r + r * lerpf(0.05, 0.36, blur_strength) * t
 		draw_circle(pos, blur_r, blur)
 
 func _draw_demo_line(a: Vector2, b: Vector2, r: float, progress: float, alpha: float) -> void:
@@ -523,19 +637,19 @@ func _draw_demo_line(a: Vector2, b: Vector2, r: float, progress: float, alpha: f
 	var c := line_color
 	c.a *= alpha
 	var glow := c
-	glow.a *= 0.24
+	glow.a *= 0.2
 	if current_theme_id == THEME_TERMINAL:
-		var hot := c.lerp(Color("#E8FFEE"), 0.42)
-		hot.a *= alpha * 0.8
-		_draw_demo_dashed_line(start, end, glow, maxf(4.8, r * 0.42), maxf(8.0, r * 0.4), maxf(4.2, r * 0.2))
-		_draw_demo_dashed_line(start, end, hot, maxf(1.9, r * 0.15), maxf(5.0, r * 0.24), maxf(3.0, r * 0.14))
+		var hot := c.lerp(Color("#E8FFEE"), 0.36)
+		hot.a *= alpha * 0.72
+		_draw_demo_dashed_line(start, end, glow, maxf(3.8, r * 0.34), maxf(7.0, r * 0.34), maxf(3.8, r * 0.18))
+		_draw_demo_dashed_line(start, end, hot, maxf(1.7, r * 0.13), maxf(4.4, r * 0.2), maxf(2.8, r * 0.12))
 	elif current_theme_id == THEME_WARM:
-		var hot := c.lerp(Color("#FFF2D2"), 0.45)
-		hot.a *= alpha * 0.82
-		draw_line(start, end, glow, maxf(5.2, r * 0.46))
-		draw_line(start, end, hot, maxf(2.0, r * 0.16))
+		var hot := c.lerp(Color("#FFF2D2"), 0.35)
+		hot.a *= alpha * 0.72
+		draw_line(start, end, glow, maxf(4.0, r * 0.36))
+		draw_line(start, end, hot, maxf(1.8, r * 0.14))
 	else:
-		draw_line(start, end, c, maxf(2.0, r * 0.1))
+		draw_line(start, end, c, maxf(1.8, r * 0.1))
 
 func _draw_demo_dashed_line(start: Vector2, end: Vector2, color: Color, width: float, dash_len: float, gap_len: float) -> void:
 	var dir := end - start
@@ -551,7 +665,7 @@ func _draw_demo_dashed_line(start: Vector2, end: Vector2, color: Color, width: f
 
 func _demo_ascii_marker(count: int) -> String:
 	if count <= 0:
-		return "OK"
+		return ""
 	return "+".repeat(clampi(count, 1, 4))
 
 func _draw_demo_ascii_centered(pos: Vector2, text: String, color: Color, font_size: int) -> void:

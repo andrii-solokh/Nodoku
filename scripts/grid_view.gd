@@ -71,6 +71,24 @@ const DEFAULT_VFX_PROFILE := {"intensity": 1.0, "motion": 1.0}
 const VFX_INTENSITY_MAX := 6.0
 const VFX_MOTION_MIN := -6.0
 const VFX_MOTION_MAX := 6.0
+const QUALITY_AMBIENT_FPS_DEFAULT := 60.0
+const QUALITY_AMBIENT_FPS_BALANCED := 15.0
+const QUALITY_AMBIENT_FPS_BATTERY := 8.0
+const QUALITY_PARTICLE_CAP_DEFAULT := 36
+const QUALITY_PARTICLE_CAP_BALANCED := 22
+const QUALITY_PARTICLE_CAP_BATTERY := 14
+const QUALITY_WARM_GLOW_PASSES_DEFAULT := 4
+const QUALITY_WARM_GLOW_PASSES_BALANCED := 3
+const QUALITY_WARM_GLOW_PASSES_BATTERY := 2
+const QUALITY_RING_ARC_DEFAULT := 48
+const QUALITY_RING_ARC_BALANCED := 40
+const QUALITY_RING_ARC_BATTERY := 28
+const QUALITY_HINT_ARC_DEFAULT := 64
+const QUALITY_HINT_ARC_BALANCED := 52
+const QUALITY_HINT_ARC_BATTERY := 36
+const QUALITY_COMPLETION_ARC_DEFAULT := 96
+const QUALITY_COMPLETION_ARC_BALANCED := 72
+const QUALITY_COMPLETION_ARC_BATTERY := 56
 
 var cell_size: float = 96.0
 var base_radius: float = 28.0
@@ -115,6 +133,15 @@ var ui_light_target: float = 0.0
 var solved_aura_level: float = 0.0
 var vfx_intensity: float = 1.0
 var vfx_motion: float = 1.0
+var quality_ambient_fps: float = QUALITY_AMBIENT_FPS_DEFAULT
+var quality_particle_cap: int = QUALITY_PARTICLE_CAP_DEFAULT
+var quality_warm_glow_passes: int = QUALITY_WARM_GLOW_PASSES_DEFAULT
+var quality_blur_layer_cap: int = DEPTH_BLUR_STEPS
+var quality_ring_arc_points: int = QUALITY_RING_ARC_DEFAULT
+var quality_hint_arc_points: int = QUALITY_HINT_ARC_DEFAULT
+var quality_completion_arc_points: int = QUALITY_COMPLETION_ARC_DEFAULT
+var quality_post_fx_policy: String = "balanced"
+var ambient_tick_accum: float = 0.0
 
 signal rotation_finished
 
@@ -267,6 +294,26 @@ func set_vfx_motion(value: float) -> void:
 func get_vfx_motion() -> float:
 	return vfx_motion
 
+func apply_quality_settings(settings: Dictionary) -> void:
+	var ambient_fps := float(settings.get("ambient_fps", quality_ambient_fps))
+	var particle_cap := int(settings.get("particle_cap", quality_particle_cap))
+	var glow_passes := int(settings.get("warm_glow_passes", quality_warm_glow_passes))
+	var blur_layers := int(settings.get("blur_layers", quality_blur_layer_cap))
+	var ring_arc := int(settings.get("ring_arc_points", quality_ring_arc_points))
+	var hint_arc := int(settings.get("hint_arc_points", quality_hint_arc_points))
+	var completion_arc := int(settings.get("completion_arc_points", quality_completion_arc_points))
+	var post_policy := String(settings.get("post_fx_policy", quality_post_fx_policy))
+	quality_ambient_fps = clampf(ambient_fps, 1.0, 240.0)
+	quality_particle_cap = clampi(particle_cap, 8, 96)
+	quality_warm_glow_passes = clampi(glow_passes, 1, 4)
+	quality_blur_layer_cap = clampi(blur_layers, 1, DEPTH_BLUR_STEPS)
+	quality_ring_arc_points = clampi(ring_arc, 16, QUALITY_RING_ARC_DEFAULT)
+	quality_hint_arc_points = clampi(hint_arc, 24, QUALITY_HINT_ARC_DEFAULT)
+	quality_completion_arc_points = clampi(completion_arc, 32, QUALITY_COMPLETION_ARC_DEFAULT)
+	quality_post_fx_policy = post_policy
+	ambient_tick_accum = 0.0
+	queue_redraw()
+
 func pulse_ui_light(strength: float = 1.0) -> void:
 	ui_light_bias = maxf(ui_light_bias, clampf(strength, 0.0, 1.0))
 	queue_redraw()
@@ -331,6 +378,7 @@ func _ready() -> void:
 	set_process(true)
 	_ensure_all_vfx_profiles()
 	use_shader_background = _vfx_enabled(VFX_SHADER_BG)
+	apply_quality_settings({})
 
 func _ambient_animation_enabled() -> bool:
 	if WEB_DISABLE_AMBIENT_ANIMATION and OS.has_feature("web"):
@@ -362,7 +410,10 @@ func _process(delta: float) -> void:
 	_sync_edge_states()
 	if _advance_vfx_timers(delta):
 		dirty = true
-	if _ambient_animation_enabled() or _has_time_driven_vfx():
+	var animate_with_time := _has_non_ambient_time_driven_vfx()
+	if _ambient_animation_enabled() and _should_step_ambient(delta):
+		animate_with_time = true
+	if animate_with_time:
 		var motion_signed := _vfx_motion_factor()
 		var motion_mix := clampf(absf(motion_signed) * 0.5, 0.0, 1.0)
 		var direction := -1.0 if motion_signed < 0.0 else 1.0
@@ -388,17 +439,48 @@ func _process(delta: float) -> void:
 	if dirty:
 		queue_redraw()
 
-func _has_time_driven_vfx() -> bool:
-	return _vfx_enabled(VFX_PARALLAX_FOG) \
-		or _vfx_enabled(VFX_AMBIENT_PARTICLES) \
-		or _vfx_enabled(VFX_HINT_BEACON) \
-		or (_vfx_enabled(VFX_HEAT_SHIMMER) and current_theme_id == THEME_WARM) \
+func _has_non_ambient_time_driven_vfx() -> bool:
+	return (_vfx_enabled(VFX_HINT_BEACON) and _has_hint_nodes()) \
 		or (_vfx_enabled(VFX_UI_LIGHT_COUPLING) and (ui_light_bias > 0.001 or ui_light_target > 0.001)) \
 		or not edge_sweeps.is_empty() \
 		or not edge_ripples.is_empty() \
 		or not edge_afterimages.is_empty() \
-		or not completion_waves.is_empty() \
-		or solved_aura_level > 0.001
+		or not completion_waves.is_empty()
+
+func _has_hint_nodes() -> bool:
+	return hint_id != -1 or not hint_ids.is_empty()
+
+func _has_active_transitions() -> bool:
+	if rotation_active:
+		return true
+	if not edge_sweeps.is_empty() or not edge_ripples.is_empty() or not edge_afterimages.is_empty() or not completion_waves.is_empty():
+		return true
+	if _has_hint_nodes():
+		return true
+	for key in dot_states.keys():
+		var state: Dictionary = dot_states[key]
+		if float(state.get("t", 1.0)) < 1.0:
+			return true
+	for key in edge_states.keys():
+		var state: Dictionary = edge_states[key]
+		if float(state.get("t", 0.0)) != float(state.get("target", 0.0)):
+			return true
+	return false
+
+func _should_step_ambient(delta: float) -> bool:
+	if _has_active_transitions():
+		ambient_tick_accum = 0.0
+		return true
+	var target_fps := quality_ambient_fps
+	if target_fps >= QUALITY_AMBIENT_FPS_DEFAULT - 1.0:
+		ambient_tick_accum = 0.0
+		return true
+	ambient_tick_accum += delta
+	var tick_interval := 1.0 / maxf(1.0, target_fps)
+	if ambient_tick_accum < tick_interval:
+		return false
+	ambient_tick_accum = fmod(ambient_tick_accum, tick_interval)
+	return true
 
 func _advance_vfx_timers(delta: float) -> bool:
 	var dirty := false
@@ -445,19 +527,58 @@ func _advance_effect_list(list: Array, delta: float) -> bool:
 			dirty = true
 	return dirty
 
+func _is_touch_mobile_layout() -> bool:
+	if not DisplayServer.is_touchscreen_available():
+		return false
+	return OS.has_feature("web") or OS.has_feature("mobile")
+
+func _touch_short_side() -> float:
+	var window_size := DisplayServer.window_get_size()
+	var short_side := minf(float(window_size.x), float(window_size.y))
+	var viewport_size := get_viewport_rect().size
+	var viewport_short := minf(viewport_size.x, viewport_size.y)
+	if viewport_short > 0.0:
+		short_side = viewport_short if short_side <= 0.0 else minf(short_side, viewport_short)
+	if OS.has_feature("web") and Engine.has_singleton("JavaScriptBridge"):
+		var js_short := float(JavaScriptBridge.eval("Math.min(window.innerWidth || 0, window.innerHeight || 0)", true))
+		if js_short > 0.0:
+			short_side = js_short if short_side <= 0.0 else minf(short_side, js_short)
+	return short_side
+
 func _update_metrics() -> void:
 	if model == null:
 		return
 	var vp := get_viewport_rect().size
 	var pad_x := 100.0
 	var pad_y := 180.0
+	var min_cell := 68.0
+	var max_cell := 170.0
+	var size_boost := 0.95
+	var radius_factor := 0.28
+	if _is_touch_mobile_layout():
+		var short_side := _touch_short_side()
+		pad_x = 72.0
+		pad_y = 128.0
+		max_cell = 230.0
+		size_boost = 1.12
+		radius_factor = 0.31
+		if short_side <= 430.0:
+			pad_x = 56.0
+			pad_y = 108.0
+			max_cell = 250.0
+			size_boost = 1.22
+		elif short_side <= 520.0:
+			pad_x = 64.0
+			pad_y = 118.0
+			max_cell = 240.0
+			size_boost = 1.18
 	var max_dim := maxi(maxi(model.nx, model.ny), model.nz)
 	var span: int = maxi(max_dim - 1, 1)
-	var max_cell_x: float = (vp.x - pad_x) / float(span)
-	var max_cell_y: float = (vp.y - pad_y) / float(span)
-	cell_size = clampf(minf(max_cell_x, max_cell_y), 68.0, 160.0)
-	cell_size = clampf(cell_size * 0.95, 68.0, 170.0)
-	base_radius = cell_size * 0.28
+	var max_cell_x: float = maxf(min_cell, (vp.x - pad_x) / float(span))
+	var max_cell_y: float = maxf(min_cell, (vp.y - pad_y) / float(span))
+	cell_size = clampf(minf(max_cell_x, max_cell_y), min_cell, max_cell)
+	cell_size = clampf(cell_size * size_boost, min_cell, max_cell)
+	base_radius = cell_size * radius_factor
 
 func is_rotating() -> bool:
 	return rotation_active
@@ -720,7 +841,9 @@ func _draw_ambient_particles(size: Vector2) -> void:
 			particle_color = Color("#84F6A0")
 		_:
 			particle_color = Color("#A9B7C8")
-	var count := int(round(lerpf(16.0, 36.0, intensity * 0.5)))
+	var normalized := clampf(intensity / VFX_INTENSITY_MAX, 0.0, 1.0)
+	var raw_count := int(round(lerpf(10.0, 36.0, normalized)))
+	var count := clampi(raw_count, 8, quality_particle_cap)
 	for i in range(count):
 		var fi := float(i)
 		var speed := 0.08 + _hash01(fi * 4.13 + 1.7) * 0.4
@@ -1024,10 +1147,10 @@ func _draw_round_node_item(n: Dictionary, warm_mode: bool) -> void:
 	var ring_alpha := lerpf(1.0, 0.55 if warm_mode else 0.42, blur_strength)
 	var ring_width := maxf(1.6, radius * lerpf(0.12 if warm_mode else 0.11, 0.2 if warm_mode else 0.18, blur_strength))
 	frame_color.a *= ring_alpha
-	draw_arc(pos, radius, 0.0, TAU, 48, frame_color, ring_width)
+	draw_arc(pos, radius, 0.0, TAU, quality_ring_arc_points, frame_color, ring_width)
 	if node_id == selected_id:
 		var sel_color := _tint_color(color_selected, maxf(fade, 0.6))
-		draw_arc(pos, radius + 4.0, 0.0, TAU, 48, sel_color, maxf(1.6, radius * 0.12))
+		draw_arc(pos, radius + 4.0, 0.0, TAU, quality_ring_arc_points, sel_color, maxf(1.6, radius * 0.12))
 	if _is_hint_node(node_id):
 		var hint_color := _tint_color(color_selected, maxf(fade, 0.55))
 		if _vfx_enabled(VFX_HINT_BEACON):
@@ -1037,12 +1160,12 @@ func _draw_round_node_item(n: Dictionary, warm_mode: bool) -> void:
 			var ring_radius := radius + 6.0 + pulse * 7.0
 			var hint_width := maxf(1.5, radius * (0.08 + pulse * 0.05))
 			hint_color.a *= (0.6 + pulse * 0.4) * hint_intensity
-			draw_arc(pos, ring_radius, 0.0, TAU, 64, hint_color, hint_width)
+			draw_arc(pos, ring_radius, 0.0, TAU, quality_hint_arc_points, hint_color, hint_width)
 			var outer := hint_color
 			outer.a *= 0.35
-			draw_arc(pos, ring_radius + 5.0, 0.0, TAU, 64, outer, maxf(1.2, hint_width * 0.65))
+			draw_arc(pos, ring_radius + 5.0, 0.0, TAU, quality_hint_arc_points, outer, maxf(1.2, hint_width * 0.65))
 		else:
-			draw_arc(pos, radius + 8.0, 0.0, TAU, 48, hint_color, maxf(1.4, radius * 0.1))
+			draw_arc(pos, radius + 8.0, 0.0, TAU, quality_ring_arc_points, hint_color, maxf(1.4, radius * 0.1))
 	dot_color.a *= lerpf(0.95, 0.24, blur_strength)
 	if dot_color.a > 0.02:
 		_draw_dots(node_id, pos, remaining, radius, dot_color)
@@ -1111,21 +1234,25 @@ func _draw_full_node_glow(pos: Vector2, radius: float, color: Color, blur_streng
 	var tex := _ensure_glow_texture()
 	if tex == null:
 		return
+	var pass_count := clampi(quality_warm_glow_passes, 1, 4)
 	var intensity := _vfx_intensity_factor()
 	var pulse := 0.94 + 0.06 * sin(float_time * 3.1 + pos.x * 0.012 + pos.y * 0.01)
 	var ui_boost := 1.0 + (ui_light_bias * 0.8 if _vfx_enabled(VFX_UI_LIGHT_COUPLING) else 0.0)
 	var aura := color.lerp(Color.WHITE, 0.1)
 	aura.a = lerpf(0.04, 0.12, 1.0 - blur_strength) * pulse * ui_boost * intensity
 	_draw_glow_sprite(tex, pos, radius * lerpf(1.9, 1.55, blur_strength), aura)
-	var bloom := color.lerp(Color.WHITE, 0.22)
-	bloom.a = lerpf(0.03, 0.09, 1.0 - blur_strength) * pulse * ui_boost * intensity
-	_draw_glow_sprite(tex, pos, radius * lerpf(1.32, 1.12, blur_strength), bloom)
-	var hot_core := color.lerp(Color.WHITE, 0.66)
-	hot_core.a = lerpf(0.08, 0.2, 1.0 - blur_strength) * pulse * ui_boost * intensity
-	_draw_glow_sprite(tex, pos, radius * 0.86, hot_core)
-	var spark := Color.WHITE
-	spark.a = lerpf(0.01, 0.045, 1.0 - blur_strength) * pulse * ui_boost * intensity
-	_draw_glow_sprite(tex, pos, radius * 0.42, spark)
+	if pass_count >= 2:
+		var bloom := color.lerp(Color.WHITE, 0.22)
+		bloom.a = lerpf(0.03, 0.09, 1.0 - blur_strength) * pulse * ui_boost * intensity
+		_draw_glow_sprite(tex, pos, radius * lerpf(1.32, 1.12, blur_strength), bloom)
+	if pass_count >= 3:
+		var hot_core := color.lerp(Color.WHITE, 0.66)
+		hot_core.a = lerpf(0.08, 0.2, 1.0 - blur_strength) * pulse * ui_boost * intensity
+		_draw_glow_sprite(tex, pos, radius * 0.86, hot_core)
+	if pass_count >= 4:
+		var spark := Color.WHITE
+		spark.a = lerpf(0.01, 0.045, 1.0 - blur_strength) * pulse * ui_boost * intensity
+		_draw_glow_sprite(tex, pos, radius * 0.42, spark)
 
 func _draw_glow_sprite(tex: Texture2D, pos: Vector2, radius: float, modulate: Color) -> void:
 	if tex == null:
@@ -1242,7 +1369,7 @@ func _draw_edge_ripples(positions: Dictionary) -> void:
 				var rect := Rect2(node.pos - Vector2(radius, radius), Vector2(radius * 2.0, radius * 2.0))
 				draw_rect(rect, ripple, false, width)
 			else:
-				draw_arc(node.pos, radius, 0.0, TAU, 64, ripple, width)
+				draw_arc(node.pos, radius, 0.0, TAU, quality_hint_arc_points, ripple, width)
 
 func _draw_completion_waves(positions: Dictionary, viewport_size: Vector2) -> void:
 	if completion_waves.is_empty() or not _vfx_enabled(VFX_COMPLETION_SHOCKWAVE):
@@ -1255,7 +1382,7 @@ func _draw_completion_waves(positions: Dictionary, viewport_size: Vector2) -> vo
 		var radius := minf(viewport_size.x, viewport_size.y) * (0.18 + t * 0.72)
 		var ring := _tint_color(color_selected, 1.0)
 		ring.a = alpha
-		draw_arc(center, radius, 0.0, TAU, 96, ring, maxf(2.0, base_radius * 0.14))
+		draw_arc(center, radius, 0.0, TAU, quality_completion_arc_points, ring, maxf(2.0, base_radius * 0.14))
 		var halo := ring
 		halo.a *= 0.25
 		draw_circle(center, radius * 0.92, halo)
@@ -1297,7 +1424,8 @@ func _edge_points(a: int, b: int, positions: Dictionary) -> Dictionary:
 func _draw_depth_blur(pos: Vector2, radius: float, fade: float, blur_strength: float) -> void:
 	var fog := clampf(1.0 - fade, 0.0, 1.0)
 	var base := _tint_color(color_circle, maxf(0.15, fade * 0.75)).lerp(color_bg, lerpf(0.45, 0.72, fog))
-	var layers := maxi(1, int(round(lerpf(1.0, float(DEPTH_BLUR_STEPS), blur_strength))))
+	var max_layers := mini(DEPTH_BLUR_STEPS, quality_blur_layer_cap)
+	var layers := maxi(1, int(round(lerpf(1.0, float(max_layers), blur_strength))))
 	for i in range(layers, 0, -1):
 		var t := float(i) / float(layers)
 		var blur_color := base

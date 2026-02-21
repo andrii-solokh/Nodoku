@@ -21,6 +21,11 @@ export XDG_CONFIG_HOME="$GODOT_HOME/.config"
 export XDG_DATA_HOME="$GODOT_HOME/.local/share"
 mkdir -p "$HOME/Library/Application Support/Godot" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
 
+if [[ -f config/vfx_release_candidate.json ]]; then
+  echo "Promoting VFX defaults from config/vfx_release_candidate.json..."
+  node scripts/promote_vfx_defaults.mjs --from config/vfx_release_candidate.json --to config/vfx_defaults.json
+fi
+
 if [[ -n "$REAL_HOME" ]]; then
   src_templates="$REAL_HOME/Library/Application Support/Godot/export_templates"
   dst_templates="$HOME/Library/Application Support/Godot/export_templates"
@@ -32,6 +37,9 @@ fi
 
 echo "Exporting Web build..."
 godot --headless --export-release "Web" public/index.html
+
+echo "Applying Nodoku web loader skin..."
+node scripts/patch_web_loader.mjs public/index.html
 
 echo "Compressing wasm/pck with brotli..."
 brotli -q 11 -f -o public/index.wasm.br public/index.wasm

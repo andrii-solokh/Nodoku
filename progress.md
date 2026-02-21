@@ -655,3 +655,413 @@ TODO
 - Validation: `godot --headless --path /Users/andriisolokh/Projects/dotcon --quit-after 1`.
 2026-02-15 update
 - Menu sliders cleanup: removed visible Grid Size numeric value and Difficulty text label from the right side of controls; now only segmented bars communicate value.
+2026-02-15 update
+- Root cause for missing Nodoku loader: `scripts/release_web.sh` re-exports `public/index.html` from Godot each release, which restores default Godot HTML shell and overwrites manual loader edits.
+- Added persistent post-export patcher: `scripts/patch_web_loader.mjs`.
+  - Rebrands title to Nodoku.
+  - Replaces default loader CSS/markup with Nodoku-themed loading card.
+  - Keeps existing Godot boot script/progress behavior.
+  - Forces head-include background color to `#020b07` to avoid visual mismatch.
+- Wired patcher into release pipeline in `scripts/release_web.sh` right after export.
+- Updated `export_presets.cfg` head include background from `#F4F1EC` to `#020b07`.
+- Verified by exporting to a temporary path and applying patcher; resulting html contains Nodoku loader branding + dark background.
+2026-02-15 update
+- Fixed web VFX profile precedence in `scripts/game_controller.gd`.
+- Root cause: web `user://vfx_profile.json` persisted across releases and overrode `res://config/vfx_defaults.json`.
+- New behavior: on web, default to project profile; apply `user://` profile only when running in Dev Mode.
+- Desktop/native behavior unchanged (still applies user profile over defaults).
+- Validation: `godot --headless --path /Users/andriisolokh/Projects/dotcon --quit-after 1`.
+2026-02-15 update
+- Fixed broken depth icons on web by replacing unsupported Unicode glyphs with ASCII-safe labels in `scripts/main.gd`.
+- New labels: `[] Flat` and `[#] 3D` (both custom depth toggle buttons and hidden depth OptionButton entries).
+- Validation: `godot --headless --path /Users/andriisolokh/Projects/dotcon --quit-after 1`.
+2026-02-18 update (VFX power-drain audit)
+- Audited rendering/VFX paths for energy drain root causes (no code changes yet).
+- Primary hotspots identified:
+  - `GridView` redraws continuously while visible because `_process()` marks dirty whenever ambient animation is enabled; `WEB_DISABLE_AMBIENT_ANIMATION` is currently false (`scripts/grid_view.gd`).
+  - Heavy default profile in `config/vfx_defaults.json`: ambient particles and heat shimmer at intensity 6.0, strong post bloom/grain/color-grade.
+  - Fullscreen post-processing pass always available (`PostFxOverlay`) with multiple screen-texture samples in shader (`shaders/post_fx_compositor.gdshader`).
+  - Animated fullscreen live background shader updates every frame in main scene (`scripts/main.gd`).
+  - Warm theme node rendering does multi-pass per-node glow + optional depth blur, scaling heavily with board size.
+- Suggested optimization direction:
+  - Introduce low-power default profile + platform quality tiers.
+  - Gate animation/redraw when idle and cap effect density on mobile.
+  - Reduce fullscreen post-FX on battery-sensitive targets; disable expensive passes by default.
+2026-02-18 update
+- Investigated report: saved VFX profile not applied in exported web release.
+- Root cause: `scripts/game_controller.gd` gated user profile load on web behind `developer_mode` via `_should_apply_user_vfx_profile()`, so normal web release startup skipped `user://vfx_profile.json`.
+- Fix: changed web gating to load user profile whenever `user://vfx_profile.json` exists (`FileAccess.file_exists(VFX_PROFILE_USER_PATH)`), while preserving non-web behavior.
+- Validation:
+  - `godot --headless --path . --quit-after 2 --verbose` passes.
+  - Ran Playwright client against local web server (`http://127.0.0.1:8092`) and captured `output/web-game/vfx-profile-web-release-fix-check/shot-0.png` with expected rendering.
+- TODO:
+  - Manual browser verification in an exported web build: save profile in dev mode, refresh without query flags, confirm profile remains applied.
+2026-02-18 update
+- Updated top-bar `Hint` control to icon-only for cleaner HUD consistency with existing Back/Restart icon buttons.
+- Added new asset: `assets/icons/hint.svg` (lightbulb icon) and wired it in `scenes/Main.tscn` via `HintButton.icon`.
+- Kept `tooltip_text = "Hint"` for discoverability and reduced button width to `64x52` to match icon button sizing.
+2026-02-18 update (mobile sizing: controls + grid)
+- Increased touch/mobile menu control scaling in `scripts/main.gd`:
+  - Added responsive touch scaling hooks (`_init_mobile_menu_scale`, `_apply_mobile_menu_scale`) driven by viewport resize.
+  - Enlarged menu hit targets/fonts on touch layouts (Start/How-to/Tutorial buttons, +/- steppers, depth toggles, segmented bars, row labels).
+- Increased in-game HUD scaling in `scripts/game_controller.gd`:
+  - Reworked touch scale calculation to use real window short-side buckets.
+  - Raised top bar / completion panel scale factors for small touch screens.
+  - Increased control hints font with HUD scale.
+  - Hid side status label on compact touch layouts to preserve button space.
+- Increased gameplay node/grid size on touch/mobile in `scripts/grid_view.gd`:
+  - Added touch-aware layout branch in `_update_metrics` with lower padding, higher cell-size cap/boost, and slightly larger node radius factor.
+- Validation:
+  - `godot --headless --path /Users/andriisolokh/Projects/Nodoku --quit-after 1` passes.
+  - Ran web Playwright loop via `$HOME/.codex/skills/develop-web-game/scripts/web_game_playwright_client.js` against `http://127.0.0.1:8080` with screenshot output in `output/web-game/mobile-ui-size-check/`.
+  - No Playwright console/page error artifacts were produced for that run.
+- Note: temporary Playwright screenshot folder `output/web-game/mobile-ui-size-check/` was cleaned up after manual inspection.
+2026-02-18 update (web default terminal theme)
+- Goal: make web startup consistently use Terminal theme.
+- Changes:
+  - `scripts/main.gd`: defaulted `current_theme_id` to Terminal, added `_default_theme_id()`, changed settings fallback to platform-aware default, and forced web load path to Terminal (`theme = THEME_TERMINAL`) to avoid stale web `user://settings.cfg` overriding startup theme.
+  - `scripts/game_controller.gd`: defaulted controller theme state to Terminal so first applied in-game visuals are Terminal before menu/game sync.
+- Validation:
+  - Re-exported web build via `bash scripts/release_web.sh`.
+  - Ran Playwright skill client against local dev server.
+  - Verified tutorial/menu screenshot shows Terminal palette: `output/web-game/theme-default-terminal-check-2/shot-0.png`.
+  - Verified in-game screenshot shows Terminal palette after skipping tutorial + starting game: `output/web-game/theme-default-terminal-ingame-check/shot-0.png`.
+- Re-ran Playwright validation after `JavaScriptBridge` short-side detection tweak; no console/page errors.
+- Cleaned temporary folder `output/web-game/mobile-ui-size-check2/` after screenshot inspection.
+
+2026-02-18 update
+- Updated top-right HUD status in `scripts/game_controller.gd` from plain `Edges/Net` counters to compact terminal-style progress bars:
+  - `E:[########] current/target`
+  - `N:[########] current/target`
+- Replaced dead-end suffix text with an ASCII warning sign (`[/!\\]`) and kept warning coloring.
+- Replaced split-network text marker with compact terminal marker (`[<>]`) for consistency and reduced width.
+- Added `_format_terminal_progress_bar()` helper and `STATUS_BAR_WIDTH` constant.
+- Validation:
+  - `godot --headless --path . --quit-after 3 --verbose` passes (no script parse/compile errors).
+  - Ran develop-web-game Playwright client via local dev server (`scripts/dev_server.js`, port 8090) and inspected screenshots in `output/web-game/theme-default-terminal-ingame-check/`.
+  - Playwright run showed menu/tutorial states without console-error artifact files; in-game HUD bar visibility could not be directly captured because tutorial/menu flow dominated the automated clicks.
+
+TODO
+- Manually confirm in-game top bar at runtime shows new `E/N` terminal bars and `[/!\\]` warning sign when dead-end triggers.
+2026-02-18 update
+- Fixed completion-modal reliability in `scripts/game_controller.gd` by centralizing completion checks into `_maybe_show_completion_modal()` and invoking it from all edge-mutation paths.
+- Added a `_process` fallback completion check so solved states still surface the modal even if a specific input path misses a direct completion call.
+- Added a completion check at the end of startup prefill animation (`_run_startup_prefill_animation`) for consistency.
+- Validation:
+  - `godot --headless --path . --quit-after 3 --verbose` passes.
+  - `godot --headless --path . --export-release "Web" public/index.html` succeeds.
+  - Playwright skill client runs against `http://127.0.0.1:8096` with action bursts and screenshot inspection show stable runtime (no immediate script/runtime errors); deterministic full-level completion was not reached by the current automated action bursts.
+2026-02-18 update
+- Implemented hint-flash removal in `scripts/game_controller.gd`: `_on_hint_pressed()` no longer calls `grid_view.pulse_ui_light(0.78)`.
+- Kept hint behavior intact (`_play_sfx(sfx_ui)` + `_show_hint()` unchanged) and left solve pulse (`grid_view.pulse_ui_light(0.95)`) untouched.
+- Validation:
+  - `godot --headless --path . --quit-after 3 --verbose` passes.
+  - Playwright web harness run completed (no console error artifact), but scripted input did not reliably reach an in-game Hint press path in this environment; captured artifacts under:
+    - `output/web-game/hint-no-top-flash-check/`
+    - `output/web-game/hint-no-top-flash-check-skip/`
+    - `output/web-game/hint-no-top-flash-check-ingame/`
+    - `output/web-game/hint-no-top-flash-check-menu-start/`
+2026-02-18 update
+- Implemented VFX power optimization plan with tiered defaults (Auto/Battery/Balanced/Beautiful).
+  - `scripts/game_controller.gd`
+    - Added quality enums and public API `set_render_quality(mode)` + `get_render_quality()`.
+    - Added runtime quality resolution (`Auto`: web/mobile -> Battery, desktop/native -> Balanced).
+    - Applied quality policy at startup and on `start_new_game(...)`.
+    - Added quality-to-grid mapping and `grid_view.apply_quality_settings(...)` integration.
+    - Added quality-aware post-FX gating (battery disables heavy stack; balanced keeps mild bloom/grade/vignette).
+    - Added post-FX uniform cache (`_set_post_fx_uniform`) to avoid redundant shader updates.
+  - `scripts/grid_view.gd`
+    - Added `apply_quality_settings(settings: Dictionary)` and runtime quality knobs:
+      ambient tick rate, particle cap, warm glow pass cap, blur layer cap, arc segment caps.
+    - Removed idle always-redraw behavior by ambient throttling in `_process(...)`.
+      - Idle ambient tick is tier-limited; active transitions stay full-rate.
+    - Capped ambient particle density, warm glow layers, blur layers, and arc segment counts by tier.
+  - `scripts/main.gd`
+    - Added menu `Graphics` option (`Auto`, `Battery Saver`, `Balanced`, `Beautiful`).
+    - Persisted `game.graphics_quality` in `user://settings.cfg` with backward-compatible default.
+    - Applied selected quality into `GameController` on load and game start.
+    - Reduced menu background shader work by only advancing background time while menu/tutorial is visible and hiding background during gameplay.
+  - `config/vfx_defaults.json`
+    - Retuned to balanced baseline with `developer_mode: false`.
+    - Lowered heavy defaults (`ambient_particles`, `heat_shimmer`, `ui_light_coupling`, bloom/grain/chromatic/lens values).
+  - `shaders/post_fx_compositor.gdshader`
+    - Added effect-active bypass path to skip extra shader work when stack is effectively off.
+
+- Validation
+  - Boot/smoke:
+    - `godot --headless --path . --quit-after 1 --verbose` passed.
+  - Web export:
+    - `godot --headless --path . --export-release "Web" public/index.html` passed.
+  - Playwright skill loop:
+    - Ran skill client with loader shim against local server (`http://127.0.0.1:8080`).
+    - Artifacts:
+      - `output/web-game/vfx-quality-tier-check/menu/shot-0.png`
+      - `output/web-game/vfx-quality-tier-check/ingame/shot-0.png`
+    - No `errors-*.json` emitted (no captured new console/page errors).
+
+TODO / suggestion
+- Optional: expose/verify `window.render_game_to_text` in web shell so Playwright runs also emit `state-*.json` snapshots for stricter automation assertions.
+
+2026-02-18 update (graphical HUD status bars)
+- Implemented in-game status widget as graphical elements in `scripts/game_controller.gd`:
+  - Added runtime-built `StatusWidget` inside `SideLabel` with two segmented strips (`EdgeStrip`, `NetStrip`) and a warning badge panel.
+  - Added `STATUS_SEGMENTS := 7` and status widget state vars (`status_edge_cells`, `status_net_cells`, `status_warning_badge`, `status_warning_icon`).
+  - Added helpers:
+    - `_ensure_status_widget()`
+    - `_set_status_strip_progress()`
+    - `_style_status_strip_cells()`
+    - `_set_warning_badge_state()`
+    - `_refresh_status_widget_theme()`
+  - Replaced text-based `_update_status_label()` formatting with graphical strip + badge updates.
+- Dead-end and split-network states now show warning badge (triangle icon) with warning color.
+- Added new icon asset: `assets/icons/warning_triangle.svg`.
+- Removed ASCII-style status bar usage (`_format_terminal_progress_bar`, `STATUS_BAR_WIDTH` no longer used).
+
+Validation
+- `godot --headless --path /Users/andriisolokh/Projects/Nodoku --quit-after 3 --verbose` passes after changes.
+- Ran Playwright client loops against local dev server:
+  - `output/web-game/status-widget-check/`
+  - `output/web-game/status-widget-ingame-check/`
+- No console/page error artifact files were produced.
+- Note: automated clicks remained mostly in tutorial/menu flow; direct in-game top-right HUD screenshot was not reliably captured in this run.
+2026-02-18 update (mobile bottom controls for HUD)
+- Implemented phone-touch HUD layout switch in `scripts/game_controller.gd`:
+  - Added `top_bar_spacer` onready reference for runtime visibility toggling.
+  - Added `_is_phone_touch_layout()` (`touch + short side <= 620`) and routed `_is_compact_touch_layout()` through it.
+  - Added `_apply_hud_layout()`:
+    - Phone-touch: moves `TopBar` to bottom (`anchor_top/bottom=1`), uses centered row, adds spacing, hides spacer + side status label + `ControlHints`.
+    - Non-touch / desktop-web: restores top layout (`anchor_top/bottom=0`), left-aligned row, restores spacer and control hints visibility.
+  - Wired `_apply_hud_layout()` into `_ready()` and `_update_hud_scale()` so resize/orientation changes reflow HUD.
+  - Updated top bar scaling pivot in `_update_hud_scale()` to use viewport center on phone-touch layout.
+- Validation:
+  - `godot --headless --path /Users/andriisolokh/Projects/Nodoku --quit-after 1` passes after changes.
+  - Ran develop-web-game Playwright client against local dev server with no console/page error artifacts.
+  - Desktop in-game screenshot confirms top-left placement preserved for non-touch layout.
+ - Touch-emulation checks confirmed bottom placement behavior path is active, though automated phone/tablet interaction remains somewhat flaky for deterministic menu/tutorial progression.
+2026-02-18 update (unified button style + icon consistency)
+- Implemented app-wide clear-action icon unification and consistent icon tint/alignment.
+- Added new icon assets:
+  - `assets/icons/play.svg`
+  - `assets/icons/help.svg`
+  - `assets/icons/skip.svg`
+  - `assets/icons/solve.svg`
+- Updated `scenes/Main.tscn`:
+  - Wired icons for `StartButton`, `HowToButton`, `TutorialClose`, `SolveButton`, `NextButton`, `ReplayButton`.
+  - Converted top-bar clear actions to icon+text defaults (`Back`, `Restart`, `Hint`, `Solve`) with explicit `icon_alignment`, `vertical_icon_alignment`, and `icon_max_width`.
+  - Added tooltips for clear-action buttons where needed.
+- Updated `scripts/main.gd`:
+  - Added button role constants (`text_only`, `icon_text`, `icon_only`) and icon width constant.
+  - Extended `_apply_button_theme(...)` and `_apply_button_style(...)` to support role-based content margins.
+  - Added `_apply_button_icon_style(...)` so menu/tutorial icon buttons get consistent tint and alignment.
+- Updated `scripts/game_controller.gd`:
+  - Added role-based helpers:
+    - `_clone_button_stylebox_with_horizontal_margins(...)`
+    - `_apply_button_content_role(...)`
+    - `_apply_top_bar_action_button(...)`
+    - `_apply_hud_button_layout_roles(...)`
+    - `_apply_icon_button_colors(...)`
+  - Applied compact-touch top-bar policy:
+    - Desktop/tablet: top-bar clear actions render icon+text.
+    - Compact touch: top-bar clear actions switch to icon-only (`64x52`) with centered icons.
+  - Expanded HUD icon tint overrides in `_apply_hud_theme()` to include `Hint`, `Solve`, `Next`, and `Replay` in addition to `Back`/`Restart`.
+  - Called `_apply_hud_button_layout_roles()` from `_ready()`, `_apply_hud_theme()`, and `_update_hud_scale()` to keep role layout stable on theme/resize/device changes.
+
+Validation
+- `godot --headless --path /Users/andriisolokh/Projects/Nodoku --quit-after 2 --verbose` passes.
+- Ran develop-web-game Playwright client against local server (`http://127.0.0.1:8093`):
+  - In-game desktop check: `output/web-game/unified-button-desktop-ingame-check2/shot-0.png`
+  - Confirms top-bar icon+text and tint parity (`Back`/`Restart`/`Hint`).
+- Ran additional Playwright touch-viewport checks for compact layout:
+  - Compact in-game (icon-only bottom bar visible): `output/web-game/unified-button-compact-start-scan/start-y-640.png`
+  - Confirms compact touch policy switched clear actions to centered icon-only controls.
+- Cleaned temporary `output/web-game/mobile-bottom-controls*` screenshot folders after inspection.
+- Final post-change skill check: ran develop-web-game Playwright client with no error artifacts, then cleaned temporary mobile-bottom-controls screenshot outputs.
+
+2026-02-18 update (single-row HUD bar)
+- Refactored graphical HUD status widget to a single row with exactly 7 segments in `scripts/game_controller.gd`.
+  - Replaced `status_edge_cells` + `status_net_cells` with `status_progress_cells`.
+  - `_ensure_status_widget()` now creates one `ProgressStrip` (7 cells) plus warning badge.
+  - Added `_set_status_strip_progress_ratio()` and removed dual-strip update usage.
+- Updated `_update_status_label()` progress metric to true completion:
+  - Computes `edge_ratio` and `net_ratio`, then uses `progress_ratio = minf(edge_ratio, net_ratio)`.
+  - Segment fill is derived from that single ratio.
+- Warning triangle badge behavior is unchanged:
+  - dead-end -> orange/red badge
+  - split-network -> yellow badge
+- Theme styling now applies to only the single progress strip.
+
+Validation
+- `godot --headless --path /Users/andriisolokh/Projects/Nodoku --quit-after 3 --verbose` passes.
+- Ran Playwright skill loop against local dev server with screenshots in:
+  - `output/web-game/status-widget-single-row-check/`
+- No console/page error artifact files were produced.
+- Captured screenshots remained in tutorial overlay flow, so direct in-game top-right HUD screenshot was not produced by this automation run.
+2026-02-18 update (tutorial overhaul: 4x4 + 4x4x4 guides)
+- Implemented tutorial guide split and visual cleanup.
+- `scripts/tutorial_demo.gd`
+  - Replaced 2-node demo with board-based guide modes:
+    - `GUIDE_MODE_BASIC_4X4` for steps 1-3.
+    - `GUIDE_MODE_ROTATION_4X4X4` for step 4.
+  - Added mode-aware sizing/depth config (4x4 flat vs 4x4x4 layered).
+  - Kept existing `step_completed(step)` flow; rotation still completes step 4 via swipe/drag/keys.
+  - Added full 4x4 rendering with highlighted target nodes for select/connect/remove.
+  - Added 4-layer 4x4x4 preview with rotation-driven layered offset.
+  - Reduced tutorial-only visual noise/glow for readability.
+  - Increased interaction hit radius and node scale for easier taps.
+- `scenes/Main.tscn`
+  - Reworked tutorial overlay into a centered card (`TutorialContent` as `PanelContainer`).
+  - Added dedicated section label: `TutorialGuideLabel`.
+  - Reduced demo vertical dominance and balanced spacing.
+  - Constrained tutorial action button width and centered it.
+  - Updated step copy to explicitly reference 4x4 basics and 4x4x4 rotation.
+- `scripts/main.gd`
+  - Added tutorial card layout logic (`_layout_tutorial_card`) for responsive centered max-width behavior.
+  - Wired and themed `tutorial_guide_label`.
+  - Updated `_apply_tutorial_step()` to switch section label text:
+    - `Basic Guide (4x4)` for steps 1-3.
+    - `Rotation Guide (4x4x4)` for step 4/complete.
+
+Validation
+- Syntax/boot checks:
+  - `godot --headless --path . --quit-after 2 --verbose` (passes)
+- Web export:
+  - `godot --headless --path . --export-release Web public/index.html`
+- Playwright skill client visual checks:
+  - Tutorial open (4x4 basic): `output/web-game/tutorial-overhaul-check/open-v2/shot-0.png`
+  - Full flow to rotation guide complete (4x4x4): `output/web-game/tutorial-overhaul-check/flow-step4-v4/shot-0.png`
+  - No console/page error artifact files produced for these runs.
+2026-02-18 update (hidden dev mode + VFX release-default promotion)
+- Implemented hidden Developer Mode unlock paths and release-default save flow.
+- `scripts/game_controller.gd`
+  - Added public API:
+    - `set_developer_mode_enabled(enabled: bool, source: String = "runtime")`
+    - `is_developer_mode_enabled()`
+  - `_ready()` now ensures dev controls are instantiated via `_ensure_theme_button()`, `_ensure_vfx_button()`, `_ensure_dev_button()`.
+  - Fixed `_apply_developer_mode_visibility()` to actually follow `developer_mode` (`Solve`, `Theme`, `VFX`, `Dev` visible only in dev mode).
+  - Added hidden in-game unlock hotspot (top-right, size based on 72px + viewport scaling), requiring 7 taps within 3.0s.
+  - Added unlock/status feedback helpers:
+    - `_announce_dev_mode_status(...)` and `_announce_vfx_status(...)` (logs fallback when popup hidden).
+  - Save flow now branches by platform:
+    - Desktop/native: writes `user://vfx_profile.json` + `res://config/vfx_defaults.json`.
+    - Web: writes `user://vfx_profile.json` and downloads `nodoku-vfx-defaults.json` via `JavaScriptBridge`.
+  - Added `_normalized_release_vfx_profile(...)` to force `developer_mode=false` for release-default payloads.
+- `scripts/main.gd`
+  - Added hidden menu unlock: 7 taps on `VersionLabel` within 3.0s.
+  - Unlock path calls `game.set_developer_mode_enabled(true, "menu_hidden_tap")`.
+- Added CLI promotion tool: `scripts/promote_vfx_defaults.mjs`
+  - Interface: `node scripts/promote_vfx_defaults.mjs --from <path> [--to <path>]`
+  - Defaults: `config/vfx_release_candidate.json` -> `config/vfx_defaults.json`.
+  - Validates profile shape (`gameplay.profiles` and `post.profiles` objects with finite numeric params).
+  - Forces `developer_mode=false` and `version=1` before writing output.
+- `scripts/release_web.sh`
+  - Added pre-export promotion step when `config/vfx_release_candidate.json` exists.
+- `docs/web_export.md`
+  - Added web workflow section for hidden dev save/export + release promotion.
+
+Validation
+- `godot --headless --path . --quit-after 2 --verbose` passes.
+- `bash -n scripts/release_web.sh` passes.
+- Promotion script checks:
+  - `node scripts/promote_vfx_defaults.mjs --from config/vfx_defaults.json --to /tmp/nodoku-vfx-defaults-check.json` (passes)
+  - Candidate normalization test confirms forced `developer_mode=false` and `version=1`.
+- Playwright skill-client attempt was started (local dev server + `$WEB_GAME_CLIENT`) but hung in this environment; process was terminated and no reliable screenshot assertion was produced for this run.
+
+2026-02-18 update (dot-consumption progress formula)
+- Updated single-row HUD bar progress logic in `scripts/game_controller.gd` to use dot-consumption ratio instead of connectivity min-ratio.
+- Added `_status_progress_ratio_from_dots()`:
+  - `total_connections = total_required_edges`
+  - `available_connections = sum(remaining_dots for active required nodes) / 2`
+  - `ratio = clamp((total_connections - available_connections) / total_connections, 0..1)`
+- `_update_status_label()` now calls `_status_progress_ratio_from_dots()` and feeds the result to `_set_status_strip_progress_ratio()`.
+- Warning badge behavior/colors were kept unchanged.
+
+Validation
+- `godot --headless --path /Users/andriisolokh/Projects/Nodoku --quit-after 3 --verbose` passes.
+- Playwright run executed with artifacts in `output/web-game/status-widget-dots-check/`; no console/page error artifacts were produced.
+2026-02-19 tutorial real-board continuation
+- Continued from prior agent state; no new structural code changes were required after verifying the refactor.
+- Confirmed tutorial now uses real `Game` board runtime with compact overlay and minimal text.
+- Browser validation (Playwright skill client) on `http://127.0.0.1:8095`:
+  - Tutorial opens on real board: `output/web-game/tutorial-realboard-check/open-click-1/shot-0.png`
+  - Step 1 -> Step 2 progression after first connection: `output/web-game/tutorial-realboard-check/step2-from-auto-open/shot-0.png`
+  - Step 2 -> complete after first rotation: `output/web-game/tutorial-realboard-check/step-flow-1/shot-0.png`
+  - Skip closes tutorial back to menu: `output/web-game/tutorial-realboard-check/skip-close/shot-0.png`
+  - Got it closes tutorial back to menu: `output/web-game/tutorial-realboard-check/gotit-close/shot-0.png`
+- Runtime checks:
+  - `godot --headless --path . --quit-after 2 --verbose` passes.
+  - `godot --headless --path . --export-release "Web" public/index.html` passes.
+- Note: quick `Start` regression click automation from tutorial context is noisy due auto-open tutorial timing on fresh load; core start logic in `scripts/main.gd` remains unchanged except forcing tutorial hidden before start.
+2026-02-19 tutorial real-board continuation (extra regression pass)
+- Re-ran an additional browser check for `Skip -> Start` with longer delay (`output/web-game/tutorial-realboard-check/start-after-skip-wait/shot-0.png`).
+- Result stayed on menu in the fixed-coordinate harness; this appears to be click-coordinate mismatch/noise in automation for menu buttons in current viewport, not a tutorial runtime error.
+- Kept regression confidence from code path: `_on_start_pressed()` still reads menu-selected size/depth/difficulty and starts game with those values.
+2026-02-19 update
+- Fixed centered icon+text pair rendering for clear-action buttons by preventing custom pair container stretch and keeping native text cleared while center-pair role is active.
+  - `scripts/main.gd`
+    - `_ensure_button_center_pair(...)`: set row/icon/label to shrink-center sizing, left text alignment, vertical center alignment.
+    - `_set_button_display_text(...)`: now updates base text metadata + pair label, and keeps `button.text` empty while pair root is visible.
+    - `_show_tutorial(...)`: replaced direct `tutorial_close.text = "Skip"` with `_set_button_display_text(...)`.
+  - `scripts/game_controller.gd`
+    - `_ensure_button_center_pair(...)`: same shrink-center sizing/alignment updates for HUD/completion buttons.
+- Validation:
+  - `godot --headless --path /Users/andriisolokh/Projects/Nodoku --quit-after 2 --verbose` passes.
+  - Playwright skill client screenshots:
+    - Tutorial skip (icon directly before text, centered as one pair): `output/web-game/center-pair-fix-menu/shot-0.png`
+    - Menu buttons centered pair (`Start`, `How to play`): `output/web-game/center-pair-fix-skip-click/shot-0.png`
+    - Desktop in-game top bar icon+text consistency: `output/web-game/center-pair-fix-hud-desktop-2/shot-0.png`
+  - Mobile/touch emulation screenshot (compact icon-only top bar centered):
+    - `output/web-game/center-pair-fix-hud-compact-touch-2/shot-0.png`
+2026-02-21 update
+- Implemented developer-only live performance telemetry for VFX tuning.
+- `scripts/game_controller.gd`
+  - Added Perf HUD runtime pipeline (0.5s polling, 10s/60s rolling windows, FPS/p50/p95, long-task rate, heap trend, battery drain, energy proxy score).
+  - Added battery-first status bands (green/yellow/red) using strict thresholds (`FPS>=55`, `p95<=20ms`, `battery<=8%/h`).
+  - Added VFX popup perf controls: `Perf HUD` toggle, `Set Baseline`, `Reset Metrics`, `Export Perf`.
+  - Added baseline + effect delta reporting after 8s settle (`ΔFPS`, `Δp95`, `ΔEnergy`, `ΔBattery`).
+  - Added export flow for perf reports:
+    - web download: `nodoku-vfx-perf.json`
+    - non-web file: `user://vfx_perf_last.json`
+  - Added launch flag parsing for `?perf=1` / `--perf` and web bridge enable/disable wiring via JavaScriptBridge.
+  - Added compact top-left perf HUD panel (developer-mode only).
+- `scripts/patch_web_loader.mjs`
+  - Added injected browser telemetry bridge `window.__nodokuPerf` with APIs:
+    - `snapshot()`
+    - `snapshotJSON()`
+    - `reset()`
+    - `setEnabled(bool)`
+    - `isEnabled()`
+  - Collector tracks frame deltas (up to 600 samples), long tasks, heap metrics (when supported), battery metrics (when supported), and returns null-safe fields.
+  - Injection is now export-stable (survives Godot HTML regeneration).
+- `public/index.html`
+  - Repatched via `node scripts/patch_web_loader.mjs public/index.html` so current checked-in web shell contains telemetry bridge.
+- Added docs: `docs/vfx_perf_tuning.md` with repeatable desktop/mobile workflow, thresholds, checklist, and limitations.
+
+Validation
+- `godot --headless --path . --quit-after 2 --verbose` passes with no parse errors.
+- `godot --headless --path . --export-release "Web" public/index.html` succeeds.
+- Ran Playwright skill client against `http://127.0.0.1:8080/?dev=1&perf=1` and reviewed screenshots:
+  - `output/web-game/perf-hud-check/shot-0.png`
+  - `output/web-game/perf-hud-check-v2/shot-0.png`
+  - `output/web-game/perf-hud-check-v3/shot-0.png`
+  - `output/web-game/perf-hud-check-v4/shot-0.png`
+  - `output/web-game/perf-hud-check-v5/shot-0.png`
+- No Playwright console/page error files were generated during those runs.
+- Verified browser bridge directly with Playwright eval:
+  - `window.__nodokuPerf` exists with required methods.
+  - `window.__nodokuPerf.isEnabled()` becomes `true` under `?dev=1&perf=1` once game runtime enables telemetry.
+
+TODO / Note
+- In automated headless Playwright runs, tutorial overlay remains on-screen, which can hide HUD from screenshots; perform one quick manual browser pass to visually confirm live Perf HUD + VFX popup perf controls in active gameplay scene.
+2026-02-21 perf telemetry follow-up
+- Aligned Perf HUD status thresholds with battery-first spec in `scripts/game_controller.gd`:
+  - Added `fps_p50` to computed summaries.
+  - Green/Yellow/Red status now evaluates FPS using p50 (fallback to avg if missing) instead of avg-only.
+  - Perf summary text now shows both FPS avg and FPS p50.
+- Updated docs wording in `docs/vfx_perf_tuning.md` to state FPS p50 target explicitly.
+- Validation run:
+  - `godot --headless --path /Users/andriisolokh/Projects/Nodoku --quit-after 2 --verbose` (passes).
+  - Browser bridge sanity via Playwright eval on `?dev=1&perf=1`: `window.__nodokuPerf.isEnabled() === true`, `snapshotJSON/reset` present.
+  - Skill client run after change:
+    - `output/web-game/perf-hud-verify-v2/shot-0.png`
+    - No `errors-*.json` produced.
+- Note: headless screenshots still show tutorial overlay, so HUD visual confirmation should be done once in a manual browser session.

@@ -1,53 +1,53 @@
 {
-	"developer_mode": true,
+	"developer_mode": false,
 	"gameplay": {
 		"profiles": {
 			"ambient_particles": {
-				"intensity": 6.0,
-				"motion": 4.0
+				"intensity": 0.42,
+				"motion": 1.5
 			},
 			"completion_shockwave": {
-				"intensity": 1.40981838893096,
-				"motion": 1.76685420272847
+				"intensity": 1.05,
+				"motion": 1.35
 			},
 			"connect_ripple": {
-				"intensity": 0.0872745328920219,
+				"intensity": 0.09,
 				"motion": 1.0
 			},
 			"disconnect_dissolve": {
-				"intensity": 0.0725647740339852,
-				"motion": 6.0
+				"intensity": 0.07,
+				"motion": 2.4
 			},
 			"edge_sweep": {
-				"intensity": 0.0746539206999228,
+				"intensity": 0.08,
 				"motion": 0.0
 			},
 			"heat_shimmer": {
-				"intensity": 6.0,
-				"motion": 2.15547383292213
+				"intensity": 0.36,
+				"motion": 1.2
 			},
 			"hint_beacon": {
-				"intensity": 0.177574073688179,
+				"intensity": 0.16,
 				"motion": 1.0
 			},
 			"parallax_fog": {
-				"intensity": 0.534339864429126,
-				"motion": 1.50272367814099
+				"intensity": 0.34,
+				"motion": 1.0
 			},
 			"phosphor_trail": {
-				"intensity": 0.064248721882967,
+				"intensity": 0.06,
 				"motion": 0.0
 			},
 			"shader_bg": {
-				"intensity": 0.69772235326834,
-				"motion": 1.0
+				"intensity": 0.62,
+				"motion": 0.92
 			},
 			"solved_aura": {
 				"intensity": 0.0,
 				"motion": 1.0
 			},
 			"ui_light_coupling": {
-				"intensity": 3.23704177259664,
+				"intensity": 0.68,
 				"motion": 1.0
 			}
 		}
@@ -55,32 +55,32 @@
 	"post": {
 		"profiles": {
 			"post_bloom_lift": {
-				"intensity": 2.87942739531155,
-				"motion": 1.0
+				"intensity": 0.62,
+				"motion": 0.85
 			},
 			"post_chromatic": {
-				"intensity": 0.181321386054077,
+				"intensity": 0.0,
 				"motion": 1.0
 			},
 			"post_color_grade": {
-				"intensity": 4.0,
-				"motion": 1.0
+				"intensity": 1.08,
+				"motion": 0.9
 			},
 			"post_grain": {
-				"intensity": 2.77013466754334,
-				"motion": 2.73363082195468
+				"intensity": 0.18,
+				"motion": 0.75
 			},
 			"post_lens_warp": {
-				"intensity": 0.379729661461215,
-				"motion": 0.27289375846294
-			},
-			"post_scanlines": {
-				"intensity": 0.288774630485015,
+				"intensity": 0.0,
 				"motion": 0.0
 			},
+			"post_scanlines": {
+				"intensity": 0.2,
+				"motion": 0.45
+			},
 			"post_vignette": {
-				"intensity": 1.17922203758752,
-				"motion": 1.0
+				"intensity": 0.95,
+				"motion": 0.85
 			}
 		}
 	},

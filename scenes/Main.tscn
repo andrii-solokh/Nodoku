@@ -5,12 +5,16 @@
 [ext_resource type="Script" uid="uid://duda7eb7l5uwv" path="res://scripts/grid_view.gd" id="3"]
 [ext_resource type="AudioStream" uid="uid://dcbogu0ttcc1h" path="res://assets/sfx/connect.wav" id="4"]
 [ext_resource type="AudioStream" uid="uid://mqym63ols3js" path="res://assets/sfx/disconnect.wav" id="5"]
+[ext_resource type="Texture2D" path="res://assets/icons/hint.svg" id="6"]
 [ext_resource type="AudioStream" uid="uid://b1jvplas5chin" path="res://assets/sfx/complete.wav" id="7"]
 [ext_resource type="AudioStream" uid="uid://cqah67p8scy15" path="res://assets/sfx/ui.wav" id="8"]
 [ext_resource type="Texture2D" path="res://assets/icons/back.svg" id="9"]
 [ext_resource type="Texture2D" path="res://assets/icons/restart.svg" id="10"]
-[ext_resource type="Script" path="res://scripts/tutorial_demo.gd" id="11"]
 [ext_resource type="Shader" path="res://shaders/live_background.gdshader" id="12"]
+[ext_resource type="Texture2D" path="res://assets/icons/play.svg" id="13"]
+[ext_resource type="Texture2D" path="res://assets/icons/help.svg" id="14"]
+[ext_resource type="Texture2D" path="res://assets/icons/skip.svg" id="15"]
+[ext_resource type="Texture2D" path="res://assets/icons/solve.svg" id="16"]
 
 [sub_resource type="SystemFont" id="3"]
 font_names = PackedStringArray("Menlo", "Monaco", "Consolas", "Courier New", "Noto Sans Mono")
@@ -130,6 +134,25 @@ corner_radius_bottom_left = 22
 shadow_color = Color(0, 0, 0, 0.12)
 shadow_size = 14
 shadow_offset = Vector2(0, 6)
+
+[sub_resource type="StyleBoxFlat" id="14"]
+content_margin_left = 28.0
+content_margin_top = 22.0
+content_margin_right = 28.0
+content_margin_bottom = 22.0
+bg_color = Color(0.02, 0.09, 0.05, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.8, 0.42, 0.82)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+shadow_color = Color(0, 0, 0, 0.2)
+shadow_size = 18
+shadow_offset = Vector2(0, 8)
 
 [node name="Main" type="Control" unique_id=1173963211]
 layout_mode = 3
@@ -278,6 +301,10 @@ custom_minimum_size = Vector2(0, 78)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
+icon = ExtResource("13")
+icon_alignment = 0
+vertical_icon_alignment = 1
+theme_override_constants/icon_max_width = 22
 theme_override_colors/font_color = Color(0.12, 0.24, 0.16, 1)
 theme_override_colors/font_pressed_color = Color(0.12, 0.24, 0.16, 1)
 theme_override_colors/font_hover_color = Color(0.12, 0.24, 0.16, 1)
@@ -286,12 +313,17 @@ theme_override_styles/normal = SubResource("7")
 theme_override_styles/pressed = SubResource("9")
 theme_override_styles/hover = SubResource("8")
 text = "Start"
+tooltip_text = "Start game"
 
 [node name="HowToButton" type="Button" parent="Menu/MenuPanel/MenuMargin/VBox"]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
+icon = ExtResource("14")
+icon_alignment = 0
+vertical_icon_alignment = 1
+theme_override_constants/icon_max_width = 22
 theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
@@ -300,6 +332,7 @@ theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
 theme_override_styles/hover = SubResource("11")
 text = "How to play"
+tooltip_text = "How to play"
 
 [node name="SpacerBottom" type="Control" parent="Menu/MenuPanel/MenuMargin/VBox" unique_id=136256322]
 custom_minimum_size = Vector2(0, 10)
@@ -323,7 +356,7 @@ theme_override_font_sizes/font_size = 18
 text = "v0.1.0"
 horizontal_alignment = 2
 
-[node name="TutorialOverlay" type="Control" parent="Menu"]
+[node name="TutorialOverlay" type="Control" parent="."]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -331,81 +364,66 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 1
+mouse_filter = 2
 
-[node name="TutorialDim" type="ColorRect" parent="Menu/TutorialOverlay"]
+[node name="TutorialDim" type="ColorRect" parent="TutorialOverlay"]
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.02, 0.04, 0.03, 0.96)
+mouse_filter = 2
 
-[node name="TutorialContent" type="MarginContainer" parent="Menu/TutorialOverlay"]
+[node name="TutorialPanel" type="PanelContainer" parent="TutorialOverlay"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = 60.0
-offset_top = 40.0
-offset_right = -60.0
-offset_bottom = -40.0
+offset_left = -290.0
+offset_top = -198.0
+offset_right = 290.0
+offset_bottom = -18.0
 grow_horizontal = 2
-grow_vertical = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("14")
+mouse_filter = 1
 
-[node name="TutorialVBox" type="VBoxContainer" parent="Menu/TutorialOverlay/TutorialContent"]
+[node name="TutorialVBox" type="VBoxContainer" parent="TutorialOverlay/TutorialPanel"]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 8
 alignment = 1
 
-[node name="TutorialDemo" type="Control" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
-custom_minimum_size = Vector2(0, 240)
-layout_mode = 2
-size_flags_vertical = 3
-focus_mode = 2
-script = ExtResource("11")
-
-[node name="TutorialTitle" type="Label" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
+[node name="TutorialTitle" type="Label" parent="TutorialOverlay/TutorialPanel/TutorialVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
 text = "How to play"
 horizontal_alignment = 1
 
-[node name="TutorialStep1" type="Label" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
+[node name="TutorialInstruction" type="Label" parent="TutorialOverlay/TutorialPanel/TutorialVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 theme_override_colors/font_color = Color(0.38, 0.62, 0.43, 1)
-text = "Tap the left node to select it."
+text = "Connect one neighboring pair."
 horizontal_alignment = 1
 
-[node name="TutorialStep2" type="Label" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
+[node name="TutorialStepIndicator" type="Label" parent="TutorialOverlay/TutorialPanel/TutorialVBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.38, 0.62, 0.43, 1)
-text = "Tap the right node to connect."
+text = "1/2"
 horizontal_alignment = 1
 
-[node name="TutorialStep3" type="Label" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
+[node name="TutorialClose" type="Button" parent="TutorialOverlay/TutorialPanel/TutorialVBox"]
+custom_minimum_size = Vector2(260, 46)
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.38, 0.62, 0.43, 1)
-text = "Tap the right node again to remove."
-horizontal_alignment = 1
-
-[node name="TutorialStep4" type="Label" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.38, 0.62, 0.43, 1)
-text = "Swipe to rotate the structure."
-horizontal_alignment = 1
-
-[node name="TutorialSpacer" type="Control" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
-custom_minimum_size = Vector2(0, 6)
-layout_mode = 2
-
-[node name="TutorialClose" type="Button" parent="Menu/TutorialOverlay/TutorialContent/TutorialVBox"]
-custom_minimum_size = Vector2(0, 48)
-layout_mode = 2
+size_flags_horizontal = 4
 focus_mode = 0
+icon = ExtResource("15")
+icon_alignment = 0
+vertical_icon_alignment = 1
+theme_override_constants/icon_max_width = 22
 theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
@@ -414,6 +432,7 @@ theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
 theme_override_styles/hover = SubResource("11")
 text = "Skip"
+tooltip_text = "Skip tutorial"
 
 [node name="Game" type="Control" parent="." unique_id=1783481741]
 visible = false
@@ -466,10 +485,13 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="BackButton" type="Button" parent="Game/HUD/Root/TopBar/TopBarHBox" unique_id=474283972]
-custom_minimum_size = Vector2(64, 52)
+custom_minimum_size = Vector2(108, 52)
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("9")
+icon_alignment = 0
+vertical_icon_alignment = 1
+theme_override_constants/icon_max_width = 22
 theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
@@ -477,14 +499,17 @@ theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
 theme_override_styles/hover = SubResource("11")
-text = ""
+text = "Back"
 tooltip_text = "Back"
 
 [node name="RestartButton" type="Button" parent="Game/HUD/Root/TopBar/TopBarHBox" unique_id=956553963]
-custom_minimum_size = Vector2(64, 52)
+custom_minimum_size = Vector2(124, 52)
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("10")
+icon_alignment = 0
+vertical_icon_alignment = 1
+theme_override_constants/icon_max_width = 22
 theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
@@ -492,13 +517,17 @@ theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
 theme_override_styles/hover = SubResource("11")
-text = ""
+text = "Restart"
 tooltip_text = "Restart"
 
 [node name="HintButton" type="Button" parent="Game/HUD/Root/TopBar/TopBarHBox"]
-custom_minimum_size = Vector2(84, 52)
+custom_minimum_size = Vector2(108, 52)
 layout_mode = 2
 focus_mode = 0
+icon = ExtResource("6")
+icon_alignment = 0
+vertical_icon_alignment = 1
+theme_override_constants/icon_max_width = 22
 theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
@@ -510,9 +539,13 @@ text = "Hint"
 tooltip_text = "Hint"
 
 [node name="SolveButton" type="Button" parent="Game/HUD/Root/TopBar/TopBarHBox"]
-custom_minimum_size = Vector2(96, 52)
+custom_minimum_size = Vector2(112, 52)
 layout_mode = 2
 focus_mode = 0
+icon = ExtResource("16")
+icon_alignment = 0
+vertical_icon_alignment = 1
+theme_override_constants/icon_max_width = 22
 theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
@@ -590,6 +623,10 @@ layout_mode = 2
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 focus_mode = 0
+icon = ExtResource("9")
+icon_alignment = 0
+vertical_icon_alignment = 1
+theme_override_constants/icon_max_width = 22
 theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
@@ -598,11 +635,16 @@ theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
 theme_override_styles/hover = SubResource("11")
 text = "Back"
+tooltip_text = "Back to menu"
 
 [node name="ReplayButton" type="Button" parent="Game/HUD/Root/CompletionPanel/CompletionVBox" unique_id=1349998100]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 focus_mode = 0
+icon = ExtResource("13")
+icon_alignment = 0
+vertical_icon_alignment = 1
+theme_override_constants/icon_max_width = 22
 theme_override_colors/font_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_pressed_color = Color(0.58, 0.94, 0.64, 1)
 theme_override_colors/font_hover_color = Color(0.58, 0.94, 0.64, 1)
@@ -611,3 +653,4 @@ theme_override_styles/normal = SubResource("10")
 theme_override_styles/pressed = SubResource("12")
 theme_override_styles/hover = SubResource("11")
 text = "Play"
+tooltip_text = "Play next level"

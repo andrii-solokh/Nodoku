@@ -27,3 +27,16 @@
 - `npm i -g vercel`
 - `vercel`
 - `vercel --prod`
+
+## 5) Promote Hidden Dev VFX Defaults (Web Flow)
+1. Unlock hidden Developer Mode in-game (secret tap sequence).
+2. Open VFX popup and press `Save Profile`.
+3. On web this saves runtime profile and downloads `nodoku-vfx-defaults.json`.
+4. Place downloaded file at `config/vfx_release_candidate.json`.
+5. Run web release:
+   - `bash scripts/release_web.sh`
+6. Release script auto-promotes candidate defaults into:
+   - `config/vfx_defaults.json`
+
+Manual promote command:
+- `node scripts/promote_vfx_defaults.mjs --from config/vfx_release_candidate.json --to config/vfx_defaults.json`
