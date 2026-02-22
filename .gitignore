@@ -30,5 +30,3 @@ logs/security/
 
 # Build artifacts
 output/
-public/index.pck
-public/index.wasm
