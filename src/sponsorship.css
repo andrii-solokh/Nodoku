@@ -106,7 +106,10 @@
   line-height: 1.5;
   color: #8b7e98;
   white-space: nowrap;
+  opacity: 1;
+  transition: opacity .24s ease;
 }
+.visitor-widget.is-loading { opacity: 0; pointer-events: none; }
 .audience-link { display: inline-flex; align-items: center; gap: 8px; padding: 5px 0; font: inherit; color: inherit; border-radius: 5px; }
 .audience-link:hover { color: #67517f; }
 .audience-counter { display: inline-flex; align-items: center; gap: 5px; }
@@ -120,7 +123,7 @@
 .visitor-widget strong { color: #695b79; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .visitor-game, .visitor-home { font-size: 12px; }
 .visitor-game strong, .visitor-home strong { font-size: 14px; }
-@media (prefers-reduced-motion: reduce) { .audience-rotating { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .audience-rotating, .visitor-widget { transition: none; } }
 .sponsorship-game { display: none; }
 @media (min-width: 1320px) and (min-height: 760px) and (min-aspect-ratio: 3/2) {
   .sponsorship-game {

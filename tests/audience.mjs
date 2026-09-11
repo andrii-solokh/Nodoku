@@ -23,7 +23,7 @@ async function counts(page, online, visitors) {
       && values['visitor-count'] === formatted(visitors) && values['visitor-count-game'] === formatted(visitors);
   }, `Both home and game show online=${online}, visitors=${visitors}`);
 }
-async function fixture({ clock = false } = {}) {
+async function fixture({ clock = false, deferInitial = false } = {}) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 }, locale: 'en-US' });
   page.on('pageerror', error => errors.push(error.message));
   if (clock) await page.clock.install({ time: new Date('2026-09-10T12:00:00Z') });
@@ -35,13 +35,14 @@ async function fixture({ clock = false } = {}) {
   const mock = {
     presence: { body: { online: 12, scope: 'local' }, status: 200 },
     visitors: { body: { count: 1234, scope: 'local' }, status: 200 },
-    requests: { presence: [], visitors: [], statistics: [] }, pending: [],
+    requests: { presence: [], visitors: [], statistics: [] }, pending: [], initialPending: [],
   };
   for (const name of ['presence', 'visitors']) {
     await page.route(`**/api/${name}`, async route => {
       const request = route.request();
       mock.requests[name].push({ method: request.method(), body: request.postData() ? request.postDataJSON() : null });
       const response = mock[name];
+      if (deferInitial && mock.initialPending.length < 2) { mock.initialPending.push(route); return; }
       if (response.defer) { mock.pending.push(route); return; }
       await route.fulfill({ status: response.status, json: response.body });
     });
@@ -57,7 +58,7 @@ async function fixture({ clock = false } = {}) {
   });
   await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors: [] } }));
   await page.goto(url);
-  await counts(page, 12, 1234);
+  if (!deferInitial) await counts(page, 12, 1234);
   return { page, mock };
 }
 async function layout(page, mode, label) {
@@ -110,6 +111,19 @@ async function visibility(page, value) {
 const snapshot = mock => ({ presence: mock.requests.presence.length, visitors: mock.requests.visitors.length });
 
 try {
+  const loading = await fixture({ deferInitial: true });
+  await waitFor(() => loading.mock.initialPending.length === 2, 'Initial presence and totals requests begin together');
+  assert.equal(await loading.page.locator('.visitor-home').evaluate(widget => widget.classList.contains('is-loading')), true, 'Audience stays together while initial values load');
+  const initialPresence = loading.mock.initialPending.find(route => route.request().url().includes('/api/presence'));
+  const initialVisitors = loading.mock.initialPending.find(route => route.request().url().includes('/api/visitors'));
+  await initialPresence.fulfill({ json: loading.mock.presence.body });
+  await waitFor(async () => await loading.page.locator('#online-count').textContent() === '12', 'Presence result reaches the hidden audience');
+  assert.equal(await loading.page.locator('.visitor-home').evaluate(widget => widget.classList.contains('is-loading')), true, 'A first result cannot reveal a partial audience message');
+  await initialVisitors.fulfill({ json: loading.mock.visitors.body });
+  await waitFor(async () => !(await loading.page.locator('.visitor-home').evaluate(widget => widget.classList.contains('is-loading'))), 'Audience fades in after both initial values settle');
+  await counts(loading.page, 12, 1234);
+  await loading.page.close();
+
   const { page, mock } = await fixture();
   assert.equal((await state(page)).mode, 'home');
   const firstId = mock.requests.visitors[0].body.visitorId;
