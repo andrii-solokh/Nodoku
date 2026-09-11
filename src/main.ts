@@ -192,18 +192,9 @@ app.innerHTML = `
 <div id="node-announcement" class="sr-only" aria-live="polite"></div>
 <dialog class="dialog" id="help-dialog" aria-labelledby="help-title">
   <div class="dialog-header"><h2 id="help-title">Clear every dot.</h2><button class="icon-button close" data-close="help-dialog" aria-label="Close help">${icon("close")}</button></div>
-  <p class="help-intro">Each dot is a connection that node still needs.<strong>3 dots = 3 connections to neighboring nodes.</strong></p>
-  <svg class="help-demo" viewBox="0 0 320 100" role="img" aria-label="Two nodes with one dot each become dotless when connected.">
-    <defs><radialGradient id="bead" cx="35%" cy="25%" r="80%"><stop offset="0" stop-color="#fffdf7"/><stop offset="1" stop-color="#ddd6e6"/></radialGradient></defs>
-    <circle cx="34" cy="36" r="24" fill="url(#bead)"/><circle cx="94" cy="36" r="24" fill="url(#bead)"/>
-    <g fill="#78638f"><circle cx="34" cy="36" r="3"/><circle cx="94" cy="36" r="3"/></g>
-    <path d="M145 36h30m-7-7 7 7-7 7" fill="none" stroke="#aaa0ba" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M226 36h60" stroke="#9d87cd" stroke-width="7" stroke-linecap="round"/>
-    <circle cx="226" cy="36" r="24" fill="#b7cfbf"/><circle cx="286" cy="36" r="24" fill="#b7cfbf"/>
-    <g font-family="Outfit, sans-serif" font-size="12" text-anchor="middle"><text x="64" y="87" fill="#85768f">1 dot each</text><text x="256" y="87" fill="#64816f">No dots left</text></g>
-  </svg>
-  <p class="help-goal">Each connection clears one dot from both nodes. Finish with no dots left and all nodes joined together.</p>
-  <ul class="help-list"><li>${icon("link")}<span>Tap two neighbors or drag between them to connect. Tap or drag between linked nodes to remove their connection.</span></li><li>${icon("orbit")}<span>Swipe empty space to turn the puzzle.</span></li></ul>
+  <p class="help-summary">Each dot is one connection a node still needs.</p>
+  <p class="help-rule">3 dots = 3 links to neighboring nodes.</p>
+  <p class="help-instructions">Tap or drag between neighbors to connect. Clear every dot and join all nodes into one network. Swipe empty space to turn the puzzle.</p>
   <button class="start-button" data-close="help-dialog">Got it</button>
 </dialog>
 <dialog class="dialog" id="keyboard-dialog" aria-labelledby="keyboard-title">
