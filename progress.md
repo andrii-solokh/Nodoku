@@ -1530,3 +1530,7 @@ TODO / Note
 - Replaced the metric selector with visible puzzles-solved, visitors, and dots-cleared histograms that share the selected period.
 - Added distinct colors, individual accessible values, empty states, and a stacked mobile layout.
 - Verified by production build, full unit suite, direct mocked browser rendering, and Playwright game-client run. The long statistics browser suite was unable to finish because its local preview navigation timed out before the statistics assertions.
+
+## 2026-09-11 — Simplified statistics page
+- Removed the expandable “What these numbers mean” definitions block from the statistics page.
+- Verified the production build, full unit suite, direct statistics rendering check, and Playwright game client.
