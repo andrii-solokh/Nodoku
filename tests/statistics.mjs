@@ -123,7 +123,8 @@ try {
   await waitFor(async () => await dialog.locator('[data-total=puzzlesSolved]').textContent() === '213', 'Statistics loads server aggregates');
   assert.equal(await dialog.locator('[data-total=dotsCleared]').textContent(), '16,320');
   assert.equal(await dialog.locator('[data-total=visitors]').textContent(), '1,529');
-  assert.equal(await dialog.locator('#statistics-chart .statistics-bar').count(), 7);
+  assert.equal(await dialog.locator('.statistics-histogram').count(), 3);
+  for (const metric of ['puzzlesSolved', 'visitors', 'dotsCleared']) assert.equal(await dialog.locator(`#statistics-chart-${metric} .statistics-bar`).count(), 7);
   await view.page.keyboard.press('ArrowRight');
   assert.deepEqual((await state(view.page)).view, original.view, 'Statistics input cannot rotate the puzzle');
   for (const period of ['today', '7d', '30d', 'all']) {
@@ -133,11 +134,9 @@ try {
     assert.equal(await dialog.locator(`[data-period="${period}"]`).getAttribute('aria-pressed'), 'true');
   }
   assert.match(await dialog.locator('#statistics-chart-note').textContent(), /last 30 days/i);
-  await dialog.locator('#statistics-metric').selectOption('visitors');
-  await dialog.locator('.statistics-bar').first().focus();
-  assert.match(await dialog.locator('#statistics-chart-value').textContent(), /13/);
-  await dialog.locator('#statistics-metric').selectOption('dotsCleared');
-  assert.match(await dialog.locator('.statistics-bar').first().getAttribute('aria-label'), /132 dots cleared/);
+  await dialog.locator('#statistics-chart-visitors .statistics-bar').first().focus();
+  assert.match(await dialog.locator('#statistics-chart-value-visitors').textContent(), /13/);
+  assert.match(await dialog.locator('#statistics-chart-dotsCleared .statistics-bar').first().getAttribute('aria-label'), /132 dots cleared/);
 
   const reports = [];
   await view.page.route('**/api/sponsor-report', route => {
@@ -192,9 +191,10 @@ try {
   await waitFor(async () => await view.page.locator('#statistics-content').isVisible(), 'Retry recovers');
   assert.equal(await view.page.locator('[data-total=puzzlesSolved]').textContent(), '0', 'Real zero totals are shown');
   assert.match(await view.page.locator('#statistics-sizes').textContent(), /No completed puzzles/);
-  assert.equal(await view.page.locator('#statistics-chart-empty').isVisible(), true);
+  assert.equal(await view.page.locator('.statistics-chart-empty').count(), 3);
+  assert.equal(await view.page.locator('#statistics-chart-empty-puzzlesSolved').isVisible(), true);
   await view.page.close();
 
   assert.deepEqual(errors, [], 'No uncaught browser errors');
-  console.log('Passed: solve tracking/deduplication and offline queue; statistics filters, chart controls, private reports, mobile layout, history/refresh, errors/empty states, and game preservation.');
+  console.log('Passed: solve tracking/deduplication and offline queue; statistics filters, separate histograms, private reports, mobile layout, history/refresh, errors/empty states, and game preservation.');
 } finally { await browser.close(); }

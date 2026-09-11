@@ -28,6 +28,7 @@ export function parseStatistics(value: unknown, period: StatisticsPeriod): Stati
 const format = new Intl.NumberFormat();
 const periodLabels: Record<StatisticsPeriod, string> = { today: 'Today', '7d': '7 days', '30d': '30 days', all: 'All time' };
 const metricLabels: Record<ActivityMetric, string> = { puzzlesSolved: 'Puzzles solved', visitors: 'Visitors', dotsCleared: 'Dots cleared' };
+const activityMetrics = Object.keys(metricLabels) as ActivityMetric[];
 let openPage: ((options?: { report?: boolean }) => void) | undefined;
 export function openStatistics(options?: { report?: boolean }): void { openPage?.(options); }
 
@@ -45,7 +46,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
       <div class="statistics-status" id="statistics-status" role="status" aria-live="polite"></div><button class="statistics-retry" id="statistics-retry" hidden>Try again</button>
       <div id="statistics-content" hidden>
         <div class="statistics-totals">${[['puzzlesSolved', 'Puzzles solved'], ['dotsCleared', 'Dots cleared'], ['visitors', 'Visitors'], ['connectionsCompleted', 'Connections completed']].map(([key, label]) => `<article class="statistics-total"><strong data-total="${key}">—</strong><span>${label}</span></article>`).join('')}</div>
-        <section class="statistics-panel statistics-activity" aria-labelledby="statistics-activity-title"><div class="statistics-panel-heading"><div><p class="statistics-eyebrow">One day at a time</p><h2 id="statistics-activity-title">Daily activity</h2></div><label class="statistics-metric-label">Show <select id="statistics-metric">${Object.entries(metricLabels).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></label></div><p id="statistics-chart-note"></p><div id="statistics-chart" class="statistics-chart" role="group" aria-label="Daily activity chart"></div><div class="statistics-chart-axis"><span id="statistics-chart-first"></span><output id="statistics-chart-value" aria-live="polite"></output><span id="statistics-chart-last"></span></div><p id="statistics-chart-empty" hidden>No activity recorded in this period yet. Your next little victory can be the first.</p><details class="statistics-daily-details"><summary>Daily values</summary><div class="statistics-table-wrap"><table><caption class="sr-only">Daily activity values</caption><thead><tr><th>Date (UTC)</th><th>Puzzles</th><th>Visitors</th><th>Dots</th></tr></thead><tbody id="statistics-daily-values"></tbody></table></div></details></section>
+        <section class="statistics-panel statistics-activity" aria-labelledby="statistics-activity-title"><div class="statistics-panel-heading"><div><p class="statistics-eyebrow">One day at a time</p><h2 id="statistics-activity-title">Daily activity</h2></div></div><p id="statistics-chart-note"></p><div class="statistics-histograms">${activityMetrics.map(metric => `<section class="statistics-histogram" data-metric="${metric}" aria-labelledby="statistics-histogram-${metric}"><h3 id="statistics-histogram-${metric}">${metricLabels[metric]}</h3><div id="statistics-chart-${metric}" class="statistics-chart" role="group" aria-label="Daily ${metricLabels[metric].toLowerCase()} histogram"></div><div class="statistics-chart-axis"><span id="statistics-chart-first-${metric}"></span><output id="statistics-chart-value-${metric}" aria-live="polite"></output><span id="statistics-chart-last-${metric}"></span></div><p id="statistics-chart-empty-${metric}" class="statistics-chart-empty" hidden>No ${metricLabels[metric].toLowerCase()} recorded in this period yet.</p></section>`).join('')}</div><details class="statistics-daily-details"><summary>Daily values</summary><div class="statistics-table-wrap"><table><caption class="sr-only">Daily activity values</caption><thead><tr><th>Date (UTC)</th><th>Puzzles</th><th>Visitors</th><th>Dots</th></tr></thead><tbody id="statistics-daily-values"></tbody></table></div></details></section>
         <div class="statistics-breakdowns"><section class="statistics-panel"><p class="statistics-eyebrow">Ways to play</p><h2>Popular grids</h2><ul id="statistics-sizes" class="statistics-ranking"></ul></section><section class="statistics-panel"><p class="statistics-eyebrow">Finding a pace</p><h2>Popular difficulties</h2><ul id="statistics-difficulties" class="statistics-ranking"></ul></section></div>
         <p id="statistics-tracking" class="statistics-tracking"></p>
       </div>
@@ -55,7 +56,6 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
   document.body.appendChild(dialog);
   const el = <T extends HTMLElement = HTMLElement>(id: string) => dialog.querySelector<T>(`#${id}`)!;
   let period: StatisticsPeriod = '30d';
-  let metric: ActivityMetric = 'puzzlesSolved';
   let data: StatisticsData | null = null;
   let active: AbortController | null = null;
   let reportActive: AbortController | null = null;
@@ -64,35 +64,37 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
   let previousHash = '';
 
   const dateLabel = (date: string) => new Date(`${date.slice(0, 10)}T00:00:00Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
-  function renderChart() {
+  function renderCharts() {
     if (!data) return;
     const daily = data.daily;
-    const chart = el('statistics-chart');
-    chart.replaceChildren();
-    chart.style.setProperty('--days', String(Math.max(1, daily.length)));
-    const max = Math.max(1, ...daily.map(row => row[metric]));
-    const output = el<HTMLOutputElement>('statistics-chart-value');
-    output.textContent = '';
-    for (const row of daily) {
-      const bar = document.createElement('button');
-      bar.type = 'button';
-      bar.className = 'statistics-bar';
-      bar.style.setProperty('--bar-height', `${row[metric] / max * 100}%`);
-      bar.setAttribute('aria-label', `${dateLabel(row.date)}: ${format.format(row[metric])} ${metricLabels[metric].toLowerCase()}`);
-      bar.title = bar.getAttribute('aria-label')!;
-      const fill = document.createElement('span');
-      fill.setAttribute('aria-hidden', 'true');
-      bar.appendChild(fill);
-      const show = () => { output.textContent = `${dateLabel(row.date)} · ${format.format(row[metric])}`; };
-      bar.addEventListener('pointerenter', show);
-      bar.addEventListener('focus', show);
-      bar.addEventListener('click', show);
-      chart.appendChild(bar);
+    for (const metric of activityMetrics) {
+      const chart = el(`statistics-chart-${metric}`);
+      chart.replaceChildren();
+      chart.style.setProperty('--days', String(Math.max(1, daily.length)));
+      const max = Math.max(1, ...daily.map(row => row[metric]));
+      const output = el<HTMLOutputElement>(`statistics-chart-value-${metric}`);
+      output.textContent = '';
+      for (const row of daily) {
+        const bar = document.createElement('button');
+        bar.type = 'button';
+        bar.className = 'statistics-bar';
+        bar.style.setProperty('--bar-height', `${row[metric] / max * 100}%`);
+        bar.setAttribute('aria-label', `${dateLabel(row.date)}: ${format.format(row[metric])} ${metricLabels[metric].toLowerCase()}`);
+        bar.title = bar.getAttribute('aria-label')!;
+        const fill = document.createElement('span');
+        fill.setAttribute('aria-hidden', 'true');
+        bar.appendChild(fill);
+        const show = () => { output.textContent = `${dateLabel(row.date)} · ${format.format(row[metric])}`; };
+        bar.addEventListener('pointerenter', show);
+        bar.addEventListener('focus', show);
+        bar.addEventListener('click', show);
+        chart.appendChild(bar);
+      }
+      el(`statistics-chart-empty-${metric}`).hidden = daily.some(row => row[metric] > 0);
+      el(`statistics-chart-first-${metric}`).textContent = daily.length ? dateLabel(daily[0].date) : '';
+      el(`statistics-chart-last-${metric}`).textContent = daily.length > 1 ? dateLabel(daily.at(-1)!.date) : '';
     }
-    el('statistics-chart-empty').hidden = daily.some(row => row[metric] > 0);
-    el('statistics-chart-first').textContent = daily.length ? dateLabel(daily[0].date) : '';
-    el('statistics-chart-last').textContent = daily.length > 1 ? dateLabel(daily.at(-1)!.date) : '';
-    el('statistics-chart-note').textContent = period === 'all' ? 'All-time totals above. The chart shows the last 30 days, in UTC.' : `${periodLabels[period]} · ${metricLabels[metric].toLowerCase()} per day, in UTC.`;
+    el('statistics-chart-note').textContent = period === 'all' ? 'All-time totals appear above. Histograms show the last 30 days, in UTC.' : `${periodLabels[period]} · daily values in UTC.`;
   }
   function ranking(id: string, entries: { label: string; count: number }[]) {
     const list = el(id);
@@ -129,7 +131,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
       for (const value of [row.date, format.format(row.puzzlesSolved), format.format(row.visitors), format.format(row.dotsCleared)]) { const td = document.createElement('td'); td.textContent = value; tr.appendChild(td); }
       body.appendChild(tr);
     }
-    renderChart();
+    renderCharts();
   }
   async function load() {
     active?.abort();
@@ -229,7 +231,6 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
     for (const candidate of dialog.querySelectorAll('[data-period]')) candidate.setAttribute('aria-pressed', String(candidate === button));
     void load(); if (reportReceipt) void loadReport();
   });
-  el<HTMLSelectElement>('statistics-metric').addEventListener('change', event => { metric = (event.target as HTMLSelectElement).value as ActivityMetric; renderChart(); });
   el('statistics-retry').addEventListener('click', () => void load());
   el('statistics-report-form').addEventListener('submit', event => { event.preventDefault(); reportReceipt = el<HTMLInputElement>('statistics-report-code').value.trim(); if (reportReceipt) void loadReport(); });
   window.addEventListener('popstate', syncLocation);
