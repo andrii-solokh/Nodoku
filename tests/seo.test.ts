@@ -8,10 +8,10 @@ test("homepage metadata describes Nodoku as a 3D spatial reasoning puzzle", asyn
   const html = await readRootFile("index.html");
 
   for (const value of [
-    '<title>Nodoku - 3D Spatial Reasoning Puzzle Online</title>',
+    '<title>Nodoku — 3D Spatial Reasoning Puzzle</title>',
     '<meta name="robots" content="index,follow" />',
     '<link rel="canonical" href="https://nodoku.solokh.com/" />',
-    '<meta property="og:title" content="Nodoku - 3D Spatial Reasoning Puzzle" />',
+    '<meta property="og:title" content="Nodoku — 3D Spatial Reasoning Puzzle" />',
     '<meta name="twitter:card" content="summary_large_image" />',
     '"@type": "VideoGame"',
     '"@type": "FAQPage"',

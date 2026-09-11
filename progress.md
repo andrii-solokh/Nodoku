@@ -1474,3 +1474,7 @@ TODO / Note
 2026-09-11 Safe maximum board zoom
 - Replaced the fixed maximum zoom multiplier with a view-aware limit derived from the projected full board bounds. It uses the current orientation, viewport aspect, node scale, float amplitude and the node edge radius, so large 5 × 5 × 5 cubes cannot crop when zoomed or rotated. View restoration and preview shape transitions use the same safe floor.
 - Extended the camera browser regression to assert each sphere's full projected diameter stays inside the canvas at maximum zoom through turns. The free-rotation fixture now begins on an exposed empty canvas point rather than a sponsor overlay. `npm test` passes 190 tests, the production build passes, and desktop max-zoom plus the prescribed interactive browser capture were inspected. Final camera mobile/rotation run is completing before release.
+
+2026-09-11 Three.js Open Graph card
+- Updated the page, Open Graph, Twitter and image-alt titles to “Nodoku — 3D Spatial Reasoning Puzzle.” The social description now states the core goal: connect every node and complete one network.
+- Replaced the hand-drawn card graphic with an asset captured from the real Three.js home board. The generator crops and composes that board beside the new title so `og-image.png` remains a static, crawler-friendly 1200 × 630 image. The Open Graph test checks that the generator uses the Three.js capture; generated card inspected before validation.
