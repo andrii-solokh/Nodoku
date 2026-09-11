@@ -1,12 +1,58 @@
 {
   "name": "nodoku",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
-    "release:web": "bash scripts/release_web.sh",
-    "icons:generate": "node scripts/generate_icons.mjs"
+    "dev": "vite",
+    "admin": "node --import tsx scripts/admin-link.ts",
+    "build": "tsc --noEmit && tsc --noEmit -p tsconfig.server.json && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --import tsx --test tests/puzzle.test.ts tests/sponsorship-server.test.ts tests/statistics-server.test.ts tests/ad-free-server.test.ts tests/demo.test.ts tests/dot-animation.test.ts tests/connection-colors.test.ts tests/gum-profile.test.ts tests/admin-api.test.ts tests/vite-admin.test.ts tests/sound.test.ts tests/melodies.test.ts tests/ambient.test.ts",
+    "test:demo": "node tests/demo.mjs",
+    "test:demo-rhythm": "node --import tsx tests/demo-rhythm.mjs",
+    "test:admin": "node --import tsx tests/admin.mjs",
+    "test:dot-animations": "node --import tsx tests/dot-animations.mjs",
+    "test:shape-transition": "node --import tsx tests/shape-transition.mjs",
+    "test:node-floating": "node --import tsx tests/node-floating.mjs",
+    "test:demo-sound": "node --import tsx tests/demo-sound.mjs",
+    "test:ad-free": "node tests/ad-free.mjs",
+    "test:sponsorship": "node tests/sponsorship.mjs",
+    "test:audience": "node tests/audience.mjs",
+    "test:statistics": "node --import tsx tests/statistics.mjs",
+    "test:sponsor-metrics": "node tests/sponsor-metrics.mjs",
+    "test:browser": "node tests/browser.mjs",
+    "test:sound": "node --import tsx tests/sound.mjs",
+    "test:share": "node --import tsx tests/share.mjs",
+    "test:persistence": "node --import tsx tests/persistence.mjs",
+    "release:web": "npm run build",
+    "release:godot": "bash scripts/release_web.sh",
+    "icons:generate": "node scripts/generate_icons.mjs",
+    "test:camera": "node tests/camera.mjs",
+    "test:gestures": "node --import tsx tests/gestures.mjs",
+    "test:drag-preview": "node tests/drag-preview.mjs",
+    "test:front-face": "node tests/front-face.mjs",
+    "test:ambient": "node tests/ambient.mjs",
+    "test:connectivity": "node --import tsx tests/connectivity.mjs",
+    "test:connection-colors": "node --import tsx tests/connection-colors.mjs",
+    "test:gum-materials": "node --import tsx tests/gum-materials.mjs"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260910.1",
+    "@types/node": "^22.20.2",
+    "@types/three": "^0.185.4",
     "playwright": "^1.58.1",
-    "sharp": "^0.34.5",
-    "wrangler": "^4.63.0"
-  }
+    "sharp": "^0.35.4",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "wrangler": "^4.130.0"
+  },
+  "dependencies": {
+    "@fontsource/outfit": "^5.3.0",
+    "stripe": "^22.6.2",
+    "three": "^0.186.0"
+  },
+  "private": true,
+  "version": "2.0.0"
 }

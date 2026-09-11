@@ -1,0 +1,60 @@
+#admin-panel {
+  position: fixed;
+  top: 80px;
+  left: 20px;
+  z-index: 20;
+  width: 340px;
+  max-height: calc(100dvh - 100px);
+  overflow: auto;
+  padding: 22px;
+  color: #514760;
+  background: #fbfafff5;
+  border: 1px solid #dcd6e8;
+  border-radius: 20px;
+  box-shadow: 0 16px 48px #302b4824;
+  backdrop-filter: blur(12px);
+  font-size: 12px;
+}
+#admin-panel[hidden], #admin-open[hidden] { display: none; }
+.admin-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; top: -22px; z-index: 2; margin: -22px -22px 0; padding: 18px 22px; background: #fbfaff; }
+.admin-heading span { color: #827392; font-size: 11px; }
+.admin-heading h2 { margin: 3px 0 0; font-size: 24px; font-weight: 500; letter-spacing: -.6px; }
+#admin-close { min-width: 32px; min-height: 32px; font-size: 18px; }
+.admin-intro { color: #887a96; font-size: 12px; line-height: 1.6; margin: 14px 0; }
+#admin-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+#admin-fields details { padding: 11px 0; border-top: 1px solid #e9e3f0; }
+#admin-fields summary { font-size: 14px; font-weight: 500; padding: 7px 0; cursor: pointer; }
+.admin-control { display: grid; grid-template-columns: 1fr 72px; align-items: center; gap: 9px; padding: 10px 0; }
+.admin-control label { line-height: 1.5; color: #71617e; }
+.admin-control input, .admin-control select, #admin-token {
+  font: inherit; color: #53445f; border: 1px solid #dcd3e7; border-radius: 7px; background: #fff;
+  width: 100%; min-width: 0; padding: 7px;
+}
+.admin-control input[type=range] { grid-column: 1 / -1; padding: 0; accent-color: #8170c9; height: 16px; }
+.admin-control input[type=checkbox] { width: 18px; height: 18px; justify-self: end; accent-color: #8170c9; }
+.admin-control input[type=color] { width: 50px; height: 32px; padding: 3px; justify-self: end; }
+.admin-choice { grid-template-columns: 1fr; }
+.admin-material-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-width: 0; }
+.admin-material-option { position: relative; min-width: 0; cursor: pointer; }
+.admin-material-option input[type=radio] { position: absolute; width: 1px; height: 1px; opacity: 0; padding: 0; }
+.admin-material-card { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; padding: 8px 6px 12px; border: 1px solid #ded6eb; border-radius: 12px; background: #f6f3fa; text-align: center; }
+.admin-material-card svg { display: block; width: 100%; max-width: 120px; height: 64px; }
+.admin-material-card strong { font-size: 13px; font-weight: 500; color: #57456f; }
+.admin-material-card > span { font-size: 10px; line-height: 1.4; color: #887a96; }
+.admin-material-option input:checked + .admin-material-card { border-color: #8170c9; box-shadow: inset 0 0 0 1px #8170c9; background: #eee7f8; }
+.admin-material-option input:focus-visible + .admin-material-card { outline: 2px solid #8170c9; outline-offset: 3px; }
+.admin-material-option:has(input:disabled) { opacity: .6; cursor: default; }
+.admin-description { grid-column: 1 / -1; margin: 0; color: #887a96; font-size: 11px; line-height: 1.5; }
+.admin-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+.admin-actions button, #admin-login button { padding: 11px 8px; border-radius: 8px; background: #ede7f5; font-size: 12px; }
+.admin-actions .admin-primary, #admin-login .admin-primary { color: white; background: #7966bd; }
+#admin-status { color: #7a688c; font-size: 11px; line-height: 1.6; margin-bottom: 0; }
+.admin-file { font-size: 10px; color: #9b8ba7; margin-bottom: 0; }
+#admin-login { display: grid; gap: 10px; }
+#admin-panel input:focus-visible { outline: 2px solid #8170c9; outline-offset: 2px; }
+#admin-open { color: #7966bd; font-size: 12px; }
+@media (max-width: 760px) {
+  #admin-panel { top: auto; left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 65dvh; padding: 18px; }
+  .admin-heading { top: -18px; margin: -18px -18px 0; padding: 14px 18px; }
+  .playing .header-actions #admin-open { font-size: 11px; }
+}
