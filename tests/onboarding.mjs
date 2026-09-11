@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict';
+import { chromium } from 'playwright';
+
+const url = process.env.TEST_URL || 'http://127.0.0.1:4173';
+const browser = await chromium.launch();
+const errors = [];
+const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text()));
+const adjacent = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.z - b.z) === 1;
+async function fixture() {
+  const page = await browser.newPage({ viewport: { width: 1200, height: 850 } });
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/api/visitors', route => route.fulfill({ json: { count: 1, scope: 'local' } }));
+  await page.route('**/api/presence', route => route.fulfill({ json: { online: 1, scope: 'local' } }));
+  await page.route('**/api/statistics?**', route => route.fulfill({ json: { period: 'all', scope: 'local', trackingSince: null, totals: { visitors: 1, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
+  await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors: [] } }));
+  await page.goto(`${url}?onboarding=1`);
+  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'onboarding');
+  return page;
+}
+try {
+  const page = await fixture();
+  assert.equal(await page.locator('.site-header').isVisible(), false, 'Onboarding hides the normal header');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 3');
+  const board = await state(page);
+  assert.equal(board.nodes.length, 9, 'The first lesson is a 3 by 3 board');
+  const a = board.nodes.find(node => board.nodes.some(other => adjacent(node, other)));
+  const b = board.nodes.find(node => adjacent(a, node));
+  await page.mouse.move(a.screen.x, a.screen.y);
+  await page.mouse.down();
+  await page.mouse.move(b.screen.x, b.screen.y, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 3');
+  assert.match(await page.locator('#onboarding-message').textContent(), /Every dot needs a connection/);
+  await page.locator('#onboarding-next').click();
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 3');
+  assert.equal((await state(page)).nodes.length, 26, 'The next lesson switches to a 3D board');
+  const canvas = await page.locator('#onboarding-stage canvas').boundingBox();
+  await page.mouse.move(canvas.x + 48, canvas.y + 80);
+  await page.mouse.down();
+  await page.mouse.move(canvas.x + 150, canvas.y + 95, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === 'Done');
+  await page.locator('#onboarding-next').click();
+  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');
+  assert.equal(await page.locator('.site-header').isVisible(), true, 'Finishing returns to the normal home screen');
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('nodoku.astra.v1')).onboardingCompleted), true, 'Completion is stored');
+  await page.close();
+
+  const skipped = await fixture();
+  await skipped.locator('#onboarding-skip').click();
+  await skipped.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');
+  assert.equal(await skipped.evaluate(() => JSON.parse(localStorage.getItem('nodoku.astra.v1')).onboardingCompleted), true, 'Skipping is stored');
+  await skipped.close();
+  assert.deepEqual(errors, []);
+  console.log('Passed: skippable first-run 3 by 3 connection lesson, goal explanation, 3D rotation lesson, and persisted completion.');
+} finally {
+  await browser.close();
+}
