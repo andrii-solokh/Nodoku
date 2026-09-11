@@ -308,6 +308,19 @@ try {
   await mobile.locator("#start-button").tap();
   await settle(mobile);
   await checkGameLayout(mobile, "mobile portrait");
+  assert.equal(await mobile.locator('#keyboard-button').isVisible(), false, 'Keyboard controls stay hidden on mobile');
+  const mobileControlGroups = await mobile.evaluate(() =>
+    [...document.querySelectorAll('.tools-group, .rotation-tools')].map((element) => {
+      const { x, y, width, height } = element.getBoundingClientRect();
+      return { x, y, width, height };
+    }),
+  );
+  const [actions, rotation] = mobileControlGroups;
+  assert.ok(
+    actions.x + actions.width <= rotation.x || rotation.x + rotation.width <= actions.x ||
+      actions.y + actions.height <= rotation.y || rotation.y + rotation.height <= actions.y,
+    'mobile portrait keeps puzzle actions separate from rotation controls',
+  );
   s = await state(mobile);
   nodes = pair(s);
   assert.equal(s.selected, null, "a fresh mobile puzzle starts with no selected node");
