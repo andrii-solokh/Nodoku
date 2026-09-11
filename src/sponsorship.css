@@ -157,6 +157,7 @@
   }
   .sponsorship-game .sponsor-card:nth-child(odd) { grid-column: 1; }
   .sponsorship-game .sponsor-card:nth-child(even) { grid-column: 3; }
+  .sponsorship-game .sponsor-card:only-child { grid-row: 2; }
   .sponsorship-game .sponsor-copy { min-width: 0; }
   .sponsorship-game .sponsor-eyebrow { font-size: 10px; margin-bottom: 7px; letter-spacing: .025em; }
   .sponsorship-game .sponsor-link strong { font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

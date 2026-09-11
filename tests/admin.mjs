@@ -38,8 +38,8 @@ try {
   await page.locator("#admin-settings").waitFor();
   assert.equal(new URL(page.url()).hash, "", "private credential is removed from the address");
   assert.deepEqual((await state(page)).config, originalConfig);
-  const homeSlotCount = originalConfig.sponsors.slots;
-  assert.equal(await page.locator("#sponsor-slot-home .sponsor-card").count(), homeSlotCount);
+  const homeSlotCount = 1;
+  assert.equal(await page.locator("#sponsor-slot-home .sponsor-card").count(), homeSlotCount, "one empty placement invites the next sponsor");
   await openHomeSettings(page);
   assert.deepEqual(await page.locator("#config-demo-timingMode option").evaluateAll(options => options.map(option => ({ value: option.value, label: option.textContent }))), [
     { value: "melody", label: "Melody rhythm" },
@@ -200,7 +200,7 @@ try {
   await page.getByText("Sponsors", { exact: true }).click();
   if (!originalConfig.sponsors.showOnHome) await page.locator("#config-sponsors-showOnHome").check();
   await page.locator("#config-sponsors-slots").fill("3");
-  assert.equal(await page.locator("#sponsor-slot-home .sponsor-card").count(), 3);
+  assert.equal(await page.locator("#sponsor-slot-home .sponsor-card").count(), 1, "changing capacity keeps one available placement");
   await page.locator("#admin-reset").click();
   assert.equal(await page.locator("#sponsor-slot-home .sponsor-card").count(), homeSlotCount);
   await page.locator("#admin-close").click();
@@ -235,9 +235,9 @@ try {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "mobile admin does not overflow");
   await page.locator("#admin-close").click();
   await page.locator("#home-button").click();
-  await page.screenshot({ path: `${out}/six-sponsors-mobile.png`, fullPage: true });
+  await page.screenshot({ path: `${out}/sponsor-placement-mobile.png`, fullPage: true });
   assert.equal(errors.length, 0, errors.join("\n"));
-  console.log("Passed: private local access, live timing/tempo and sound/scene settings, validation, actual Fixed delay/BPM and completion ending Off save/reload, reset/export, configurable demo/growth, immediate clicks, undo cancellation, instant drawing, six sponsors and mobile editor.");
+  console.log("Passed: private local access, live timing/tempo and sound/scene settings, validation, actual Fixed delay/BPM and completion ending Off save/reload, reset/export, configurable demo/growth, immediate clicks, undo cancellation, instant drawing, one available sponsor placement and mobile editor.");
 } finally {
   await browser.close();
   // Never overwrite a file changed by another editor while the test was running.

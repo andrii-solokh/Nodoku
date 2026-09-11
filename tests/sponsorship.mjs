@@ -40,6 +40,7 @@ try {
   });
   await local.goto(url);
   await waitFor(async () => (await local.locator("#visitor-count").textContent()) !== "—", "real local visitor API responds");
+  assert.equal(await local.locator("#sponsor-slot-home .sponsor-card").count(), 1, "only one empty placement is shown");
   assert.equal(await local.locator(".visitor-home .visitor-scope").textContent(), "Preview");
   assert.equal(await local.locator(".visitor-home .visitor-scope").isVisible(), true);
   assert.ok(Number((await local.locator("#visitor-count").textContent()).replaceAll(",", "")) >= 1);
@@ -197,6 +198,7 @@ try {
   ] });
   await ads.goto(url);
   await waitFor(async () => await ads.locator("#sponsor-slot-home .sponsor-link:not([hidden])").isVisible(), "active sponsor rendered");
+  assert.equal(await ads.locator("#sponsor-slot-home .sponsor-card").count(), 2, "an active sponsor is joined by one available placement");
   assert.equal(await ads.locator("#sponsor-slot-home .sponsor-link:not([hidden]) strong").textContent(), "<img src=x onerror=alert(1)>");
   assert.equal(await ads.locator("#sponsor-slot-home img").count(), 0, "sponsor copy cannot inject HTML");
   assert.equal(await ads.locator("#sponsor-slot-home .sponsor-link:not([hidden])").getAttribute("rel"), "sponsored noopener noreferrer");

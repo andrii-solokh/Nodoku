@@ -223,11 +223,16 @@ export function mountSponsorship(options: { beforeOpen: () => void }): void {
   let sponsorItems: Sponsor[] = [];
   let rotation = 0;
   const formatPrice = () => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(plan.amount / 100);
+  const visibleCardCount = () => {
+    const filled = Math.min(sponsorshipConfig.slots, sponsorItems.length);
+    // Paid placements stay visible; only one card invites the next sponsor.
+    return filled + (filled < sponsorshipConfig.slots ? 1 : 0);
+  };
   const buildCards = () => {
     for (const slot of [homeSlot, gameSlot]) {
       const grid = slot.querySelector(".sponsor-grid")!;
       grid.replaceChildren();
-      for (let index = 0; index < sponsorshipConfig.slots; index++) {
+      for (let index = 0; index < visibleCardCount(); index++) {
         const card = document.createElement("article");
         card.className = "sponsor-card";
         card.dataset.slot = String(index + 1);
@@ -277,6 +282,7 @@ export function mountSponsorship(options: { beforeOpen: () => void }): void {
       item && typeof item === "object" && typeof item.id === "string" && typeof item.brand === "string" && item.brand.trim().length > 0 && item.brand.length <= 60 && typeof item.tagline === "string" && item.tagline.length <= 120 && secureUrl(item.url) !== null && typeof item.endsAt === "string" && Date.parse(item.endsAt) > Date.now(),
     ) : [];
     sponsorItems = [...new Map(valid.map(sponsor => [sponsor.id, sponsor])).values()];
+    buildCards();
     renderSponsors();
   };
   applySponsorshipConfig = () => { buildCards(); renderSponsors(); updateAdVisibility(); };
