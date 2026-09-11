@@ -3,7 +3,7 @@ import "@fontsource/outfit/400.css";
 import "@fontsource/outfit/500.css";
 import "@fontsource/outfit/600.css";
 import "./style.css";
-import { Puzzle, edgeKey, type Difficulty, type PuzzleSettings } from "./puzzle";
+import { Puzzle, dailyPuzzleSeed, edgeKey, type Difficulty, type PuzzleSettings } from "./puzzle";
 import { BoardScene } from "./scene";
 import { HomeDemo } from "./demo";
 import { mountSponsorship, setSponsorshipConfig } from "./sponsorship";
@@ -218,7 +218,7 @@ app.innerHTML = `
   <h2 id="completion-title">All connected.</h2>
   <p>You cleared every dot.<br>Invite a friend to find their own moment of calm.</p>
   <div id="completion-share"></div>
-  <button class="start-button" id="next-button" autofocus>Another puzzle${icon("play")}</button>
+  <button class="start-button" id="next-button" autofocus>Play today again${icon("play")}</button>
   <button class="secondary-button" id="completion-home">Back to the beginning</button>
 </dialog>
 <dialog class="dialog music-dialog" id="music-dialog" aria-labelledby="music-title">
@@ -338,9 +338,6 @@ function persist() {
   } catch {
     /* Gameplay also works without browser storage. */
   }
-}
-function newSeed() {
-  return crypto.getRandomValues(new Uint32Array(1))[0];
 }
 function toast(message: string) {
   clearTimeout(toastTimer);
@@ -695,7 +692,7 @@ function startGame(resume = false) {
   puzzle =
     resumedPuzzle
       ? resumedPuzzle
-      : new Puzzle({ ...settings, seed: newSeed() });
+      : new Puzzle({ ...settings, seed: dailyPuzzleSeed() });
   if (!resumedPuzzle) melodyStep = 0;
   savedPuzzle = null;
   savedView = null;
@@ -791,8 +788,8 @@ function startFresh() {
   if (savedPuzzle && savedPuzzle.edges.length > 0) {
     confirm(
       "Begin a fresh puzzle?",
-      "Your unfinished puzzle will be replaced by a new one.",
-      "New puzzle",
+      "Your unfinished puzzle will be replaced by today’s shared puzzle.",
+      "Play daily puzzle",
       () => startGame(),
     );
   } else startGame();

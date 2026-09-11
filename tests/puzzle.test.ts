@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   Puzzle,
+  dailyPuzzleSeed,
   edgeKey,
   type Difficulty,
   type Edge,
@@ -63,6 +64,21 @@ test("all board sizes, shapes, difficulties, and seeds generate connected solvab
       }
     }
   }
+});
+
+test("daily puzzle seeds use the shared UTC calendar day", () => {
+  const beforeUtcMidnight = new Date("2026-09-11T23:59:59-07:00");
+  const sameUtcDay = new Date("2026-09-12T08:00:00+01:00");
+  const nextUtcDay = new Date("2026-09-13T00:00:00Z");
+  const seed = dailyPuzzleSeed(beforeUtcMidnight);
+
+  assert.equal(seed, dailyPuzzleSeed(sameUtcDay));
+  assert.notEqual(seed, dailyPuzzleSeed(nextUtcDay));
+  assert.ok(Number.isInteger(seed) && seed >= 0 && seed <= 0xffffffff);
+  assert.deepEqual(
+    new Puzzle({ ...settings, seed }).solution,
+    new Puzzle({ ...settings, seed: dailyPuzzleSeed(sameUtcDay) }).solution,
+  );
 });
 
 test("generation is deterministic, seed sensitive, and difficulty changes clue density", () => {

@@ -59,6 +59,16 @@ function randomGenerator(seed: number): () => number {
   };
 }
 
+/** A UTC date gives every player the same puzzle, regardless of local timezone. */
+export function dailyPuzzleSeed(date = new Date()): number {
+  if (!Number.isFinite(date.getTime())) throw new RangeError("Invalid daily puzzle date");
+  const day = date.toISOString().slice(0, 10);
+  let hash = 0x811c9dc5;
+  for (const character of `nodoku.daily.v1:${day}`)
+    hash = Math.imul(hash ^ character.charCodeAt(0), 0x01000193) >>> 0;
+  return hash;
+}
+
 /** A puzzle accepts every connected network matching its clues, not just its seed solution. */
 export class Puzzle {
   readonly settings: PuzzleSettings;
