@@ -1553,3 +1553,8 @@ TODO / Note
 - Connected the private placement-report section to the Studio sponsor-placement toggle.
 - Turning sponsor placements off now hides the report and clears any entered private code; restoring placements makes the report available again.
 - Verified with the production build, 192 unit tests, a mocked browser check, and the Playwright game client.
+
+## 2026-09-11 — Unified statistics header
+- Rebuilt the statistics header around the same Nodoku mark, full-width gutters, and centered context used by the game header.
+- Replaced the separate wordmark treatment with a standard brand mark, centered “Statistics” label, and a compact Back control.
+- Verified with the production build, unit suite, desktop and mobile browser captures, and the Playwright game client.

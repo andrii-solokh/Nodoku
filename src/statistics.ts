@@ -40,7 +40,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
   dialog.setAttribute('aria-labelledby', 'statistics-title');
   dialog.innerHTML = `
     <div class="statistics-shell">
-      <header class="statistics-header"><button id="statistics-close" class="statistics-back" autofocus><span aria-hidden="true">←</span> <span>Back to game</span></button><span class="statistics-wordmark">nodoku <i aria-hidden="true"></i></span></header>
+      <header class="statistics-header"><span class="brand statistics-brand" aria-label="Nodoku"><svg viewBox="0 0 34 34" aria-hidden="true"><path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3"/><g fill="#a9cbbd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g><circle cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/></svg><span class="brand-name">nodoku</span></span><span class="statistics-header-title">Statistics</span><button id="statistics-close" class="statistics-back" autofocus><span>Back</span><span aria-hidden="true">←</span></button></header>
       <div class="statistics-intro"><p class="statistics-eyebrow">A world of little connections <span id="statistics-scope" hidden>Local preview</span></p><h2 id="statistics-title">Every dot adds up.</h2><p>A shared look at the puzzles we have brought together.</p></div>
       <nav class="statistics-periods" aria-label="Statistics period">${Object.entries(periodLabels).map(([value, label]) => `<button type="button" data-period="${value}" aria-pressed="${value === '30d'}">${label}</button>`).join('')}</nav>
       <div class="statistics-status" id="statistics-status" role="status" aria-live="polite"></div><button class="statistics-retry" id="statistics-retry" hidden>Try again</button>
@@ -202,7 +202,6 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
     if (!dialog.open) {
       returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       options.beforeOpen?.();
-      el('statistics-close').querySelector('span:last-child')!.textContent = document.querySelector('#app.playing') ? 'Back to game' : 'Back to Nodoku';
       dialog.showModal();
       dialog.scrollTop = 0;
       void load();
