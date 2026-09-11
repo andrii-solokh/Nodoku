@@ -127,6 +127,10 @@ try {
   for (const metric of ['puzzlesSolved', 'visitors', 'dotsCleared']) assert.equal(await dialog.locator(`#statistics-chart-${metric} .statistics-bar`).count(), 7);
   assert.equal(await dialog.locator('#statistics-sizes .statistics-ranking-bar').count(), 3);
   assert.equal(await dialog.locator('#statistics-difficulties .statistics-ranking-bar').count(), 3);
+  await view.page.evaluate(() => window.dispatchEvent(new CustomEvent('nodoku:sponsorship-config', { detail: { enabled: false } })));
+  assert.equal(await dialog.locator('#statistics-report').isVisible(), false, 'Hiding sponsor placements also hides private sponsor reports');
+  await view.page.evaluate(() => window.dispatchEvent(new CustomEvent('nodoku:sponsorship-config', { detail: { enabled: true } })));
+  assert.equal(await dialog.locator('#statistics-report').isVisible(), true, 'Restoring sponsor placements restores private sponsor reports');
   await view.page.keyboard.press('ArrowRight');
   assert.deepEqual((await state(view.page)).view, original.view, 'Statistics input cannot rotate the puzzle');
   for (const period of ['today', '7d', '30d', 'all']) {
