@@ -1491,3 +1491,8 @@ TODO / Note
 2026-09-11 Exact Open Graph logo
 - Replaced the social-card’s hand-drawn corner square with the exact inset-node mark used in the Nodoku UI: three purple nodes, a sage lower-right node, and links joining their centres.
 - Bumped the published image URL to `?v=3d-green-logo`, so social crawlers request the corrected card instead of a previously cached PNG. Regenerated and visually inspected the 1200 × 630 asset; all 190 tests and the production build pass.
+
+2026-09-11 Branded loading screen
+- Added a first-paint Nodoku loader that reuses the real inset-node mark. Its three links draw and four nodes pulse in sequence above “Connecting the dots,” then it dissolves only after two animation frames, when the real board is available.
+- The loader has no dependencies outside the document head, respects reduced motion, keeps the pre-rendered page available to crawlers, and removes itself after the transition so it cannot block input. Focused metadata coverage added.
+- Visual browser checks inspected the loader and the completed game handoff. The game starts normally after the fade with no browser errors. `npm test` passes 191 tests and the production build passes.

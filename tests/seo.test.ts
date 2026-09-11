@@ -49,3 +49,14 @@ test("robots and sitemap permit discovery of the canonical homepage", async () =
   assert.match(robots, /Sitemap: https:\/\/nodoku\.solokh\.com\/sitemap\.xml/);
   assert.match(sitemap, /<loc>https:\/\/nodoku\.solokh\.com\/<\/loc>/);
 });
+
+
+test("homepage ships a motion-safe branded loading screen", async () => {
+  const [html, app] = await Promise.all([readRootFile("index.html"), readRootFile("src/main.ts")]);
+  assert.match(html, /id="app-loader"/);
+  assert.match(html, /Connecting the dots/);
+  assert.match(html, /prefers-reduced-motion: reduce/);
+  assert.match(html, /M8 9h18v17H8Z/);
+  assert.match(app, /function finishLoading\(\)/);
+  assert.match(app, /loadingScreen\.classList\.add\("is-ready"\)/);
+});
