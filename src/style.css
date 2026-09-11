@@ -363,8 +363,10 @@ a {
 }
 .onboarding-main {
   display: none;
+  box-sizing: border-box;
   height: 100dvh;
   min-height: 0;
+  padding-bottom: max(236px, calc(196px + env(safe-area-inset-bottom)));
   position: relative;
   overflow: hidden;
 }
@@ -375,8 +377,9 @@ a {
 .onboarding-stage canvas { border-radius: 0; }
 .onboarding-copy {
   position: absolute;
+  z-index: 1;
   left: 50%;
-  bottom: max(42px, env(safe-area-inset-bottom));
+  bottom: max(24px, env(safe-area-inset-bottom));
   width: min(440px, calc(100% - 40px));
   transform: translateX(-50%);
   text-align: center;
@@ -1019,6 +1022,12 @@ a {
 }
 .playing .header-actions {
   gap: 16px;
+}
+@media (max-height: 700px) {
+  .onboarding-main { padding-bottom: max(205px, calc(176px + env(safe-area-inset-bottom))); }
+  .onboarding-copy h1 { font-size: 28px; }
+  .onboarding-copy p { font-size: 14px; margin-top: 6px; }
+  .onboarding-next { margin-top: 12px; padding: 10px 16px; }
 }
 .onboarding .site-header,
 .onboarding .home-main,
