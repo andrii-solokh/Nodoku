@@ -60,7 +60,7 @@ let settings: PuzzleSettings = {
   difficulty: "easy",
   seed: 1,
 };
-let soundEnabled = false;
+let soundEnabled = true;
 let musicEnabled = false;
 let melodyStep = 0;
 let savedPuzzle: Puzzle | null = null;
@@ -93,7 +93,7 @@ try {
         // Invalid menu preferences must not discard a valid saved puzzle.
       }
     }
-    soundEnabled = stored.sound === true;
+    if (typeof stored.sound === "boolean") soundEnabled = stored.sound;
     musicEnabled = stored.music === true;
     if (savedPuzzle?.solved && stored.screen !== "playing") savedPuzzle = null;
     if (savedPuzzle) {

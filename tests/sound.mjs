@@ -104,8 +104,10 @@ async function fixture(edges = [], melodyStep = 0) {
   return page;
 }
 async function enable(page) {
-  await page.locator('#sound-button').click();
-  await page.waitForTimeout(300);
+  if (await page.locator('#sound-button').getAttribute('aria-pressed') !== 'true') {
+    await page.locator('#sound-button').click();
+    await page.waitForTimeout(300);
+  }
   assert.equal(await page.locator('#sound-button').getAttribute('aria-pressed'), 'true');
 }
 async function pairClick(page, a, b) {
@@ -242,7 +244,9 @@ try {
     await page.close();
   } else {
   const page = await fixture();
-  assert.equal(await page.locator('#sound-button').getAttribute('aria-pressed'), 'false');
+  assert.equal(await page.locator('#sound-button').getAttribute('aria-pressed'), 'true', 'SFX default on for a first-time player');
+  await page.locator('#sound-button').click();
+  assert.equal(await page.locator('#sound-button').getAttribute('aria-pressed'), 'false', 'A player can still mute SFX explicitly');
   await page.locator('[data-rotate="right"]').click();
   await settle(page);
   let s = await state(page);

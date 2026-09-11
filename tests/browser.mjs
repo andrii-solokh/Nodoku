@@ -106,10 +106,16 @@ try {
   assert.equal((await state(page)).dialog, "help-dialog");
   await page.keyboard.press("Escape");
   assert.equal((await state(page)).dialog, null);
-  await page.locator("#sound-button").click();
   assert.equal(
     await page.locator("#sound-button").getAttribute("aria-pressed"),
     "true",
+    "First-time players start with sound effects enabled",
+  );
+  await page.locator("#sound-button").click();
+  assert.equal(
+    await page.locator("#sound-button").getAttribute("aria-pressed"),
+    "false",
+    "The saved mute choice remains available",
   );
   await page.locator("#sound-button").click();
   await page.locator("#start-button").click();
