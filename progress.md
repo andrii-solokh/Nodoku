@@ -1539,3 +1539,7 @@ TODO / Note
 - Added a Studio → Sponsors “Show sponsor placements” toggle, which immediately hides or restores all home and in-game sponsor placements.
 - Preserves the existing per-location visibility and slot settings, and migrates older saved configs to enabled by default.
 - Verified with 192 unit tests, production build, and the Playwright game client. The existing full admin browser suite could not complete because the local dev server left its app loader over the page.
+
+## 2026-09-11 — Optically aligned wordmark
+- Wrapped the Nodoku wordmark and shifted its visible lettering upward slightly to align it optically with the square node mark.
+- Verified with a compact header capture, production build, unit suite, and Playwright game client.
