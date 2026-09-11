@@ -965,6 +965,12 @@ a {
 .share-button[data-network="x"] {
   color: #000;
 }
+.share-button[data-network="instagram"] {
+  color: #d62976;
+}
+.share-button[data-network="tiktok"] {
+  color: #111;
+}
 .share-button[data-network="whatsapp"] {
   color: #25d366;
 }

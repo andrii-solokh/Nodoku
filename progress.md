@@ -1568,3 +1568,8 @@ TODO / Note
 - Passed the selected melody tempo into the resolved-puzzle completion phrase, preserving its original note lengths and rests through the next logical ending.
 - Added an app-level browser audio assertion that measures every scheduled completion onset against the score.
 - Verified with the production build, 192 unit tests, the browser sound suite, and the Playwright game client.
+
+## 2026-09-11 — TikTok and Instagram share options
+- Added official TikTok and Instagram marks to the completion share panel, alongside the existing social, device-share, and copy actions.
+- Both open their platform in a new tab; the existing copy and native-share actions provide the completed-puzzle message for composing a post.
+- Verified with the production build, 192 unit tests, the completion-share browser suite at desktop and 320px mobile widths, and the Playwright game client.
