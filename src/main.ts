@@ -15,7 +15,7 @@ import { mountCompletionShare } from "./share";
 import { recordCompletion, restoreAttemptId, startCompletionTracking } from "./completions";
 
 const paths: Record<string, string> = {
-  cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9M8 5.2l8 4.6"/>',
+  cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>',
   flat: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 4v16M4 12h16"/>',
   play: '<path d="m9 5 10 7-10 7Z" fill="currentColor" stroke="none"/>',
   pause: '<path d="M9 5v14M15 5v14" stroke-width="3"/>',
