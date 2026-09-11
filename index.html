@@ -4,32 +4,119 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#eeedf6" />
+    <meta name="robots" content="index,follow" />
     <meta
       name="description"
-      content="Turn a tactile 3D puzzle, connect every dot, and bring the whole network together."
+      content="Play Nodoku, a 3D spatial reasoning puzzle where each node requires a specific number of connections. Connect every node and complete the network."
     />
     <link rel="canonical" href="https://nodoku.solokh.com/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Nodoku" />
     <meta property="og:url" content="https://nodoku.solokh.com/" />
-    <meta property="og:title" content="Nodoku — a little space to connect" />
-    <meta property="og:description" content="Turn a tactile 3D puzzle, connect every dot, and bring the whole network together." />
+    <meta property="og:title" content="Nodoku - 3D Spatial Reasoning Puzzle" />
+    <meta property="og:description" content="Connect every node, satisfy every connection constraint, and solve the network in 3D." />
     <meta property="og:image" content="https://nodoku.solokh.com/og-image.png" />
     <meta property="og:image:secure_url" content="https://nodoku.solokh.com/og-image.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Nodoku 3D dot-connection puzzle" />
+    <meta property="og:image:alt" content="Nodoku, a 3D spatial reasoning puzzle" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Nodoku — a little space to connect" />
-    <meta name="twitter:description" content="Turn a tactile 3D puzzle, connect every dot, and bring the whole network together." />
+    <meta name="twitter:title" content="Nodoku - 3D Spatial Reasoning Puzzle" />
+    <meta name="twitter:description" content="Connect every node, satisfy every connection constraint, and solve the network in 3D." />
     <meta name="twitter:image" content="https://nodoku.solokh.com/og-image.png" />
-    <meta name="twitter:image:alt" content="Nodoku 3D dot-connection puzzle" />
+    <meta name="twitter:image:alt" content="Nodoku, a 3D spatial reasoning puzzle" />
     <link rel="icon" type="image/svg+xml" href="/src/favicon.svg" />
-    <title>Nodoku — a little space to connect</title>
+    <title>Nodoku - 3D Spatial Reasoning Puzzle Online</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Nodoku",
+        "url": "https://nodoku.solokh.com/",
+        "description": "A 3D spatial reasoning puzzle where each node requires a specific number of connections.",
+        "genre": ["Puzzle", "Logic", "Spatial reasoning"],
+        "playMode": "SinglePlayer"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is Nodoku?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Nodoku is a 3D spatial reasoning puzzle where players connect nodes while satisfying the required number of connections shown on each node." }
+          },
+          {
+            "@type": "Question",
+            "name": "What do the dots mean?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The number of dots on a node tells you exactly how many connections that node must have in the completed puzzle." }
+          },
+          {
+            "@type": "Question",
+            "name": "How do you solve Nodoku?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Connect nodes until every node has the correct number of connections and all nodes belong to one connected network." }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Nodoku a number puzzle?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Nodoku uses numbers as connection constraints, but the game is primarily a logic, network, and spatial reasoning puzzle rather than an arithmetic puzzle." }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is Nodoku 3D?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The nodes exist in three-dimensional space, so players must rotate the puzzle and reason about relationships that may not be visible from a single viewpoint." }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>
+    <section class="seo-content" aria-labelledby="seo-introduction-title">
+      <div class="seo-content-inner">
+        <p class="seo-lede" id="seo-introduction-title">Nodoku is a 3D spatial reasoning puzzle built around nodes and connections. Each node has between one and four dots showing exactly how many connections it requires. Connect every node so all connection requirements are satisfied and the entire network forms one valid connected structure.</p>
+
+        <section aria-labelledby="how-to-play-title">
+          <h2 id="how-to-play-title">How to Play Nodoku</h2>
+          <p>Every node in Nodoku contains between one and four dots. The dots represent the exact number of connections that node must have when the puzzle is complete. Connect neighboring nodes until every requirement is satisfied, while keeping the entire structure in one connected network. A completed node has no dots left to use. If a node still has dots, it still needs links.</p>
+          <p>Start by looking for clear constraints: a node with one dot has a single connection to make, while a node with several dots needs more room around it. Each connection affects both of its endpoints, so every move reveals a little more about the rest of the network.</p>
+        </section>
+
+        <section aria-labelledby="logic-title">
+          <h2 id="logic-title">A Puzzle About Logic and Spatial Reasoning</h2>
+          <p>The dots in Nodoku are not values to calculate. They are connection constraints. Every connection changes what is possible for nearby nodes, so the puzzle rewards planning, deduction, and checking the connectivity of the whole graph. A locally valid connection can still leave a separate group behind, which is why the final network must be joined together.</p>
+          <p>That balance makes Nodoku a spatial logic puzzle: use each small clue, consider the remaining choices around it, and keep an eye on the shape that is forming across the board.</p>
+        </section>
+
+        <section aria-labelledby="three-d-title">
+          <h2 id="three-d-title">Why Nodoku Is 3D</h2>
+          <p>Unlike a flat node puzzle, Nodoku places nodes in three-dimensional space. Rotate the structure to inspect hidden relationships and see which nodes are neighbors on another face. The perspective changes, but the constraints do not. Looking at the network from more than one angle is part of solving the 3D puzzle, not just a visual effect.</p>
+          <p>That makes each board a compact spatial puzzle and a 3D brain puzzle: the connections form a network you can explore from every side.</p>
+        </section>
+
+        <section aria-labelledby="play-online-title">
+          <h2 id="play-online-title">Play Nodoku Online</h2>
+          <p>Nodoku runs directly in your browser, so you can start solving without installing an app or creating an account. The puzzle works on desktop and mobile: drag between nodes to connect them, or turn the board to inspect the 3D network. Come back whenever you want a short spatial reasoning challenge.</p>
+        </section>
+
+        <section aria-labelledby="faq-title">
+          <h2 id="faq-title">Frequently Asked Questions</h2>
+          <h3>What is Nodoku?</h3>
+          <p>Nodoku is a 3D spatial reasoning puzzle where players connect nodes while satisfying the required number of connections shown on each node.</p>
+          <h3>What do the dots mean?</h3>
+          <p>The number of dots on a node tells you exactly how many connections that node must have in the completed puzzle.</p>
+          <h3>How do you solve Nodoku?</h3>
+          <p>Connect nodes until every node has the correct number of connections and all nodes belong to one connected network.</p>
+          <h3>Is Nodoku a number puzzle?</h3>
+          <p>Nodoku uses numbers as connection constraints, but the game is primarily a logic, network, and spatial reasoning puzzle rather than an arithmetic puzzle.</p>
+          <h3>Why is Nodoku 3D?</h3>
+          <p>The nodes exist in three-dimensional space, so players must rotate the puzzle and reason about relationships that may not be visible from a single viewpoint.</p>
+        </section>
+      </div>
+    </section>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

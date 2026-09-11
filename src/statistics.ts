@@ -40,7 +40,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
   dialog.innerHTML = `
     <div class="statistics-shell">
       <header class="statistics-header"><button id="statistics-close" class="statistics-back" autofocus><span aria-hidden="true">←</span> <span>Back to game</span></button><span class="statistics-wordmark">nodoku <i aria-hidden="true"></i></span></header>
-      <div class="statistics-intro"><p class="statistics-eyebrow">A world of little connections <span id="statistics-scope" hidden>Local preview</span></p><h1 id="statistics-title">Every dot adds up.</h1><p>A shared look at the puzzles we have brought together.</p></div>
+      <div class="statistics-intro"><p class="statistics-eyebrow">A world of little connections <span id="statistics-scope" hidden>Local preview</span></p><h2 id="statistics-title">Every dot adds up.</h2><p>A shared look at the puzzles we have brought together.</p></div>
       <nav class="statistics-periods" aria-label="Statistics period">${Object.entries(periodLabels).map(([value, label]) => `<button type="button" data-period="${value}" aria-pressed="${value === '30d'}">${label}</button>`).join('')}</nav>
       <div class="statistics-status" id="statistics-status" role="status" aria-live="polite"></div><button class="statistics-retry" id="statistics-retry" hidden>Try again</button>
       <div id="statistics-content" hidden>
