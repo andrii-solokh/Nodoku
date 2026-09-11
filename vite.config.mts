@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import { sponsorshipApi } from "./scripts/sponsorship-api";
 
 export default defineConfig({
-  publicDir: false,
+  publicDir: "static",
   plugins: [sponsorshipApi()],
   server: {
     host: "127.0.0.1", port: 5173,
