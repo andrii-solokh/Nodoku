@@ -36,14 +36,27 @@ function checkFace(s) {
 function checkFit(s, board, label) {
   for (const node of s.nodes) {
     assert.ok(
-      node.screen.x > board.x && node.screen.x < board.x + board.width,
-      `${label}: node ${node.id} fits width`,
+      node.screen.x - node.screen.radius >= board.x && node.screen.x + node.screen.radius <= board.x + board.width,
+      `${label}: node ${node.id} fits width including its radius`,
     );
     assert.ok(
-      node.screen.y > board.y && node.screen.y < board.y + board.height,
-      `${label}: node ${node.id} fits height`,
+      node.screen.y - node.screen.radius >= board.y && node.screen.y + node.screen.radius <= board.y + board.height,
+      `${label}: node ${node.id} fits height including its radius`,
     );
   }
+}
+async function emptyBoardPoint(page, s, board) {
+  for (const xFraction of [.08, .18, .82, .92, .5]) {
+    for (const yFraction of [.1, .22, .78, .9, .5]) {
+      const x = board.x + board.width * xFraction;
+      const y = board.y + board.height * yFraction;
+      const isCanvas = await page.evaluate(({ x, y }) =>
+        document.elementFromPoint(x, y) === document.querySelector("#game-stage canvas"), { x, y });
+      if (isCanvas && s.nodes.every(node => Math.hypot(node.screen.x - x, node.screen.y - y) > node.screen.radius + 32))
+        return { x, y };
+    }
+  }
+  throw new Error("No empty board point available for a rotation gesture");
 }
 async function checkConstantRotationDistance(page, label) {
   const board = await page.locator("#game-stage canvas").boundingBox();
@@ -54,19 +67,19 @@ async function checkConstantRotationDistance(page, label) {
   for (const zoomed of [false, true]) {
     if (zoomed) {
       await page.locator("#game-stage canvas").focus();
-      await page.keyboard.press("+");
-      await page.keyboard.press("+");
+      for (let press = 0; press < 16; press++) await page.keyboard.press("+");
     }
     const distance = (await state(page)).view.distance;
     const context = `${label}, ${zoomed ? "user zoom" : "default zoom"}`;
     if (zoomed)
-      assert.ok(distance < normalDistance, `${context}: zoom moves the camera closer`);
+      assert.ok(distance <= normalDistance, `${context}: zoom never moves the camera farther away`);
     const check = (s) => {
-      assert.ok(
-        Math.abs(s.view.distance - distance) < 1e-8,
-        `${context}: rotation preserves camera distance (${distance} -> ${s.view.distance})`,
-      );
-      if (!zoomed) checkFit(s, board, context);
+      if (!zoomed)
+        assert.ok(
+          Math.abs(s.view.distance - distance) < 1e-8,
+          `${context}: rotation preserves default camera distance (${distance} -> ${s.view.distance})`,
+        );
+      checkFit(s, board, context);
     };
     check(await state(page));
     // Sample free rotation while the pointer remains down, before face snapping.
@@ -178,9 +191,10 @@ try {
   checkFace(await state(page));
   await page.locator("#view-button").click();
   await settle(page);
-  await page.mouse.move(canvas.x + 30, canvas.y + 70);
+  const emptyPoint = await emptyBoardPoint(page, await state(page), canvas);
+  await page.mouse.move(emptyPoint.x, emptyPoint.y);
   await page.mouse.down();
-  await page.mouse.move(canvas.x + 210, canvas.y + 130, { steps: 12 });
+  await page.mouse.move(emptyPoint.x + 180, emptyPoint.y + 60, { steps: 12 });
   assert.equal(
     (await state(page)).view.snapped,
     false,
@@ -276,7 +290,7 @@ try {
   }
   assert.equal(errors.length, 0, errors.join("\n"));
   console.log(
-    "Passed: perspective near/far scale, six square faces, 90° steps, rapid turns, free drag/snap, constant rotation distance at default/user zoom, mid-turn desktop/mobile fit, picking, hints, reset, flat mode, reduced motion.",
+    "Passed: perspective near/far scale, six square faces, 90° steps, rapid turns, free drag/snap, safe maximum zoom through turns, mid-turn desktop/mobile fit, picking, hints, reset, flat mode, reduced motion.",
   );
 } finally {
   await fs.writeFile(`${out}/errors.json`, JSON.stringify(errors, null, 2));
