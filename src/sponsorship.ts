@@ -283,7 +283,7 @@ export function mountSponsorship(options: { beforeOpen: () => void }): void {
   applySponsorshipConfig();
   window.setInterval(() => {
     if (document.hidden || dialog.open || [homeSlot, gameSlot].some(slot => slot.contains(document.activeElement))) return;
-    rotation += sponsorshipConfig.slots;
+    rotation += 1;
     renderSponsors();
   }, 30000);
   const loadSponsors = async () => {
