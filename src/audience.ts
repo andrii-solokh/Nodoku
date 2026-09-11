@@ -14,6 +14,8 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
   mountStatistics(options);
   for (const [index, widget] of widgets.entries()) {
     const suffix = index === 0 ? '' : '-game';
+    widget.classList.add('is-loading');
+    widget.setAttribute('aria-busy', 'true');
     widget.setAttribute('role', 'group');
     widget.setAttribute('aria-label', 'Player activity');
     widget.innerHTML = `<button class="audience-link" type="button" aria-label="Open statistics">
@@ -39,7 +41,21 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
   let away = false;
   let statistics: StatisticsData | null = null;
   let onlineCount: number | null = null;
+  let initialPresenceReady = false;
+  let initialTotalsReady = false;
+  let audienceRevealed = false;
   const today = () => new Date().toISOString().slice(0, 10);
+
+  function revealAudience() {
+    if (audienceRevealed || !initialPresenceReady || !initialTotalsReady || document.hidden || away) return;
+    audienceRevealed = true;
+    requestAnimationFrame(() => {
+      for (const widget of widgets) {
+        widget.classList.remove('is-loading');
+        widget.removeAttribute('aria-busy');
+      }
+    });
+  }
 
   function updateAccessibleLabels() {
     const metric = metrics[metricIndex];
@@ -103,6 +119,10 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
       if (!response.ok || !Number.isSafeInteger(body?.online) || body.online < 0 || !['local', 'global'].includes(body?.scope)) throw new Error('Unavailable');
       if (active === controller && !document.hidden && !away) online(body.online, body.scope);
     } catch { if (active === controller && !document.hidden && !away) online(null); }
+    finally {
+      initialPresenceReady = true;
+      revealAudience();
+    }
   }
   async function totals(controller: AbortController) {
     const registrationDay = today();
@@ -126,6 +146,9 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
       renderMetrics();
     } catch {
       if (active === controller && !document.hidden && !away) { statistics = null; renderMetrics(); }
+    } finally {
+      initialTotalsReady = true;
+      revealAudience();
     }
   }
   const poll = async () => {
