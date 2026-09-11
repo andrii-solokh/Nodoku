@@ -134,10 +134,11 @@ app.innerHTML = `
     <button class="icon-button" id="sound-button" aria-label="Turn sound effects on" aria-pressed="false">${icon("mute")}</button>
   </nav>
 </header>
-<main class="home-main">
+<main id="main-content">
+<section class="home-main" aria-labelledby="home-title">
   <section class="intro" aria-label="Set up a puzzle">
-    <h1>A little space<br>to connect.</h1>
-    <p class="intro-copy">Turn the puzzle. Follow the dots.<br>Bring it all together.</p>
+    <h1 id="home-title">3D Spatial Reasoning Puzzle</h1>
+    <p class="intro-copy">Connect every node and complete the network.<br>Each node shows how many connections it needs.</p>
     <div class="puzzle-options">
       <div class="setting-row"><span class="setting-label" id="shape-label">Your perspective</span><div class="segmented" role="group" aria-labelledby="shape-label"><button class="segment" data-depth="3d">${icon("cube")}3D</button><button class="segment" data-depth="flat">${icon("flat")}Flat</button></div></div>
       <div class="setting-row"><span class="setting-label" id="size-label">Grid size</span><div class="sizes" role="group" aria-labelledby="size-label">${[3, 4, 5].map((n) => `<button class="size-button" data-size="${n}" aria-label="${n} by ${n} grid">${n}</button>`).join("")}</div></div>
@@ -153,8 +154,8 @@ app.innerHTML = `
     </div>
   </section>
   <div class="home-stage-wrap"><div id="home-stage" class="stage home-stage"></div><div class="preview-caption"><button class="demo-toggle" id="demo-toggle" aria-label="Pause demo" aria-pressed="false" title="Pause demo">${icon("pause")}</button><span id="preview-caption">Solving</span></div></div>
-</main>
-<main class="game-main" aria-label="Puzzle board">
+</section>
+<section class="game-main" aria-label="Puzzle board">
   <div id="game-stage" class="stage game-stage"></div>
   <aside class="network-status" id="network-status" aria-label="Network status" hidden>
     <div role="status" aria-live="polite" aria-atomic="true"><strong id="network-status-title"></strong><p>All dots are cleared. Swap connections to join the groups.</p><span class="network-group-detail" id="network-group-detail"></span></div>
@@ -164,16 +165,17 @@ app.innerHTML = `
     <div class="tools-group"><button class="tool-button" id="undo-button" disabled>${icon("undo")}Undo</button><button class="tool-button" id="redo-button" disabled>${icon("redo")}Redo</button><button class="tool-button" id="restart-button">${icon("restart")}Restart</button><button class="tool-button hint" id="hint-button">${icon("hint")}Hint</button></div>
     <div class="rotation-tools" role="group" aria-label="Board view"><button class="icon-button" data-rotate="left" aria-label="Rotate left">${icon("left")}</button><button class="icon-button" data-rotate="up" aria-label="Rotate up">${icon("up")}</button><button class="icon-button view-reset" id="view-button">${icon("cube")}Reset view</button><button class="icon-button" data-rotate="down" aria-label="Rotate down">${icon("down")}</button><button class="icon-button" data-rotate="right" aria-label="Rotate right">${icon("right")}</button></div>
   </div>
-</main>
-<main class="onboarding-main" aria-labelledby="onboarding-title">
+</section>
+<section class="onboarding-main" aria-labelledby="onboarding-title">
   <div id="onboarding-stage" class="stage onboarding-stage"></div>
   <section class="onboarding-copy" aria-live="polite">
     <span class="onboarding-step" id="onboarding-step">1 of 3</span>
-    <h1 id="onboarding-title">Make one connection.</h1>
+    <h2 id="onboarding-title">Make one connection.</h2>
     <p id="onboarding-message">Drag from one node to a neighboring node.</p>
     <button class="onboarding-next" id="onboarding-next" hidden>Show me 3D${icon("right")}</button>
   </section>
   <button class="onboarding-skip" id="onboarding-skip">Skip tutorial</button>
+</section>
 </main>
 <div id="toast" class="status-toast" role="status" aria-live="polite"></div>
 <div id="node-announcement" class="sr-only" aria-live="polite"></div>
