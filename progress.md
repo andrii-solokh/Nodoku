@@ -1487,3 +1487,7 @@ TODO / Note
 - Removed “Complete one network.” and the “A TACTILE 3D PUZZLE” pill from the social card. The remaining copy is the title and “Connect every node.”
 - Re-captured the actual Three.js board after11 demo connections, so three completed nodes are sage green. Its opaque page-color pixels are converted to alpha before composition, leaving the board, links and soft shadows without a rectangular canvas backdrop. The generator and test assert the transparent scene source and removed copy; all190 tests and the production build pass.
 - Versioned the published Open Graph image URL with `?v=3d-green` after Cloudflare served the former asset from its four-hour cache, so social crawlers fetch the revised image immediately.
+
+2026-09-11 Exact Open Graph logo
+- Replaced the social-card’s hand-drawn corner square with the exact inset-node mark used in the Nodoku UI: three purple nodes, a sage lower-right node, and links joining their centres.
+- Bumped the published image URL to `?v=3d-green-logo`, so social crawlers request the corrected card instead of a previously cached PNG. Regenerated and visually inspected the 1200 × 630 asset; all 190 tests and the production build pass.

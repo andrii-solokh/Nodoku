@@ -32,9 +32,11 @@ const svg = `
   <circle cx="250" cy="532" r="240" fill="#ded8ed" opacity=".36" filter="url(#soft)"/>
   <circle cx="1010" cy="150" r="210" fill="#dad7ed" opacity=".38" filter="url(#soft)"/>
   <rect width="710" height="630" fill="url(#copyShield)"/>
-  <g transform="translate(74 65)">
-    <path d="M0 0H34V34H0Z" fill="none" stroke="#8170c9" stroke-width="7" stroke-linejoin="round"/>
-    <circle cx="0" cy="0" r="9" fill="#8170c9"/><circle cx="34" cy="0" r="9" fill="#8170c9"/><circle cx="0" cy="34" r="9" fill="#8170c9"/><circle cx="34" cy="34" r="5" fill="#a9cbbd"/>
+  <!-- Match the app logo: its paths join the inset node centres, not their outer edges. -->
+  <g transform="translate(68 57) scale(1.35)">
+    <path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3" stroke-linejoin="round"/>
+    <g fill="#8270bd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g>
+    <circle cx="26" cy="26" r="5" fill="#a0beaf"/>
   </g>
   <text x="130" y="92" fill="#302b48" font-family="Outfit, Arial, sans-serif" font-size="38" font-weight="700" letter-spacing="-1.3">nodoku</text>
   <text x="74" y="245" fill="#302b48" font-family="Outfit, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="-3.2">3D spatial</text>
