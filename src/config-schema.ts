@@ -154,7 +154,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors", Recor
     shadowOpacity: { label: "Shadow strength", kind: "number", min: 0, max: .4, step: .01 },
     background: { label: "Background", kind: "color" },
     nodeColor: { label: "Nodes", kind: "color" },
-    connectionColor: { label: "Selection accent", kind: "color", description: "Color of selection rings and available connections. Placed links blend their nodes' unfinished and completed colors." },
+    connectionColor: { label: "Accent color", kind: "color", description: "Color used for selection, available connections, and the brief pulse on changed nodes and links. Placed links then blend their nodes' unfinished and completed colors." },
     completedColor: { label: "Completed nodes", kind: "color" },
   },
   sound: {
