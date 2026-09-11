@@ -1558,3 +1558,8 @@ TODO / Note
 - Rebuilt the statistics header around the same Nodoku mark, full-width gutters, and centered context used by the game header.
 - Replaced the separate wordmark treatment with a standard brand mark, centered “Statistics” label, and a compact Back control.
 - Verified with the production build, unit suite, desktop and mobile browser captures, and the Playwright game client.
+
+## 2026-09-11 — Unified preview-solver control
+- Restyled the landing demo’s Solving / Continue Solving control to use the same group and selected-option surfaces as the perspective selector.
+- Kept it as one accessible button, preserving the play/pause behavior and existing labels.
+- Verified with the production build, 192 unit tests, active and paused browser captures, and the Playwright game client.
