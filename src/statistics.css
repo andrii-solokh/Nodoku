@@ -1,11 +1,12 @@
 .statistics-page { position: fixed; inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; color: var(--ink); background: var(--paper); overflow: auto; overscroll-behavior: contain; }
 .statistics-page::backdrop { background: var(--paper); }
 .statistics-shell { max-width: 1112px; padding: 28px 36px 72px; margin: 0 auto; }
-.statistics-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 64px; }
-.statistics-back { display: inline-flex; align-items: center; gap: 10px; padding: 10px 0; color: #71647f; font-size: 14px; }
-.statistics-back > span:first-child { font-size: 23px; }
-.statistics-wordmark { display: inline-flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 550; letter-spacing: -1px; }
-.statistics-wordmark i { width: 8px; height: 8px; background: #a1bfaf; border-radius: 50%; }
+.statistics-header { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; width: calc(100vw - 11vw); min-height: 60px; margin: 0 0 50px calc(50% - 50vw + 5.5vw); }
+.statistics-brand { justify-self: start; color: var(--ink); cursor: default; pointer-events: none; }
+.statistics-header-title { color: #796c87; font-size: 14px; font-weight: 500; }
+.statistics-back { justify-self: end; display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 8px; padding: 10px 0; color: #71647f; font-size: 14px; }
+.statistics-back > span:last-child { font-size: 21px; line-height: 1; }
+.statistics-back:hover { color: var(--purple); }
 .statistics-eyebrow { margin: 0 0 10px; color: #83738f; font-size: 11px; font-weight: 500; letter-spacing: .2px; }
 #statistics-scope { display: inline-block; padding: 4px 7px; margin-left: 8px; border-radius: 5px; background: #e0d9ed; font-size: 9px; letter-spacing: .4px; }
 .statistics-intro h2 { margin: 0; max-width: 800px; font-size: clamp(38px, 6vw, 66px); font-weight: 450; letter-spacing: -3px; line-height: 1.06; }
@@ -78,7 +79,9 @@
 .statistics-page [hidden] { display: none !important; }
 @media (max-width: 700px) {
   .statistics-shell { padding: 18px 20px 40px; }
-  .statistics-header { margin-bottom: 42px; }
+  .statistics-header { width: 100%; min-height: 48px; margin: 0 0 34px; }
+  .statistics-brand { font-size: 23px; gap: 8px; }
+  .statistics-brand svg { width: 26px; height: 26px; }
   .statistics-intro h2 { letter-spacing: -2px; }
   .statistics-intro > p:last-child { font-size: 15px; }
   .statistics-totals { grid-template-columns: 1fr 1fr; gap: 12px; }
