@@ -15,6 +15,7 @@ function colorAt(geometry: THREE.CylinderGeometry, index: number): number[] {
   const color = geometry.getAttribute("color");
   return [color.getX(index), color.getY(index), color.getZ(index)];
 }
+const smoothstep = (t: number) => t * t * (3 - 2 * t);
 
 test("every connection carries its node colors into an accent-colored center", () => {
   const base = new THREE.CylinderGeometry(1, 1, 1, 8, 4);
@@ -45,8 +46,8 @@ test("the two halves blend smoothly through the accent in linear color space", (
       const start = startDone ? complete : incomplete;
       const end = endDone ? complete : incomplete;
       const expected = y <= 0
-        ? start.clone().lerp(accent, 2 * y + 1)
-        : accent.clone().lerp(end, 2 * y);
+        ? start.clone().lerp(accent, smoothstep(2 * y + 1))
+        : accent.clone().lerp(end, smoothstep(2 * y));
       for (const index of indices) equalColor(colorAt(geometry, index), expected);
     }
   }

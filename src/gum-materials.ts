@@ -59,8 +59,6 @@ export class GumMaterials {
   private environment: THREE.WebGLRenderTarget;
   private stretch = { value: 0 };
   private nodeRadius = { value: .205 };
-  private incompleteColor = { value: new THREE.Color() };
-  private completeColor = { value: new THREE.Color() };
   private glow = { value: 0 };
   private installed = new WeakSet<THREE.Material>();
   private endpoints = new WeakMap<THREE.Material, { value: THREE.Vector2 }>();
@@ -122,8 +120,6 @@ export class GumMaterials {
     this.config = config;
     this.stretch.value = config.materialStyle === "gum" ? config.gooStretch : 0;
     this.nodeRadius.value = .205 * config.nodeScale;
-    this.incompleteColor.value.set(config.nodeColor);
-    this.completeColor.value.set(config.completedColor);
     this.glow.value = config.materialStyle === "gum" ? 1 : 0;
   }
 
@@ -182,33 +178,13 @@ export class GumMaterials {
           shader.uniforms.gumStretch = this.stretch;
           shader.uniforms.gumNodeRadius = this.nodeRadius;
           shader.uniforms.gumEndpointRadii = this.endpointUniform(material);
-          shader.uniforms.gumIncompleteColor = this.incompleteColor;
-          shader.uniforms.gumCompleteColor = this.completeColor;
-          shader.vertexShader = "uniform vec3 gumIncompleteColor;\nuniform vec3 gumCompleteColor;\n" + profile + shader.vertexShader
+          shader.vertexShader = profile + shader.vertexShader
             .replace("#include <beginnormal_vertex>", `#include <beginnormal_vertex>
               if (abs(normal.y) < 0.5) objectNormal = normalize(vec3(normal.x, -gumProfile(position.y).y, normal.z));`)
-            .replace("#include <color_vertex>", `#include <color_vertex>
-              #if defined(USE_COLOR) && !defined(USE_COLOR_ALPHA)
-              if (gumStretch > 0.0) {
-                vec3 palette = gumCompleteColor - gumIncompleteColor;
-                float paletteLength = dot(palette, palette);
-                if (paletteLength > 0.000001) {
-                  float weight = dot(color - gumIncompleteColor, palette) / paletteLength;
-                  if (weight > 0.00001 && weight < 0.99999) {
-                    float t = position.y + 0.5;
-                    float span = max(length(modelMatrix[1].xyz), 0.000001);
-                    vec2 shoulders = min(gumRadii() * 1.4 / span, vec2(0.45));
-                    float blend = smoothstep(shoulders.x, 1.0 - shoulders.y, t);
-                    float direction = abs(weight - t) < abs(weight - (1.0 - t)) ? 1.0 : -1.0;
-                    vColor.rgb += palette * direction * (blend - t);
-                  }
-                }
-              }
-              #endif`)
             .replace("#include <begin_vertex>", deform);
         }
       };
-      material.customProgramCacheKey = () => `nodoku-gum-${surface}-v2`;
+      material.customProgramCacheKey = () => `nodoku-gum-${surface}-v3`;
       material.needsUpdate = true;
     }
     const gum = this.config.materialStyle === "gum";
