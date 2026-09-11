@@ -73,7 +73,8 @@ function assertColors(current, label) {
     const endComplete = nodeFor(current, rod.endNode).remaining === 0;
     assert.equal(rod.startColor, hex(startComplete ? current.config.scene.completedColor : current.config.scene.nodeColor), `${label}: actual geometry start matches node ${rod.startNode}`);
     assert.equal(rod.endColor, hex(endComplete ? current.config.scene.completedColor : current.config.scene.nodeColor), `${label}: actual geometry end matches node ${rod.endNode}`);
-    if (startComplete === endComplete) assert.equal(rod.startColor, rod.endColor, `${label}: equal states use a solid color`);
+    assert.equal(rod.centerColor, hex(current.config.scene.connectionColor), `${label}: every link blends through the connection accent`);
+    if (startComplete === endComplete) assert.equal(rod.startColor, rod.endColor, `${label}: matching endpoints retain their shared node color`);
     types.add(`${startComplete ? 'C' : 'N'}${endComplete ? 'C' : 'N'}`);
   }
   return types;
@@ -157,17 +158,14 @@ try {
   const accent = hex(defaults.scene.connectionColor);
   assert.equal(reverse.startNode, 1, 'a reverse-direction gesture starts the physical rod at the higher node ID');
   assert.equal(reverse.endNode, 0);
-  assert.equal(reverse.startColor, accent, 'the new connection starts at the accent color');
-  assert.equal(reverse.endColor, accent, 'the new connection starts at the accent color');
-  assert.deepEqual(current.colorTransitions.nodes.map(pulse => pulse.nodeId), [0], 'only the target endpoint pulses');
-  assert.ok(current.colorTransitions.rods.some(pulse => key(pulse.edge) === '0:1'), 'the new connection pulses');
+  assert.notEqual(reverse.startColor, accent, 'the new connection keeps the source node color');
+  assert.notEqual(reverse.endColor, accent, 'the new connection keeps the target node color');
+  assert.equal(reverse.centerColor, accent, 'the new connection immediately carries the accent at its center');
   await advance(page, 200);
   current = await state(page);
   assert.ok(current.connectionAnimations.some(animation => key(animation.edge) === '0:1' && animation.progress > 0 && animation.progress < 1));
-  assert.ok(current.colorTransitions.nodes.every(pulse => pulse.progress > 0 && pulse.progress < 1), 'node accents blend toward their target colors');
   reverse = rodFor(current, [0, 1]);
-  assert.notEqual(reverse.startColor, accent, 'the rod has left the accent color midway');
-  assert.notEqual(reverse.endColor, accent, 'each rod endpoint blends separately');
+  assert.equal(reverse.centerColor, accent, 'the growing rod keeps its accent core');
   await page.screenshot({ path: `${out}/reverse-gradient-growing.png` });
   await advance(page);
   assertColors(await state(page), 'Reverse growth settles to its endpoint gradient');

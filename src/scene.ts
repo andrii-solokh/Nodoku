@@ -39,9 +39,6 @@ type Motion = {
 type SceneConfig = GameConfig["scene"];
 type Rod = { edge: [number, number]; mesh: THREE.Mesh; start: THREE.Vector3; end: THREE.Vector3; startNode: number; endNode: number; length: number };
 type Growth = { elapsed: number; duration: number; easing: SceneConfig["connectionEasing"] };
-type NodeMaterial = THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
-type NodeColorPulse = { elapsed: number; duration: number; material: NodeMaterial; target: THREE.Color; targetMaterial: NodeMaterial };
-type RodColorPulse = { elapsed: number; duration: number; geometry: THREE.CylinderGeometry; target: Float32Array };
 type LinkEndpoints = { start: THREE.Vector3; end: THREE.Vector3; radius: number; progress: number };
 type DragStrand = {
   nodeId: number; end: THREE.Vector3; desired: THREE.Vector3; pointerEnd: THREE.Vector3;
@@ -88,11 +85,8 @@ export class BoardScene {
   private rods = new THREE.Group();
   private rodMeshes = new Map<string, Rod>();
   private connectionGrowth = new Map<string, Growth>();
-  private nodeColorPulses = new Map<number, NodeColorPulse>();
-  private rodColorPulses = new Map<string, RodColorPulse>();
-  private colorPulseTargets = new Set<number>();
   private config: SceneConfig = {
-    rotationMs: 320, connectionMs: 420, accentFadeMs: 2000, connectionEasing: "easeOut",
+    rotationMs: 320, connectionMs: 420, connectionEasing: "easeOut",
     dragMaxLength: 1.15, dragThickness: 1.15, dragMinThickness: .3, dragTipSize: .05,
     dragFollowMs: 90, dragMagnetRange: .45, dragMagnetStrength: .7, dragMagnetResponseMs: 120,
     dragReturnMs: 520, dragElasticity: .55,
@@ -341,8 +335,6 @@ export class BoardScene {
   }
 
   setPuzzle(puzzle: Puzzle, preview = false, animateShape = false): void {
-    this.clearColorPulses();
-    this.colorPulseTargets.clear();
     this.gumPulses.clear();
     this.updateGumNodes();
     this.gumDegrees.clear();
@@ -587,10 +579,6 @@ export class BoardScene {
     return decorations;
   }
 
-  markChangeTarget(id: number): void {
-    this.colorPulseTargets.add(id);
-  }
-
   setSelection(id: number | null): void {
     this.previousSelection = this.selection;
     this.selection = id;
@@ -602,13 +590,12 @@ export class BoardScene {
   }
 
   setConfig(config: GameConfig): void {
-    this.clearColorPulses();
     this.config = { ...config.scene };
     this.updateGumMaterials();
     if (!this.gumMotionEnabled) this.gumPulses.clear();
     this.white.color.set(this.config.nodeColor);
     this.finished.color.set(this.config.completedColor);
-    this.connectionColors.configure(this.white.color, this.finished.color);
+    this.connectionColors.configure(this.white.color, this.finished.color, new THREE.Color(this.config.connectionColor));
     this.ringMaterial.color.set(this.config.connectionColor);
     this.selectionPathMaterial.color.set(this.config.connectionColor);
     this.selected.color.set(this.config.connectionColor).lerp(this.white.color, .75);
@@ -696,7 +683,7 @@ export class BoardScene {
       || !!this.dragMagnet && Math.abs(this.dragMagnet.strength - this.dragMagnet.target) > 1e-4);
   }
 
-  get hasAnimations(): boolean { return this.dragAnimating || this.gumPulses.size > 0 || this.motion !== null || this.connectionGrowth.size > 0 || this.nodeColorPulses.size > 0 || this.rodColorPulses.size > 0 || this.activeDotNodes.size > 0 || this.shapeTransition !== null; }
+  get hasAnimations(): boolean { return this.dragAnimating || this.gumPulses.size > 0 || this.motion !== null || this.connectionGrowth.size > 0 || this.activeDotNodes.size > 0 || this.shapeTransition !== null; }
 
   get hasAmbientMotion(): boolean {
     return !this.disposed && !this.reducedMotion && !document.hidden && this.config.nodeFloatAmplitude > 0 && this.nodeMeshes.size > 0;
@@ -857,25 +844,13 @@ export class BoardScene {
     }));
   }
 
-  getColorTransitionState() {
-    return {
-      accent: new THREE.Color(this.config.connectionColor).getHexString(),
-      nodes: [...this.nodeColorPulses].map(([nodeId, pulse]) => ({
-        nodeId, progress: Math.min(1, pulse.elapsed / pulse.duration),
-        color: pulse.material.color.getHexString(), target: pulse.target.getHexString(),
-      })),
-      rods: [...this.rodColorPulses].map(([key, pulse]) => ({
-        edge: [...this.rodMeshes.get(key)!.edge], progress: Math.min(1, pulse.elapsed / pulse.duration),
-      })),
-    };
-  }
-
   getConnectionColorState() {
     const positions = this.cylinder.getAttribute("position");
-    let startIndex = 0, endIndex = 0;
+    let startIndex = 0, endIndex = 0, centerIndex = 0;
     for (let i = 1; i < positions.count; i++) {
       if (positions.getY(i) < positions.getY(startIndex)) startIndex = i;
       if (positions.getY(i) > positions.getY(endIndex)) endIndex = i;
+      if (Math.abs(positions.getY(i)) < Math.abs(positions.getY(centerIndex))) centerIndex = i;
     }
     return [...this.rodMeshes.values()].map(rod => {
       const material = rod.mesh.material as THREE.MeshPhysicalMaterial;
@@ -885,7 +860,7 @@ export class BoardScene {
         : material.color.getHexString();
       return {
         edge: [...rod.edge], startNode: rod.startNode, endNode: rod.endNode,
-        startColor: colorAt(startIndex), endColor: colorAt(endIndex),
+        startColor: colorAt(startIndex), centerColor: colorAt(centerIndex), endColor: colorAt(endIndex),
         highlighted: material === this.highlightedRodMaterial,
       };
     });
@@ -933,95 +908,8 @@ export class BoardScene {
     );
   }
 
-  private endRodColorPulse(key: string, restore = true): void {
-    const pulse = this.rodColorPulses.get(key);
-    if (!pulse) return;
-    const rod = this.rodMeshes.get(key);
-    if (restore && rod && rod.mesh.geometry === pulse.geometry)
-      rod.mesh.geometry = this.connectionGeometry(rod);
-    pulse.geometry.dispose();
-    this.rodColorPulses.delete(key);
-  }
-
-  private clearColorPulses(): void {
-    for (const [id, pulse] of this.nodeColorPulses) {
-      const mesh = this.nodeMeshes.get(id);
-      if (mesh?.material === pulse.material) mesh.material = pulse.targetMaterial;
-      pulse.material.dispose();
-    }
-    this.nodeColorPulses.clear();
-    for (const key of [...this.rodColorPulses.keys()]) this.endRodColorPulse(key);
-  }
-
-  private beginNodeColorPulse(id: number): void {
-    if (this.reducedMotion || this.config.accentFadeMs <= 0) return;
-    const mesh = this.nodeMeshes.get(id);
-    if (!mesh) return;
-    const existing = this.nodeColorPulses.get(id);
-    if (existing) {
-      if (mesh.material === existing.material) mesh.material = existing.targetMaterial;
-      existing.material.dispose();
-      this.nodeColorPulses.delete(id);
-    }
-    const targetMaterial = mesh.material;
-    if (!(targetMaterial instanceof THREE.MeshStandardMaterial || targetMaterial instanceof THREE.MeshPhysicalMaterial)) return;
-    const material = targetMaterial.clone() as NodeMaterial;
-    material.color.set(this.config.connectionColor);
-    mesh.material = material;
-    this.nodeColorPulses.set(id, {
-      elapsed: 0, duration: this.config.accentFadeMs, material,
-      target: targetMaterial.color.clone(), targetMaterial,
-    });
-  }
-
-  private beginRodColorPulse(rod: Rod): void {
-    if (this.reducedMotion || this.config.accentFadeMs <= 0) return;
-    const key = rod.edge.join(":");
-    this.endRodColorPulse(key);
-    const geometry = this.connectionGeometry(rod).clone();
-    const colors = geometry.getAttribute("color") as THREE.BufferAttribute;
-    const target = new Float32Array(colors.array as Float32Array);
-    const accent = new THREE.Color(this.config.connectionColor);
-    for (let index = 0; index < colors.count; index++)
-      colors.setXYZ(index, accent.r, accent.g, accent.b);
-    colors.needsUpdate = true;
-    rod.mesh.geometry = geometry;
-    this.rodColorPulses.set(key, { elapsed: 0, duration: this.config.accentFadeMs, geometry, target });
-  }
-
-  private advanceColorPulses(ms: number): void {
-    const accent = new THREE.Color(this.config.connectionColor);
-    for (const [id, pulse] of this.nodeColorPulses) {
-      pulse.elapsed += ms;
-      const progress = Math.min(1, pulse.elapsed / pulse.duration);
-      pulse.material.color.lerpColors(accent, pulse.target, 1 - (1 - progress) ** 3);
-      if (progress < 1) continue;
-      const mesh = this.nodeMeshes.get(id);
-      if (mesh?.material === pulse.material) mesh.material = pulse.targetMaterial;
-      pulse.material.dispose();
-      this.nodeColorPulses.delete(id);
-    }
-    for (const [key, pulse] of this.rodColorPulses) {
-      pulse.elapsed += ms;
-      const progress = Math.min(1, pulse.elapsed / pulse.duration);
-      const t = 1 - (1 - progress) ** 3;
-      const colors = pulse.geometry.getAttribute("color") as THREE.BufferAttribute;
-      for (let index = 0; index < colors.count; index++) {
-        const offset = index * 3;
-        colors.setXYZ(index,
-          accent.r + (pulse.target[offset] - accent.r) * t,
-          accent.g + (pulse.target[offset + 1] - accent.g) * t,
-          accent.b + (pulse.target[offset + 2] - accent.b) * t,
-        );
-      }
-      colors.needsUpdate = true;
-      if (progress === 1) this.endRodColorPulse(key);
-    }
-  }
-
-  private refreshConnections(animate: boolean): Set<string> {
-    if (!this.puzzle) return new Set();
-    const added = new Set<string>();
+  private refreshConnections(animate: boolean): void {
+    if (!this.puzzle) return;
     const current = new Set<string>();
     for (const [a, b] of this.puzzle.edges) {
       const edge: [number, number] = a < b ? [a, b] : [b, a];
@@ -1047,31 +935,26 @@ export class BoardScene {
       const rod = { edge, mesh, start, end, startNode, endNode, length: delta.length() };
       this.rodMeshes.set(key, rod);
       this.rods.add(mesh);
-      added.add(key);
       if (animate && !this.reducedMotion && this.config.connectionMs > 0) this.connectionGrowth.set(key, {
         elapsed: 0, duration: this.config.connectionMs, easing: this.config.connectionEasing,
       });
       this.placeRod(rod, this.growthProgress(this.connectionGrowth.get(key)));
     }
     for (const [key, rod] of this.rodMeshes) if (!current.has(key)) {
-      this.endRodColorPulse(key, false);
       this.rods.remove(rod.mesh);
       this.rodMeshes.delete(key);
       this.connectionGrowth.delete(key);
     }
     if (this.wantsFrames) this.ensureAnimationFrame(); else this.stopAnimationFrame();
-    return added;
   }
 
   refresh(animateConnections = true): void {
     if (!this.puzzle) return;
-    const added = this.refreshConnections(animateConnections);
-    const changed = new Set<number>();
+    this.refreshConnections(animateConnections);
     for (const node of this.puzzle.nodes) {
       const remaining = this.puzzle.remaining(node.id);
       const previous = this.gumDegrees.get(node.id);
       if (previous !== undefined && previous !== remaining) {
-        changed.add(node.id);
         if (animateConnections && this.gumMotionEnabled)
           this.gumPulses.set(node.id, { elapsed: 0, duration: this.config.connectionMs });
       }
@@ -1085,16 +968,6 @@ export class BoardScene {
       this.syncDots(node.id);
     }
     this.updateMaterials();
-    const targets = new Set(this.colorPulseTargets);
-    this.colorPulseTargets.clear();
-    if (animateConnections && !this.reducedMotion && this.config.accentFadeMs > 0) {
-      for (const key of added) {
-        const rod = this.rodMeshes.get(key);
-        if (rod && targets.size === 0) targets.add(rod.endNode);
-        if (rod) this.beginRodColorPulse(rod);
-      }
-      for (const id of targets) if (changed.has(id)) this.beginNodeColorPulse(id);
-    }
     this.render();
     if (this.wantsFrames) this.ensureAnimationFrame(); else this.stopAnimationFrame();
   }
@@ -1232,7 +1105,7 @@ export class BoardScene {
     if (this.highlightedGroup.size && !this.puzzle.disconnected) this.highlightedGroup.clear();
     this.guides.visible = this.highlightedGroup.size === 0;
     for (const rod of this.rodMeshes.values()) {
-      if (!this.rodColorPulses.has(rod.edge.join(":"))) rod.mesh.geometry = this.connectionGeometry(rod);
+      rod.mesh.geometry = this.connectionGeometry(rod);
       rod.mesh.material = this.highlightedGroup.has(rod.edge[0]) && this.highlightedGroup.has(rod.edge[1])
         ? this.highlightedRodMaterial : this.rodMaterial;
     }
@@ -1277,13 +1150,7 @@ export class BoardScene {
                   : this.white;
       const visual = this.shapeTransition?.nodes.get(mesh.userData.shapeKey);
       if (visual) { visual.finalMaterial = material; visual.toColor.copy(material.color); }
-      else {
-        const pulse = this.nodeColorPulses.get(node.id);
-        if (pulse) {
-          pulse.targetMaterial = material;
-          pulse.target.copy(material.color);
-        } else mesh.material = material;
-      }
+      else mesh.material = material;
     }
   }
 
@@ -1710,7 +1577,6 @@ export class BoardScene {
       pulse.elapsed += elapsed;
       if (pulse.elapsed >= pulse.duration) this.gumPulses.delete(id);
     }
-    this.advanceColorPulses(elapsed);
     this.advanceShape(elapsed);
     this.render(elapsed);
     if (!this.wantsFrames) this.stopAnimationFrame();

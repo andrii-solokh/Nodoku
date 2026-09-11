@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-/** Four reusable endpoint-color combinations for the same unit cylinder. */
+/** Four reusable endpoint-color combinations with an accent-colored core. */
 export class ConnectionColors {
   private readonly geometries: THREE.CylinderGeometry[];
 
@@ -14,7 +14,7 @@ export class ConnectionColors {
     });
   }
 
-  configure(incomplete: THREE.Color, complete: THREE.Color): void {
+  configure(incomplete: THREE.Color, complete: THREE.Color, accent: THREE.Color): void {
     for (let state = 0; state < this.geometries.length; state++) {
       const geometry = this.geometries[state];
       const positions = geometry.getAttribute("position");
@@ -24,10 +24,13 @@ export class ConnectionColors {
       for (let index = 0; index < positions.count; index++) {
         const t = THREE.MathUtils.clamp(positions.getY(index) + .5, 0, 1);
         // THREE.Color components are already in the renderer's linear space.
+        const from = t <= .5 ? start : accent;
+        const to = t <= .5 ? accent : end;
+        const blend = t <= .5 ? t * 2 : (t - .5) * 2;
         colors.setXYZ(index,
-          start.r + (end.r - start.r) * t,
-          start.g + (end.g - start.g) * t,
-          start.b + (end.b - start.b) * t,
+          from.r + (to.r - from.r) * blend,
+          from.g + (to.g - from.g) * blend,
+          from.b + (to.b - from.b) * blend,
         );
       }
       colors.needsUpdate = true;

@@ -18,7 +18,6 @@ export interface GameConfig {
     shapeTransitionMs: number;
     rotationMs: number;
     connectionMs: number;
-    accentFadeMs: number;
     connectionEasing: "linear" | "easeOut" | "easeInOut";
     dragMaxLength: number;
     dragThickness: number;
@@ -106,7 +105,6 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors", Recor
     rotationMs: milliseconds("Camera turn duration", 0, 2000),
     shapeTransitionMs: { ...milliseconds("Preview transition duration", 0, 2000), description: "How long the home puzzle takes to change grid size or switch between 3D and Flat. Set to 0 for an instant switch." },
     connectionMs: milliseconds("Connection draw duration", 0, 2000),
-    accentFadeMs: { ...milliseconds("Accent fade duration", 0, 5000), description: "How long a changed node and its new connection blend from Accent color to their final colors. Set to 0 for an instant change." },
     connectionEasing: { label: "Connection easing", kind: "choice", options: { linear: "Steady", easeOut: "Gentle finish", easeInOut: "Gentle start and finish" } },
     dragMaxLength: {
       label: "Maximum reach", kind: "number", min: 1, max: 3, step: .05, unit: "grid steps",
@@ -156,7 +154,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors", Recor
     shadowOpacity: { label: "Shadow strength", kind: "number", min: 0, max: .4, step: .01 },
     background: { label: "Background", kind: "color" },
     nodeColor: { label: "Nodes", kind: "color" },
-    connectionColor: { label: "Accent color", kind: "color", description: "Color used for selection, available connections, and the brief pulse on changed nodes and links. Placed links then blend their nodes' unfinished and completed colors." },
+    connectionColor: { label: "Connection accent", kind: "color", description: "Color used for selection, available connections, and the center of every placed link. Links blend from each node color into this accent at their center." },
     completedColor: { label: "Completed nodes", kind: "color" },
   },
   sound: {
@@ -217,10 +215,13 @@ export function validateConfig(value: unknown): GameConfig {
   for (const [group, rules] of Object.entries(CONFIG_RULES)) {
     // Only missing legacy fields/sections receive defaults. Supplied values
     // and every pre-existing sound field remain strictly validated.
-    const values = group === "demo"
+    const values: Record<string, unknown> = group === "demo"
       ? { timingMode: "melody", tempoBpm: 96, ...object(source[group]) }
       : group === "scene"
-      ? { materialStyle: "gum", gooStretch: .65, gooGloss: .7, dotAnimation: "glide", dotAnimationMs: 460, shapeTransitionMs: 700, accentFadeMs: 2000, nodeFloatAmplitude: .025, nodeFloatPeriodMs: 6000, ...dragDefaults, ...object(source[group]) }
+      ? (() => {
+        const { accentFadeMs: _retiredAccentFadeMs, ...scene } = object(source[group]);
+        return { materialStyle: "gum", gooStretch: .65, gooGloss: .7, dotAnimation: "glide", dotAnimationMs: 460, shapeTransitionMs: 700, nodeFloatAmplitude: .025, nodeFloatPeriodMs: 6000, ...dragDefaults, ...scene };
+      })()
       : group === "sound"
       ? migrateSound(source[group], hasSound)
       : object(source[group]);
