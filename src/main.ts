@@ -151,16 +151,16 @@ app.innerHTML = `
     <h1 id="home-title">3D Spatial Reasoning Puzzle</h1>
     <p class="intro-copy">Connect every node and complete the network.<br>Each node shows how many connections it needs.</p>
     <div class="puzzle-options">
-      <div class="setting-row"><span class="setting-label" id="shape-label">Your perspective</span><div class="segmented" role="group" aria-labelledby="shape-label"><button class="segment" data-depth="3d">${icon("cube")}3D</button><button class="segment" data-depth="flat">${icon("flat")}Flat</button></div></div>
-      <div class="setting-row"><span class="setting-label" id="size-label">Grid size</span><div class="sizes" role="group" aria-labelledby="size-label">${[3, 4, 5].map((n) => `<button class="size-button" data-size="${n}" aria-label="${n} by ${n} grid">${n}</button>`).join("")}</div></div>
-      <div class="setting-row"><span class="setting-label" id="difficulty-label">Complexity</span><div class="difficulty-group" role="group" aria-labelledby="difficulty-label">${Object.entries(
+      <div class="setting-row"><span class="setting-label" id="shape-label">Your perspective</span><div class="setting-control"><div class="segmented" role="group" aria-labelledby="shape-label"><button class="segment" data-depth="3d">${icon("cube")}3D</button><button class="segment" data-depth="flat">${icon("flat")}Flat</button></div></div></div>
+      <div class="setting-row"><span class="setting-label" id="size-label">Grid size</span><div class="setting-control"><div class="sizes" role="group" aria-labelledby="size-label">${[3, 4, 5].map((n) => `<button class="size-button" data-size="${n}" aria-label="${n} by ${n} grid">${n}</button>`).join("")}</div></div></div>
+      <div class="setting-row"><span class="setting-label" id="difficulty-label">Complexity</span><div class="setting-control"><div class="difficulty-group" role="group" aria-labelledby="difficulty-label">${Object.entries(
         labels,
       )
         .map(
           ([value, label], index) =>
             `<button class="difficulty-button" data-difficulty="${value}" aria-label="${["Low", "Medium", "High"][index]} complexity — ${label}" title="${["Low", "Medium", "High"][index]} complexity — ${label}">${complexityIcon(index + 1)}</button>`,
         )
-        .join("")}</div></div>
+        .join("")}</div></div></div>
       <div class="start-actions"><button class="start-button" id="start-button">${icon("play")}Start connecting</button><button class="resume-button" id="resume-button" hidden>Continue your puzzle</button></div>
     </div>
   </section>
