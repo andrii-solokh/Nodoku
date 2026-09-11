@@ -60,6 +60,26 @@ try {
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('nodoku.astra.v1')).onboardingCompleted), true, 'Completion is stored');
   await page.close();
 
+  const portrait = await fixture();
+  await portrait.setViewportSize({ width: 390, height: 844 });
+  await portrait.waitForTimeout(50);
+  const portraitLayout = await portrait.evaluate(() => {
+    const canvas = document.querySelector('#onboarding-stage canvas');
+    const copy = document.querySelector('.onboarding-copy');
+    if (!canvas || !copy) throw new Error('Portrait onboarding elements are missing');
+    const canvasBounds = canvas.getBoundingClientRect();
+    const copyBounds = copy.getBoundingClientRect();
+    return {
+      height: window.innerHeight,
+      scrollHeight: document.documentElement.scrollHeight,
+      canvasBottom: canvasBounds.bottom,
+      copyTop: copyBounds.top,
+    };
+  });
+  assert.ok(portraitLayout.scrollHeight <= portraitLayout.height + 1, 'portrait onboarding fits without vertical page scroll');
+  assert.ok(portraitLayout.canvasBottom <= portraitLayout.copyTop, 'portrait lesson copy stays below the board');
+  await portrait.close();
+
   const skipped = await fixture();
   await skipped.locator('#onboarding-skip').click();
   await skipped.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');

@@ -286,3 +286,31 @@
 #ad-free-restore { display: grid; gap: 10px; }
 #ad-free-code, #ad-free-saved-code { width: 100%; padding: 12px; border: 1px solid #d8d1e5; border-radius: 8px; background: #fff; font: inherit; }
 #ad-free-receipt { font-size: 13px; line-height: 1.6; color: #82748e; }
+
+@media (max-width: 760px) and (orientation: portrait) {
+  .sponsorship-home {
+    flex: 0 0 54px;
+    width: 100%;
+    margin: 0;
+  }
+  .sponsorship-home .sponsor-collection-header { display: none; }
+  .sponsorship-home .sponsor-grid { display: block; height: 100%; }
+  .sponsorship-home .sponsor-card { display: none; }
+  .sponsorship-home .sponsor-card:first-child {
+    display: flex;
+    height: 54px;
+    min-height: 54px;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 11px;
+  }
+  .sponsorship-home .sponsor-copy { flex: 1; }
+  .sponsorship-home .sponsor-eyebrow { display: none; }
+  .sponsorship-home .sponsor-placeholder { font-size: 12px; }
+  .sponsorship-home .sponsor-link strong { font-size: 13px; }
+  .sponsorship-home .sponsor-link span { display: none; }
+  .sponsorship-home .sponsor-slot-footer { flex: 0 0 auto; margin: 0; }
+  .sponsorship-home .sponsor-slot-price { display: none; }
+  .sponsorship-home .sponsor-advertise { min-height: 30px; padding: 3px 0 3px 6px; font-size: 11px; }
+}

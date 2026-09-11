@@ -299,6 +299,12 @@ try {
     ),
     "mobile has no horizontal overflow",
   );
+  assert.ok(
+    await mobile.evaluate(
+      () => document.documentElement.scrollHeight <= window.innerHeight + 1,
+    ),
+    "mobile home fits without vertical page scroll",
+  );
   await mobile.locator("#start-button").tap();
   await settle(mobile);
   await checkGameLayout(mobile, "mobile portrait");
