@@ -996,6 +996,7 @@ a {
 .home .game-activity {
   display: none;
 }
+.home #keyboard-button { display: none; }
 .playing .home-main,
 .playing .home-activity {
   display: none;

@@ -102,6 +102,7 @@ try {
   );
   await page.screenshot({ path: `${out}/home-desktop.png`, fullPage: true });
   assert.equal((await state(page)).mode, "home");
+  assert.equal(await page.locator('#keyboard-button').isVisible(), false, 'Keyboard controls stay out of the home header');
   await page.locator("#help-button").click();
   assert.equal((await state(page)).dialog, "help-dialog");
   await page.keyboard.press("Escape");
@@ -120,6 +121,7 @@ try {
   await page.locator("#sound-button").click();
   await page.locator("#start-button").click();
   await settle(page);
+  assert.equal(await page.locator('#keyboard-button').isVisible(), true, 'Keyboard controls appear during an active puzzle');
   await checkGameLayout(page, "desktop", true);
   let s = await state(page);
   assert.equal(s.nodes.length, 26);
