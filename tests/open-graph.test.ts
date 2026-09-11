@@ -25,8 +25,11 @@ test("Open Graph image uses the captured Three.js board and has large social-car
   const generator = await readFile(new URL("../scripts/generate-og-image.mjs", import.meta.url), "utf8");
   assert.match(generator, /og-scene\.png/);
   assert.match(generator, /actual Three\.js home board/);
+  assert.doesNotMatch(generator, /Complete one network\.|A TACTILE 3D PUZZLE/);
   const image = await sharp(new URL("../static/og-image.png", import.meta.url).pathname).metadata();
   assert.equal(image.format, "png");
   assert.equal(image.width, 1200);
   assert.equal(image.height, 630);
+  const capture = await sharp(new URL("../static/og-scene.png", import.meta.url).pathname).metadata();
+  assert.equal(capture.hasAlpha, true, "the Three.js board capture has no opaque canvas background");
 });
