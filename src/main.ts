@@ -117,6 +117,17 @@ try {
 }
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
+const loadingScreen = document.getElementById("app-loader");
+let loadingScreenDismissed = false;
+function finishLoading() {
+  if (!loadingScreen || loadingScreenDismissed) return;
+  loadingScreenDismissed = true;
+  // Wait for the first canvas frame, then let the loading mark dissolve into the board.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    loadingScreen.classList.add("is-ready");
+    window.setTimeout(() => loadingScreen.remove(), 460);
+  }));
+}
 app.className = "home";
 app.innerHTML = `
 <header class="site-header">
@@ -270,6 +281,7 @@ try {
   el("home-stage").innerHTML =
     '<div class="webgl-error"><strong>The 3D view couldn’t start.</strong>Enable hardware acceleration in your browser, then reload to play Nodoku.</div>';
   el<HTMLButtonElement>("start-button").disabled = true;
+  finishLoading();
   throw error;
 }
 function demoSoundOptions(kind: "connect" | "complete") {
@@ -1093,6 +1105,7 @@ startCompletionTracking();
 if (showOnboarding) startOnboarding();
 else if (resumeOnLoad) startGame(true);
 else updateOptions();
+finishLoading();
 mountSponsorship({
   beforeOpen: () => {
     scene.cancelPendingTap();
