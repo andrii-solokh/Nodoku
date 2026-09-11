@@ -1525,3 +1525,8 @@ TODO / Note
 - Placed perspective, grid-size, and complexity controls in a shared centered control column.
 - Retained left-aligned row labels and responsive mobile sizing.
 - Verified equal control centers on desktop and mobile, plus the production build, test suite, and Playwright game client.
+
+## 2026-09-11 — Separate daily-activity histograms
+- Replaced the metric selector with visible puzzles-solved, visitors, and dots-cleared histograms that share the selected period.
+- Added distinct colors, individual accessible values, empty states, and a stacked mobile layout.
+- Verified by production build, full unit suite, direct mocked browser rendering, and Playwright game-client run. The long statistics browser suite was unable to finish because its local preview navigation timed out before the statistics assertions.
