@@ -15,6 +15,7 @@ test("homepage metadata describes Nodoku as a 3D spatial reasoning puzzle", asyn
     '<meta name="twitter:card" content="summary_large_image" />',
     '"@type": "VideoGame"',
     '"@type": "FAQPage"',
+    '<h1>3D Spatial Reasoning Puzzle</h1>',
   ]) assert.ok(html.includes(value), `missing ${value}`);
 });
 
