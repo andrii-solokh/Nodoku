@@ -1,0 +1,1007 @@
+import "@fontsource/outfit/300.css";
+import "@fontsource/outfit/400.css";
+import "@fontsource/outfit/500.css";
+import "@fontsource/outfit/600.css";
+import "./style.css";
+import { Puzzle, edgeKey, type Difficulty, type PuzzleSettings } from "./puzzle";
+import { BoardScene } from "./scene";
+import { HomeDemo } from "./demo";
+import { mountSponsorship, setSponsorshipConfig } from "./sponsorship";
+import { getConfig, subscribeConfig } from "./config";
+import { GameAudio } from "./sound";
+import { AmbientAudio } from "./ambient";
+import moonlightUrl from "./assets/moonlight-scott-buckley.mp3?url";
+import { mountCompletionShare } from "./share";
+import { recordCompletion, restoreAttemptId, startCompletionTracking } from "./completions";
+
+const paths: Record<string, string> = {
+  cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9M8 5.2l8 4.6"/>',
+  flat: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 4v16M4 12h16"/>',
+  play: '<path d="m9 5 10 7-10 7Z" fill="currentColor" stroke="none"/>',
+  pause: '<path d="M9 5v14M15 5v14" stroke-width="3"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1-1.5 2M12 16h.01"/>',
+  sound:
+    '<path d="m11 4-6 5H2v6h3l6 5ZM15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>',
+  mute: '<path d="m11 4-6 5H2v6h3l6 5ZM16 9l6 6m0-6-6 6"/>',
+  music: '<path d="M9 18V5l11-2v13M9 9l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>',
+  undo: '<path d="m8 4-5 5 5 5M3 9h10a7 7 0 0 1 0 14" transform="translate(0 -2)"/>',
+  redo: '<path d="m16 4 5 5-5 5M21 9H11a7 7 0 0 0 0 14" transform="translate(0 -2)"/>',
+  restart: '<path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/>',
+  hint: '<path d="M9 18h6m-5 3h4M8 14a6 6 0 1 1 8 0c-1 1-1 2-1 2H9s0-1-1-2Z"/>',
+  left: '<path d="m14 6-6 6 6 6"/>',
+  right: '<path d="m10 6 6 6-6 6"/>',
+  up: '<path d="m6 14 6-6 6 6"/>',
+  down: '<path d="m6 10 6 6 6-6"/>',
+  close: '<path d="m6 6 12 12M6 18 18 6"/>',
+  check: '<path d="m5 12 4 4L19 6"/>',
+  orbit:
+    '<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-30 12 12)"/><path d="M12 2v3m0 14v3"/><circle cx="12" cy="12" r="2"/>',
+  link: '<circle cx="5" cy="12" r="3"/><circle cx="19" cy="12" r="3"/><path d="M8 12h8"/>',
+  network:
+    '<circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 5h10M5 7v10M7 19h10"/>',
+  home: '<path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/>',
+  keyboard: '<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10"/>',
+};
+const icon = (name: string) =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || ""}</svg>`;
+const complexityIcon = (level: number) =>
+  `<svg class="complexity-icon" viewBox="0 0 40 20" aria-hidden="true"><path class="complexity-track" d="M6 10h28"/>${level > 1 ? `<path class="complexity-link" d="M6 10h${(level - 1) * 14}"/>` : ""}${[1, 2, 3].map(dot => `<circle class="complexity-dot${dot <= level ? " filled" : ""}" cx="${6 + (dot - 1) * 14}" cy="10" r="3.5"/>`).join("")}</svg>`;
+const logo =
+  '<svg viewBox="0 0 34 34" aria-hidden="true"><path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3"/><g fill="#8270bd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g><circle cx="26" cy="26" r="5" fill="#a0beaf"/></svg>';
+const labels: Record<Difficulty, string> = {
+  easy: "Gentle",
+  medium: "Focused",
+  hard: "Intricate",
+};
+const storageKey = "nodoku.astra.v1";
+let settings: PuzzleSettings = {
+  size: 3,
+  depth: 3,
+  difficulty: "easy",
+  seed: 1,
+};
+let soundEnabled = false;
+let musicEnabled = false;
+let melodyStep = 0;
+let savedPuzzle: Puzzle | null = null;
+let savedView: unknown = null;
+let savedSelection: number | null = null;
+let attemptId: string | null = null;
+let resumeOnLoad = false;
+let puzzle: Puzzle | null = null;
+let selected: number | null = null;
+let mode: "home" | "playing" = "home";
+let toastTimer: ReturnType<typeof setTimeout>;
+let completionShown = false;
+let keyboardIndex = -1;
+let networkGroups: number[][] = [];
+let networkSignature = "";
+let highlightedGroup = 0;
+let nextGroupToShow = 0;
+const gameAudio = new GameAudio();
+const ambientAudio = new AmbientAudio(moonlightUrl);
+try {
+  const stored = JSON.parse(localStorage.getItem(storageKey) || "null");
+  if (stored) {
+    savedPuzzle = Puzzle.restore(stored.game);
+    if (savedPuzzle) settings = { ...savedPuzzle.settings };
+    if (stored.settings) {
+      try {
+        const validated = new Puzzle(stored.settings);
+        settings = { ...validated.settings };
+      } catch {
+        // Invalid menu preferences must not discard a valid saved puzzle.
+      }
+    }
+    soundEnabled = stored.sound === true;
+    musicEnabled = stored.music === true;
+    if (savedPuzzle?.solved && stored.screen !== "playing") savedPuzzle = null;
+    if (savedPuzzle) {
+      melodyStep = Number.isSafeInteger(stored.melodyStep) && stored.melodyStep >= 0
+        && stored.melodyStep < 1_000_000_000 ? stored.melodyStep : savedPuzzle.edges.length;
+      attemptId = restoreAttemptId(stored.attemptId);
+      // Earlier saves did not record the screen; resume their unfinished board.
+      resumeOnLoad = stored.screen === "playing" || stored.screen === undefined;
+      savedView = stored.view ?? null;
+      savedSelection = Number.isInteger(stored.selected)
+        && savedPuzzle.nodes.some(node => node.id === stored.selected)
+        ? stored.selected : null;
+    }
+  }
+} catch {
+  /* A fresh game remains available when stored settings are invalid. */
+}
+
+const app = document.querySelector<HTMLDivElement>("#app")!;
+app.className = "home";
+app.innerHTML = `
+<header class="site-header">
+  <button class="brand" id="home-button" aria-label="Nodoku home">${logo}nodoku</button>
+  <div class="game-header-info">
+    <div class="game-title" id="game-title"></div>
+    <div class="progress-wrap"><div class="progress-track" role="progressbar" aria-label="Dots connected" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="progress-fill"></div></div><span id="progress-value">0%</span></div>
+  </div>
+  <div class="game-activity" id="game-activity"></div>
+  <div class="home-activity" id="home-activity"></div>
+  <nav class="header-actions" aria-label="Game help, controls and sound">
+    <button class="text-button" id="help-button">${icon("help")}How to play</button>
+    <button class="icon-button" id="keyboard-button" aria-label="Keyboard controls" title="Keyboard controls">${icon("keyboard")}</button>
+    <button class="icon-button" id="music-button" aria-label="Music and credits" title="Music and credits" aria-haspopup="dialog" hidden>${icon("music")}</button>
+    <button class="icon-button" id="sound-button" aria-label="Turn sound effects on" aria-pressed="false">${icon("mute")}</button>
+  </nav>
+</header>
+<main class="home-main">
+  <section class="intro" aria-label="Set up a puzzle">
+    <h1>A little space<br>to connect.</h1>
+    <p class="intro-copy">Turn the puzzle. Follow the dots.<br>Bring it all together.</p>
+    <div class="puzzle-options">
+      <div class="setting-row"><span class="setting-label" id="shape-label">Your perspective</span><div class="segmented" role="group" aria-labelledby="shape-label"><button class="segment" data-depth="3d">${icon("cube")}3D</button><button class="segment" data-depth="flat">${icon("flat")}Flat</button></div></div>
+      <div class="setting-row"><span class="setting-label" id="size-label">Grid size</span><div class="sizes" role="group" aria-labelledby="size-label">${[3, 4, 5].map((n) => `<button class="size-button" data-size="${n}" aria-label="${n} by ${n} grid">${n}</button>`).join("")}</div></div>
+      <div class="setting-row"><span class="setting-label" id="difficulty-label">Complexity</span><div class="difficulty-group" role="group" aria-labelledby="difficulty-label">${Object.entries(
+        labels,
+      )
+        .map(
+          ([value, label], index) =>
+            `<button class="difficulty-button" data-difficulty="${value}" aria-label="${["Low", "Medium", "High"][index]} complexity — ${label}" title="${["Low", "Medium", "High"][index]} complexity — ${label}">${complexityIcon(index + 1)}</button>`,
+        )
+        .join("")}</div></div>
+      <div class="start-actions"><button class="start-button" id="start-button">${icon("play")}Start connecting</button><button class="resume-button" id="resume-button" hidden>Continue your puzzle</button></div>
+    </div>
+  </section>
+  <div class="home-stage-wrap"><div id="home-stage" class="stage home-stage"></div><div class="preview-caption"><button class="demo-toggle" id="demo-toggle" aria-label="Pause demo" aria-pressed="false" title="Pause demo">${icon("pause")}</button><span id="preview-caption">Solving, one connection at a time.</span></div></div>
+</main>
+<main class="game-main" aria-label="Puzzle board">
+  <div id="game-stage" class="stage game-stage"></div>
+  <aside class="network-status" id="network-status" aria-label="Network status" hidden>
+    <div role="status" aria-live="polite" aria-atomic="true"><strong id="network-status-title"></strong><p>All dots are cleared. Swap connections to join the groups.</p><span class="network-group-detail" id="network-group-detail"></span></div>
+    <button id="network-group-button" type="button">Show group 1</button>
+  </aside>
+  <div class="game-toolbar">
+    <div class="tools-group"><button class="tool-button" id="undo-button" disabled>${icon("undo")}Undo</button><button class="tool-button" id="redo-button" disabled>${icon("redo")}Redo</button><button class="tool-button" id="restart-button">${icon("restart")}Restart</button><button class="tool-button hint" id="hint-button">${icon("hint")}Hint</button></div>
+    <div class="rotation-tools" role="group" aria-label="Board view"><button class="icon-button" data-rotate="left" aria-label="Rotate left">${icon("left")}</button><button class="icon-button" data-rotate="up" aria-label="Rotate up">${icon("up")}</button><button class="icon-button view-reset" id="view-button">${icon("cube")}Reset view</button><button class="icon-button" data-rotate="down" aria-label="Rotate down">${icon("down")}</button><button class="icon-button" data-rotate="right" aria-label="Rotate right">${icon("right")}</button></div>
+  </div>
+</main>
+<div id="toast" class="status-toast" role="status" aria-live="polite"></div>
+<div id="node-announcement" class="sr-only" aria-live="polite"></div>
+<dialog class="dialog" id="help-dialog" aria-labelledby="help-title">
+  <div class="dialog-header"><h2 id="help-title">Clear every dot.</h2><button class="icon-button close" data-close="help-dialog" aria-label="Close help">${icon("close")}</button></div>
+  <p class="help-intro">Each dot is a connection that node still needs.<strong>3 dots = 3 connections to neighboring nodes.</strong></p>
+  <svg class="help-demo" viewBox="0 0 320 100" role="img" aria-label="Two nodes with one dot each become dotless when connected.">
+    <defs><radialGradient id="bead" cx="35%" cy="25%" r="80%"><stop offset="0" stop-color="#fffdf7"/><stop offset="1" stop-color="#ddd6e6"/></radialGradient></defs>
+    <circle cx="34" cy="36" r="24" fill="url(#bead)"/><circle cx="94" cy="36" r="24" fill="url(#bead)"/>
+    <g fill="#78638f"><circle cx="34" cy="36" r="3"/><circle cx="94" cy="36" r="3"/></g>
+    <path d="M145 36h30m-7-7 7 7-7 7" fill="none" stroke="#aaa0ba" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M226 36h60" stroke="#9d87cd" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="226" cy="36" r="24" fill="#b7cfbf"/><circle cx="286" cy="36" r="24" fill="#b7cfbf"/>
+    <g font-family="Outfit, sans-serif" font-size="12" text-anchor="middle"><text x="64" y="87" fill="#85768f">1 dot each</text><text x="256" y="87" fill="#64816f">No dots left</text></g>
+  </svg>
+  <p class="help-goal">Each connection clears one dot from both nodes. Finish with no dots left and all nodes joined together.</p>
+  <ul class="help-list"><li>${icon("link")}<span>Tap two neighbors or drag between them to connect. Tap or drag between linked nodes to remove their connection.</span></li><li>${icon("orbit")}<span>Swipe empty space to turn the puzzle.</span></li></ul>
+  <button class="start-button" data-close="help-dialog">Got it</button>
+</dialog>
+<dialog class="dialog" id="keyboard-dialog" aria-labelledby="keyboard-title">
+  <div class="dialog-header"><h2 id="keyboard-title">Keyboard controls</h2><button class="icon-button close" data-close="keyboard-dialog" aria-label="Close keyboard controls">${icon("close")}</button></div>
+  <div class="keyboard-help">
+    <div class="shortcut-rotation">
+      <span>Rotate view</span>
+      <div class="shortcut-layouts">
+        <span class="sr-only">Arrow keys or W A S D</span>
+        <span class="shortcut-keypad" aria-hidden="true"><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></span>
+        <span class="shortcut-or" aria-hidden="true">or</span>
+        <span class="shortcut-keypad" aria-hidden="true"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
+      </div>
+    </div>
+    <dl class="shortcut-list">
+      <div><dt>Undo</dt><dd><kbd>Ctrl / <span aria-hidden="true">⌘</span><span class="sr-only">Command</span></kbd><span class="shortcut-join">+</span><kbd>Z</kbd></dd></div>
+      <div><dt>Redo</dt><dd><kbd>Ctrl / <span aria-hidden="true">⌘</span><span class="sr-only">Command</span></kbd><span class="shortcut-join">+</span><kbd>Shift</kbd><span class="shortcut-join">+</span><kbd>Z</kbd></dd></div>
+      <div><dt>Hint</dt><dd><kbd>H</kbd></dd></div>
+      <div><dt>Fullscreen</dt><dd><kbd>F</kbd></dd></div>
+    </dl>
+  </div>
+</dialog>
+<dialog class="dialog completion-dialog" id="completion-dialog" aria-labelledby="completion-title">
+  <div class="completion-emblem">${icon("check")}</div>
+  <h2 id="completion-title">All connected.</h2>
+  <p>You cleared every dot.<br>Invite a friend to find their own moment of calm.</p>
+  <div id="completion-share"></div>
+  <button class="start-button" id="next-button" autofocus>Another puzzle${icon("play")}</button>
+  <button class="secondary-button" id="completion-home">Back to the beginning</button>
+</dialog>
+<dialog class="dialog music-dialog" id="music-dialog" aria-labelledby="music-title">
+  <div class="dialog-header"><h2 id="music-title">Ambient music</h2><button class="icon-button close" data-close="music-dialog" aria-label="Close music and credits">${icon("close")}</button></div>
+  <div class="music-track">
+    <div class="music-emblem">${icon("music")}</div>
+    <div><h3>Moonlight</h3><p>Scott Buckley</p></div>
+  </div>
+  <button class="start-button music-toggle" id="music-toggle" aria-pressed="false">${icon("play")}Play music</button>
+  <p class="music-note">Piano and strings, while you connect.<br>Music and sound effects have separate controls.</p>
+  <div class="music-credit">
+    <h3>Music credit</h3>
+    <p>'Moonlight' by Scott Buckley - released under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC-BY 4.0</a>. <a href="https://www.scottbuckley.com.au" target="_blank" rel="noopener noreferrer">www.scottbuckley.com.au</a></p>
+    <a class="music-source" href="https://www.scottbuckley.com.au/library/moonlight/" target="_blank" rel="noopener noreferrer">About the track ↗</a>
+  </div>
+</dialog>
+<dialog class="dialog" id="confirm-dialog" aria-labelledby="confirm-title"><div class="dialog-header"><h2 id="confirm-title">Start this puzzle over?</h2></div><p id="confirm-description">Your connections will be cleared. The puzzle stays the same.</p><div class="dialog-actions"><button data-close="confirm-dialog">Keep playing</button><button class="confirm-button" id="confirm-button">Restart puzzle</button></div></dialog>
+`;
+const el = <T extends HTMLElement = HTMLElement>(id: string) =>
+  document.getElementById(id) as T;
+const completionShare = mountCompletionShare(el("completion-share"));
+app.querySelectorAll<HTMLButtonElement>(".game-toolbar button").forEach((button) => {
+  button.title = button.getAttribute("aria-label") || button.textContent!.trim();
+});
+let scene: BoardScene;
+let strokePuzzle: Puzzle | null = null;
+let strokeChanged = false;
+const strokeEdges = new Set<string>();
+try {
+  scene = new BoardScene(el("home-stage"), onTap, () => selectNode(null), {
+    onDoubleTap: onDoubleTap,
+    onTapSettled: maybeComplete,
+    onStrokeStart: onStrokeStart,
+    onStrokeEdge: onStrokeEdge,
+    onStrokeEnd: onStrokeEnd,
+    onViewChange: () => {
+      if (mode === "playing") persist();
+    },
+  });
+} catch (error) {
+  el("home-stage").innerHTML =
+    '<div class="webgl-error"><strong>The 3D view couldn’t start.</strong>Enable hardware acceleration in your browser, then reload to play Nodoku.</div>';
+  el<HTMLButtonElement>("start-button").disabled = true;
+  throw error;
+}
+function demoSoundOptions(kind: "connect" | "complete") {
+  const config = getConfig();
+  const connections = demo.puzzle?.edges.length ?? 0;
+  return {
+    unlock: false,
+    melodyIndex: Math.max(0, connections - (kind === "connect" ? 1 : 0)),
+    rhythmTempoBpm: config.demo.timingMode === "melody" ? config.demo.tempoBpm : undefined,
+  };
+}
+const demo = new HomeDemo(scene, kind => {
+  if (mode === "home" && soundEnabled && !demo.paused && !demoSuspended()) {
+    gameAudio.play(kind, demoSoundOptions(kind));
+  }
+}, () => soundEnabled && !demoSuspended() ? gameAudio.getCompletionDurationMs(demoSoundOptions("complete")) : 0);
+let activeMelody = getConfig().sound.connectionMelody;
+let activeDemoTiming = `${getConfig().demo.timingMode}:${getConfig().demo.tempoBpm}`;
+let activeTempoBpm = getConfig().demo.tempoBpm;
+subscribeConfig(config => {
+  scene.setConfig(config);
+  demo.setConfig(config);
+  gameAudio.setConfig(config.sound);
+  const demoTiming = `${config.demo.timingMode}:${config.demo.tempoBpm}`;
+  if (activeDemoTiming !== demoTiming) {
+    if (mode === "home" || activeTempoBpm !== config.demo.tempoBpm) gameAudio.stop();
+    activeDemoTiming = demoTiming;
+    activeTempoBpm = config.demo.tempoBpm;
+  }
+  ambientAudio.setVolume(config.sound.ambientVolume);
+  updateMusic();
+  if (activeMelody !== config.sound.connectionMelody) {
+    activeMelody = config.sound.connectionMelody;
+    melodyStep = 0;
+    persist();
+  }
+  setSponsorshipConfig(config.sponsors);
+  document.documentElement.style.backgroundColor = config.scene.background;
+  document.documentElement.style.setProperty("--paper", config.scene.background);
+});
+let demoFrame = 0;
+function demoSuspended() {
+  return document.hidden || !!document.querySelector("dialog[open]");
+}
+function runDemo() {
+  if (demoFrame) cancelAnimationFrame(demoFrame);
+  let last = performance.now();
+  const tick = (now: number) => {
+    demoFrame = 0;
+    if (mode !== "home") return;
+    // No catch-up burst when returning from a background tab.
+    demo.advanceTime(Math.min(100, now - last), demoSuspended());
+    last = now;
+    demoFrame = requestAnimationFrame(tick);
+  };
+  demoFrame = requestAnimationFrame(tick);
+}
+
+function persist() {
+  try {
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        settings,
+        sound: soundEnabled,
+        music: musicEnabled,
+        melodyStep,
+        screen: mode,
+        game: (puzzle || savedPuzzle)?.serialize() ?? null,
+        view: puzzle ? scene.serializeView() : savedView,
+        selected: puzzle ? selected : savedSelection,
+        attemptId: (puzzle || savedPuzzle) ? attemptId : null,
+      }),
+    );
+  } catch {
+    /* Gameplay also works without browser storage. */
+  }
+}
+function newSeed() {
+  return crypto.getRandomValues(new Uint32Array(1))[0];
+}
+function toast(message: string) {
+  clearTimeout(toastTimer);
+  el("toast").textContent = message;
+  toastTimer = setTimeout(() => {
+    el("toast").textContent = "";
+  }, 3400);
+}
+function tone(kind: "connect" | "disconnect" | "complete", count = 1, sequenceTempoBpm?: number) {
+  const melodyIndex = melodyStep;
+  if (kind === "connect") melodyStep += count;
+  if (soundEnabled && !document.hidden) gameAudio.play(kind, { melodyIndex, count, sequenceTempoBpm });
+}
+function updateSound() {
+  gameAudio.setEnabled(soundEnabled && !document.hidden);
+  const button = el("sound-button");
+  button.innerHTML = icon(soundEnabled ? "sound" : "mute");
+  button.setAttribute("aria-pressed", String(soundEnabled));
+  button.setAttribute(
+    "aria-label",
+    soundEnabled ? "Turn sound effects off" : "Turn sound effects on",
+  );
+  button.title = soundEnabled ? "Sound effects on" : "Sound effects off";
+}
+function updateMusic() {
+  const available = getConfig().sound.showAmbientMusic;
+  const enabled = available && musicEnabled;
+  ambientAudio.setEnabled(enabled);
+  el("music-button").hidden = !available;
+  el("music-button").classList.toggle("music-enabled", enabled);
+  const button = el<HTMLButtonElement>("music-toggle");
+  button.disabled = !available;
+  button.innerHTML = `${icon(enabled ? "pause" : "play")}${enabled ? "Pause music" : "Play music"}`;
+  button.setAttribute("aria-pressed", String(enabled));
+  const dialog = el<HTMLDialogElement>("music-dialog");
+  if (!available && dialog.open) dialog.close();
+}
+function limitNewPuzzleSize() {
+  // Keep older saved puzzles resumable; restrict only new games and previews.
+  const flat = settings.depth === 1;
+  const size = Math.max(flat ? 4 : 3, Math.min(5, settings.size));
+  if (size !== settings.size)
+    settings = { ...settings, size, depth: flat ? 1 : size };
+}
+function updateOptions(animateShape = false) {
+  limitNewPuzzleSize();
+  gameAudio.stop();
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-size]")
+    .forEach((button) => {
+      button.hidden = settings.depth === 1 && Number(button.dataset.size) < 4;
+      button.disabled = button.hidden;
+      button.setAttribute(
+        "aria-pressed",
+        String(Number(button.dataset.size) === settings.size),
+      );
+    });
+  document
+    .querySelectorAll<HTMLElement>("[data-depth]")
+    .forEach((button) =>
+      button.setAttribute(
+        "aria-pressed",
+        String((button.dataset.depth === "flat") === (settings.depth === 1)),
+      ),
+    );
+  document
+    .querySelectorAll<HTMLElement>("[data-difficulty]")
+    .forEach((button) =>
+      button.setAttribute(
+        "aria-pressed",
+        String(button.dataset.difficulty === settings.difficulty),
+      ),
+    );
+  el("resume-button").hidden = !savedPuzzle;
+  demo.start(settings, animateShape);
+  runDemo();
+  persist();
+}
+function moveCanvas(target: string) {
+  scene.mount(el(target));
+  requestAnimationFrame(() => scene.resize());
+}
+function selectNode(id: number | null) {
+  selected = id;
+  scene.setSelection(id);
+  const remaining = id === null ? 0 : (puzzle?.remaining(id) ?? 0);
+  if (id !== null)
+    el("node-announcement").textContent =
+      `Node ${id + 1}, ${remaining} ${remaining === 1 ? "dot" : "dots"} remaining. Choose a neighbor.`;
+}
+function onTap(id: number): (() => void) | void {
+  if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]"))
+    return;
+  const active = puzzle;
+  const restore = active.checkpoint();
+  const restoreMelodyStep = melodyStep;
+  onNode(id);
+  return () => {
+    if (puzzle === active) {
+      restore();
+      if (melodyStep !== restoreMelodyStep) gameAudio.stop();
+      melodyStep = restoreMelodyStep;
+    }
+  };
+}
+function onNode(id: number) {
+  if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]"))
+    return;
+  if (selected === id) {
+    selectNode(null);
+    return;
+  }
+  if (selected === null) {
+    selectNode(id);
+    return;
+  }
+  // A selected node may have moved behind the board after a turn.
+  if (!scene.getScreenNodes().some(node => node.id === selected && node.pickable)) {
+    selectNode(id);
+    return;
+  }
+  const previous = selected;
+  if (!puzzle.neighbors(previous).includes(id)) {
+    selectNode(id);
+    return;
+  }
+  const count = puzzle.edges.length;
+  const result = puzzle.toggle(previous, id);
+  if (!result.changed) {
+    toast("A node has no dots left. Remove a connection to make room.");
+    return;
+  }
+  tone(puzzle.edges.length > count ? "connect" : "disconnect");
+  selectNode(null);
+  updateGame();
+}
+function onDoubleTap(id: number) {
+  if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]"))
+    return;
+  const result = puzzle.toggleNode(id);
+  el("toast").textContent = "";
+  selectNode(null);
+  if (result.changed) tone(result.removed ? "disconnect" : "connect", result.count,
+    result.removed ? undefined : getConfig().demo.tempoBpm);
+  updateGame();
+  if (!result.changed)
+    toast(
+      result.reason ||
+        "The neighboring nodes have no room for another connection.",
+    );
+}
+function onStrokeStart(id: number) {
+  if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]"))
+    return;
+  onStrokeEnd();
+  strokePuzzle = puzzle;
+  strokeChanged = false;
+  strokeEdges.clear();
+  puzzle.beginBatch();
+  selectNode(id);
+}
+function onStrokeEdge(a: number, b: number): boolean {
+  if (
+    !puzzle ||
+    strokePuzzle !== puzzle ||
+    document.querySelector("dialog[open]") ||
+    !puzzle.neighbors(a).includes(b)
+  )
+    return false;
+  const key = edgeKey(a, b);
+  // Crossing back over a link in the same stroke must not toggle it again.
+  if (strokeEdges.has(key)) {
+    selectNode(b);
+    return true;
+  }
+  const count = puzzle.edges.length;
+  const result = puzzle.toggle(a, b);
+  if (!result.changed) return false;
+  strokeEdges.add(key);
+  strokeChanged = true;
+  selectNode(b);
+  tone(puzzle.edges.length > count ? "connect" : "disconnect");
+  updateGame();
+  return true;
+}
+function onStrokeEnd(showCompletion = true) {
+  const active = strokePuzzle;
+  if (!active) return;
+  active.endBatch();
+  const changed = strokeChanged;
+  strokePuzzle = null;
+  strokeChanged = false;
+  strokeEdges.clear();
+  if (active === puzzle) {
+    selectNode(null);
+    if (changed) {
+      updateGame(showCompletion);
+    } else if (showCompletion) maybeComplete();
+  }
+}
+function updateGame(showCompletion = true) {
+  if (!puzzle) return;
+  scene.refresh();
+  const percent = Math.round(puzzle.progress * 100);
+  el("progress-value").textContent = `${percent}%`;
+  el("progress-fill").style.width = `${percent}%`;
+  app
+    .querySelector('[role="progressbar"]')!
+    .setAttribute("aria-valuenow", String(percent));
+  el<HTMLButtonElement>("undo-button").disabled = !puzzle.canUndo;
+  el<HTMLButtonElement>("redo-button").disabled = !puzzle.canRedo;
+  el<HTMLButtonElement>("hint-button").disabled = puzzle.solved;
+  updateNetworkStatus();
+  if (showCompletion) maybeComplete();
+  if (!puzzle.solved) completionShown = false;
+  if (!strokePuzzle) persist();
+}
+function updateNetworkStatus() {
+  networkGroups = mode === "playing" && puzzle?.disconnected ? puzzle.connectionGroups : [];
+  const visible = networkGroups.length > 1;
+  el("network-status").hidden = !visible;
+  app.classList.toggle("network-separated", visible);
+  const signature = JSON.stringify(networkGroups);
+  if (signature !== networkSignature) {
+    networkSignature = signature;
+    highlightedGroup = 0;
+    nextGroupToShow = 0;
+  }
+  scene.setHighlightedGroup(visible ? networkGroups[highlightedGroup] : null);
+  if (!visible) return;
+  const title = `${networkGroups.length} separate groups`;
+  const detail = `Highlighted group ${highlightedGroup + 1} · ${networkGroups[highlightedGroup].length} nodes`;
+  if (el("network-status-title").textContent !== title) el("network-status-title").textContent = title;
+  if (el("network-group-detail").textContent !== detail) el("network-group-detail").textContent = detail;
+  el("network-group-button").textContent = `Show group ${nextGroupToShow + 1}`;
+}
+function maybeComplete() {
+  if (
+    mode === "playing" &&
+    puzzle?.solved &&
+    !completionShown &&
+    !strokePuzzle &&
+    !scene.hasPendingTap &&
+    !document.querySelector("dialog[open]")
+  ) {
+    completionShown = true;
+    if (attemptId) recordCompletion(puzzle, attemptId);
+    savedPuzzle = null;
+    tone("complete");
+    completionShare.update(puzzle.settings, puzzle.edges.length);
+    el<HTMLDialogElement>("completion-dialog").showModal();
+  }
+}
+function startGame(resume = false) {
+  if (demoFrame) cancelAnimationFrame(demoFrame);
+  demoFrame = 0;
+  demo.stop();
+  gameAudio.stop();
+  onStrokeEnd();
+  const resumedPuzzle = resume ? savedPuzzle : null;
+  if (!resumedPuzzle) limitNewPuzzleSize();
+  if (!resumedPuzzle || !attemptId) attemptId = restoreAttemptId(null);
+  const restoredView = resumedPuzzle ? savedView : null;
+  const restoredSelection = resumedPuzzle ? savedSelection : null;
+  puzzle =
+    resumedPuzzle
+      ? resumedPuzzle
+      : new Puzzle({ ...settings, seed: newSeed() });
+  if (!resumedPuzzle) melodyStep = 0;
+  savedPuzzle = null;
+  savedView = null;
+  savedSelection = null;
+  selected = null;
+  keyboardIndex = -1;
+  completionShown = false;
+  mode = "playing";
+  app.className = "playing";
+  el("toast").textContent = "";
+  const s = puzzle.settings;
+  el("game-title").innerHTML =
+    `${s.size} × ${s.size}${s.depth > 1 ? ` × ${s.depth}` : ""}<span>${labels[s.difficulty]}</span>`;
+  moveCanvas("game-stage");
+  scene.setPuzzle(puzzle);
+  if (resumedPuzzle) scene.restoreView(restoredView);
+  scene.setInteractive(true);
+  selectNode(puzzle.solved ? null : restoredSelection);
+  updateGame();
+  if (!document.querySelector("dialog[open]"))
+    app.querySelector("canvas")?.focus({ preventScroll: true });
+}
+function goHome() {
+  onStrokeEnd();
+  document
+    .querySelectorAll<HTMLDialogElement>("dialog[open]")
+    .forEach((dialog) => dialog.close());
+  savedPuzzle = puzzle && !puzzle.solved ? puzzle : null;
+  savedView = savedPuzzle ? scene.serializeView() : null;
+  savedSelection = savedPuzzle ? selected : null;
+  puzzle = null;
+  mode = "home";
+  app.className = "home";
+  updateNetworkStatus();
+  el("toast").textContent = "";
+  moveCanvas("home-stage");
+  updateOptions();
+  el("start-button").focus({ preventScroll: true });
+}
+function undo() {
+  scene.cancelPendingTap();
+  onStrokeEnd(false);
+  selectNode(null);
+  const previous = new Set(puzzle?.edges.map(edge => edgeKey(...edge)));
+  if (!puzzle || !puzzle.undo()) return;
+  const added = puzzle.edges.filter(edge => !previous.has(edgeKey(...edge))).length;
+  tone(added ? "connect" : "disconnect", added || 1);
+  updateGame();
+}
+function redo() {
+  scene.cancelPendingTap();
+  onStrokeEnd();
+  const previous = new Set(puzzle?.edges.map(edge => edgeKey(...edge)));
+  if (!puzzle || !puzzle.redo()) return;
+  selectNode(null);
+  const added = puzzle.edges.filter(edge => !previous.has(edgeKey(...edge))).length;
+  tone(added ? "connect" : "disconnect", added || 1);
+  updateGame();
+}
+function hint() {
+  scene.cancelPendingTap();
+  onStrokeEnd();
+  if (!puzzle || puzzle.solved) return;
+  const result = puzzle.hint();
+  if (!result.changed) {
+    toast(result.reason || "Try removing a connection to make room.");
+    return;
+  }
+  selectNode(null);
+  if (result.edge) scene.focusNode(result.edge[0]);
+  tone(result.removed ? "disconnect" : "connect");
+  updateGame();
+  toast(
+    result.removed
+      ? "One connection removed to open up a path."
+      : "A connection to help you along.",
+  );
+}
+let confirmAction: () => void = () => {};
+function confirm(
+  title: string,
+  description: string,
+  actionLabel: string,
+  action: () => void,
+) {
+  el("confirm-title").textContent = title;
+  el("confirm-description").textContent = description;
+  el("confirm-button").textContent = actionLabel;
+  confirmAction = action;
+  el<HTMLDialogElement>("confirm-dialog").showModal();
+}
+function startFresh() {
+  if (savedPuzzle && savedPuzzle.edges.length > 0) {
+    confirm(
+      "Begin a fresh puzzle?",
+      "Your unfinished puzzle will be replaced by a new one.",
+      "New puzzle",
+      () => startGame(),
+    );
+  } else startGame();
+}
+el("start-button").addEventListener("click", startFresh);
+el("resume-button").addEventListener("click", () => startGame(true));
+el("home-button").addEventListener("click", () => {
+  if (mode === "playing") goHome();
+});
+for (const name of ["help", "keyboard", "music"])
+  el(`${name}-button`).addEventListener("click", () => {
+    if (name === "music" && !getConfig().sound.showAmbientMusic) return;
+    scene.cancelPendingTap();
+    el<HTMLDialogElement>(`${name}-dialog`).showModal();
+  });
+el("sound-button").addEventListener("click", () => {
+  soundEnabled = !soundEnabled;
+  updateSound();
+  persist();
+  // The speaker preview never consumes a note from the player's melody.
+  if (soundEnabled && !document.hidden) gameAudio.play("connect", { melodyIndex: 0 });
+});
+el("music-toggle").addEventListener("click", event => {
+  if (!getConfig().sound.showAmbientMusic) return;
+  musicEnabled = !musicEnabled;
+  updateMusic();
+  if (event.isTrusted && !document.hidden) ambientAudio.unlock();
+  persist();
+});
+for (const event of ["pointerdown", "keydown"])
+  document.addEventListener(event, input => {
+    if (!input.isTrusted) return;
+    if (mode === "home") {
+      demo.cancelPendingSound();
+      gameAudio.stop();
+    }
+    gameAudio.unlock();
+    if (!document.hidden) ambientAudio.unlock();
+  }, { capture: true });
+// Touch and pen activation is available on release; clicks also cover
+// assistive controls that do not emit a pointerdown or keyboard event.
+document.addEventListener("click", input => {
+  if (input.isTrusted && !document.hidden) ambientAudio.unlock();
+}, { capture: true });
+document.addEventListener("visibilitychange", () => {
+  gameAudio.setEnabled(soundEnabled && !document.hidden);
+  if (document.hidden) {
+    ambientAudio.suspend();
+    demo.cancelPendingSound();
+    onStrokeEnd(false);
+    persist();
+  } else {
+    ambientAudio.resume();
+    maybeComplete();
+  }
+});
+el("demo-toggle").addEventListener("click", () => {
+  demo.togglePaused();
+  if (demo.paused) gameAudio.stop();
+  el("demo-toggle").innerHTML = icon(demo.paused ? "play" : "pause");
+  const label = demo.paused ? "Resume demo" : "Pause demo";
+  el("demo-toggle").setAttribute("aria-label", label);
+  el("demo-toggle").setAttribute("aria-pressed", String(demo.paused));
+  el("demo-toggle").title = label;
+  el("preview-caption").textContent = demo.paused
+    ? "Demo paused. Drag to explore."
+    : "Solving, one connection at a time.";
+});
+el("undo-button").addEventListener("click", undo);
+el("redo-button").addEventListener("click", redo);
+el("network-group-button").addEventListener("click", () => {
+  if (mode !== "playing" || !puzzle?.disconnected) return;
+  scene.cancelPendingTap();
+  onStrokeEnd(false);
+  selectNode(null);
+  highlightedGroup = nextGroupToShow;
+  nextGroupToShow = (nextGroupToShow + 1) % networkGroups.length;
+  updateNetworkStatus();
+  // Prefer a node already on the front face when part of this group is visible.
+  const frontNodes = scene.getScreenNodes();
+  const group = networkGroups[highlightedGroup];
+  const target = group.find(id => frontNodes.some(node => node.id === id && node.pickable)) ?? group[0];
+  scene.focusNode(target);
+});
+el("completion-dialog").addEventListener("cancel", (event) =>
+  event.preventDefault(),
+);
+for (const id of ["help-dialog", "keyboard-dialog", "music-dialog", "confirm-dialog"])
+  el(id).addEventListener("close", maybeComplete);
+el("hint-button").addEventListener("click", hint);
+el("view-button").addEventListener("click", () => scene.resetView());
+el("restart-button").addEventListener("click", () => {
+  scene.cancelPendingTap();
+  onStrokeEnd();
+  if (!puzzle?.edges.length) {
+    puzzle?.reset();
+    scene.resetView();
+    melodyStep = 0;
+    gameAudio.stop();
+    selectNode(null);
+    updateGame();
+    return;
+  }
+  confirm(
+    "Start this puzzle over?",
+    "Your connections will be cleared. The puzzle stays the same.",
+    "Restart puzzle",
+    () => {
+      puzzle?.reset();
+      melodyStep = 0;
+      gameAudio.stop();
+      selectNode(null);
+      updateGame();
+      toast("A fresh start on the same puzzle.");
+    },
+  );
+});
+el("confirm-button").addEventListener("click", () => {
+  el<HTMLDialogElement>("confirm-dialog").close();
+  confirmAction();
+});
+el("next-button").addEventListener("click", () => {
+  if (puzzle) settings = { ...puzzle.settings };
+  el<HTMLDialogElement>("completion-dialog").close();
+  startGame();
+});
+el("completion-home").addEventListener("click", goHome);
+document
+  .querySelectorAll<HTMLElement>("[data-close]")
+  .forEach((button) =>
+    button.addEventListener("click", () =>
+      el<HTMLDialogElement>(button.dataset.close!).close(),
+    ),
+  );
+document
+  .querySelectorAll<HTMLElement>("[data-rotate]")
+  .forEach((button) =>
+    button.addEventListener("click", () =>
+      scene.rotate(button.dataset.rotate as "left" | "right" | "up" | "down"),
+    ),
+  );
+document.querySelectorAll<HTMLElement>("[data-size]").forEach((button) =>
+  button.addEventListener("click", () => {
+    const size = Number(button.dataset.size);
+    if (button.hidden) return;
+    const flat = settings.depth === 1;
+    settings.size = size;
+    settings.depth = flat ? 1 : settings.size;
+    updateOptions(true);
+  }),
+);
+document.querySelectorAll<HTMLElement>("[data-depth]").forEach((button) =>
+  button.addEventListener("click", () => {
+    const depth = button.dataset.depth === "flat" ? 1 : settings.size;
+    if (depth === settings.depth) return;
+    settings.depth = depth;
+    updateOptions(true);
+  }),
+);
+document.querySelectorAll<HTMLElement>("[data-difficulty]").forEach((button) =>
+  button.addEventListener("click", () => {
+    settings.difficulty = button.dataset.difficulty as Difficulty;
+    updateOptions();
+  }),
+);
+document.addEventListener("keydown", (event) => {
+  if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]"))
+    return;
+  if (event.target instanceof Element && event.target.closest("#admin-panel")) return;
+  if (
+    event.target instanceof HTMLElement &&
+    event.target.closest("input, select, textarea, [contenteditable=true]")
+  )
+    return;
+  const key = event.key.toLowerCase();
+  if (event.altKey) return;
+  if ((event.ctrlKey || event.metaKey) && key !== "z") return;
+  if (
+    key === "enter" &&
+    event.target instanceof HTMLElement &&
+    event.target.closest("button, summary")
+  )
+    return;
+  const rotations: Record<string, "left" | "right" | "up" | "down"> = {
+    arrowleft: "left",
+    a: "left",
+    arrowright: "right",
+    d: "right",
+    arrowup: "up",
+    w: "up",
+    arrowdown: "down",
+    s: "down",
+  };
+  if (rotations[key]) {
+    event.preventDefault();
+    scene.rotate(rotations[key]);
+  } else if (key === "z" && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    if (event.shiftKey) redo();
+    else undo();
+  } else if (key === "h") {
+    event.preventDefault();
+    hint();
+  } else if (key === "r") scene.resetView();
+  else if (key === "+" || key === "=") scene.zoom(0.15);
+  else if (key === "-") scene.zoom(-0.15);
+  else if (key === "escape") {
+    scene.cancelPendingTap();
+    selectNode(null);
+  } else if (key === "f") {
+    event.preventDefault();
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else
+      void document.documentElement
+        .requestFullscreen()
+        .catch(() => toast("Fullscreen isn’t available in this browser."));
+  } else if (key === "[" || key === "]") {
+    event.preventDefault();
+    keyboardIndex =
+      (keyboardIndex + (key === "]" ? 1 : -1) + puzzle.nodes.length) %
+      puzzle.nodes.length;
+    const node = puzzle.nodes[keyboardIndex];
+    scene.focusNode(node.id);
+    toast(
+      `Node ${node.id + 1}: ${puzzle.remaining(node.id)} dots. Press Enter to choose.`,
+    );
+  } else if (key === "enter" && keyboardIndex >= 0) {
+    event.preventDefault();
+    scene.cancelPendingTap();
+    onNode(puzzle.nodes[keyboardIndex].id);
+  }
+});
+window.addEventListener("resize", () => scene.resize());
+document.addEventListener("fullscreenchange", () => scene.resize());
+window.addEventListener("pagehide", () => {
+  ambientAudio.suspend();
+  onStrokeEnd();
+  persist();
+});
+window.addEventListener("pageshow", () => {
+  if (!document.hidden) ambientAudio.resume();
+});
+
+Object.assign(window, {
+  render_game_to_text: () => {
+    const displayed = mode === "home" ? demo.puzzle : puzzle;
+    const screenNodes = new Map(
+      scene.getScreenNodes().map((node) => [node.id, node]),
+    );
+    return JSON.stringify({
+      mode,
+      coordinates:
+        "Node coordinates: x right, y up, z front. Screen coordinates are viewport pixels, origin top-left.",
+      settings: displayed?.settings ?? settings,
+      selected: mode === "playing" ? selected : null,
+      view: scene.getViewState(),
+      progress: displayed?.progress ?? 0,
+      solved: displayed?.solved ?? false,
+      disconnected: displayed?.disconnected ?? false,
+      network: { groups: networkGroups, highlight: scene.getNetworkHighlightState() },
+      edges: displayed?.edges ?? [],
+      demo: mode === "home" ? demo.getState() : null,
+      connectionAnimations: scene.getConnectionAnimationState(),
+      dragConnection: scene.getDragConnectionState(),
+      connectionColors: scene.getConnectionColorState(),
+      shapeTransition: scene.getShapeTransitionState(),
+      floating: scene.getFloatingState(),
+      gum: scene.getGumState(),
+      dotAnimations: scene.getDotAnimationState(),
+      config: getConfig(),
+      audio: { soundEnabled, musicAvailable: getConfig().sound.showAmbientMusic, musicEnabled: musicEnabled && getConfig().sound.showAmbientMusic, ambientTrack: "Moonlight — Scott Buckley" },
+      melodyStep: mode === "home" ? (demo.puzzle?.edges.length ?? 0) : melodyStep,
+      nodes:
+        displayed?.nodes.map((node) => ({
+          ...node,
+          remaining: displayed!.remaining(node.id),
+          screen: screenNodes.get(node.id),
+        })) ?? [],
+      dialog: document.querySelector("dialog[open]")?.id ?? null,
+    });
+  },
+  advanceTime: (ms: number) => {
+    if (!Number.isFinite(ms) || ms <= 0) return;
+    if (mode !== "home") { scene.advanceTime(ms); return; }
+    for (let remaining = ms; remaining > 0; remaining -= 40) {
+      const step = Math.min(40, remaining);
+      if (scene.hasAnimations || scene.hasAmbientMotion) scene.advanceTime(step);
+      demo.advanceTime(step, demoSuspended());
+    }
+  },
+});
+updateSound();
+updateMusic();
+if (document.hidden) ambientAudio.suspend();
+startCompletionTracking();
+if (resumeOnLoad) startGame(true);
+else updateOptions();
+mountSponsorship({
+  beforeOpen: () => {
+    scene.cancelPendingTap();
+    onStrokeEnd(false);
+  },
+});
+document.addEventListener("close", (event) => {
+  if (event.target instanceof HTMLDialogElement && ["sponsor-dialog", "statistics-dialog"].includes(event.target.id))
+    maybeComplete();
+}, true);
+if (new URLSearchParams(location.search).has("admin")) {
+  void import("./admin").then(({ mountAdmin }) => mountAdmin()).catch(() => {
+    toast("The configurator could not load. Reload to try again.");
+  });
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nodoku",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-09-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nodoku",
+      "database_id": "b7be3da8-25d3-4559-8613-920b0a148812"
+    }
+  ],
+  // Stripe credentials belong in Pages secrets, never in this file.
+  "vars": {
+    "APP_ORIGIN": "https://nodoku.solokh.com"
+  },
+  "env": {
+    "preview": {
+      // Configure a separate test database and origin explicitly to enable preview checkout.
+      "d1_databases": [],
+      "vars": {}
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "demo": {
+    "timingMode": "melody",
+    "tempoBpm": 96,
+    "initialDelayMs": 100,
+    "stepDelayMs": 70,
+    "revealDelayMs": 0,
+    "completeHoldMs": 3200,
+    "restartDelayMs": 1100,
+    "interactionPauseMs": 1800,
+    "resumeDelayMs": 600
+  },
+  "scene": {
+    "materialStyle": "gum",
+    "gooStretch": 0.95,
+    "gooGloss": 1,
+    "dotAnimation": "orbit",
+    "dotAnimationMs": 230,
+    "rotationMs": 320,
+    "shapeTransitionMs": 700,
+    "connectionMs": 420,
+    "connectionEasing": "easeOut",
+    "dragMaxLength": 1.15,
+    "dragThickness": 1.15,
+    "dragMinThickness": 0.3,
+    "dragTipSize": 0.05,
+    "dragFollowMs": 90,
+    "dragMagnetRange": 0.45,
+    "dragMagnetStrength": 0.7,
+    "dragMagnetResponseMs": 120,
+    "dragReturnMs": 520,
+    "dragElasticity": 0.55,
+    "rodRadius": 0.035,
+    "nodeScale": 1.1,
+    "nodeFloatAmplitude": 0.02,
+    "nodeFloatPeriodMs": 6000,
+    "fogStrength": 1.35,
+    "shadowOpacity": 0.06,
+    "background": "#eeedf6",
+    "nodeColor": "#fcfaf5",
+    "connectionColor": "#8170c9",
+    "completedColor": "#a9cbbd"
+  },
+  "sound": {
+    "connectionMelody": "odeToJoy",
+    "noteDurationMs": 810,
+    "melodyVolume": 0.75,
+    "completionSound": true,
+    "completionNoteIntervalMs": 240,
+    "showAmbientMusic": false,
+    "ambientVolume": 0.18
+  },
+  "sponsors": {
+    "slots": 6,
+    "showOnHome": false,
+    "showInGame": true
+  }
+}

@@ -1,0 +1,246 @@
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import { chromium } from "playwright";
+import { readAdminToken } from "../scripts/admin-api.ts";
+
+const url = process.env.TEST_URL || "http://127.0.0.1:4173";
+const out = "output/web-game/configurator";
+await fs.mkdir(out, { recursive: true });
+const configPath = new URL("../config/game-config.json", import.meta.url);
+const original = await fs.readFile(configPath, "utf8");
+const originalConfig = JSON.parse(original);
+let written;
+const token = readAdminToken(process.cwd());
+const browser = await chromium.launch();
+const errors = [];
+const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text()));
+const advance = (page, ms) => page.evaluate(ms => window.advanceTime(ms), ms);
+const openHomeSettings = async page => {
+  const summary = page.getByText("Home auto-solve", { exact: true });
+  if (!await summary.evaluate(element => element.parentElement.open)) await summary.click();
+};
+try {
+  const visitor = await browser.newPage();
+  await visitor.goto(url);
+  assert.equal(await visitor.locator("#admin-open").count(), 0, "ordinary visitors have no studio controls");
+  const denied = await visitor.request.get(`${url}/api/admin/config`);
+  assert.equal(denied.status(), 401, "configuration API requires the private local token");
+  await visitor.goto(`${url}/?admin=1`);
+  await visitor.locator("#admin-login").waitFor();
+  assert.equal(await visitor.locator("#admin-settings").count(), 0);
+  await visitor.close();
+
+  const page = await browser.newPage({ viewport: { width: 1512, height: 982 } });
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+  await page.addInitScript(() => { window.requestAnimationFrame = () => 1; window.cancelAnimationFrame = () => {}; });
+  await page.goto(`${url}/?admin=1#admin-token=${token}`);
+  await page.locator("#admin-settings").waitFor();
+  assert.equal(new URL(page.url()).hash, "", "private credential is removed from the address");
+  assert.deepEqual((await state(page)).config, originalConfig);
+  const homeSlotCount = originalConfig.sponsors.slots;
+  assert.equal(await page.locator("#sponsor-slot-home .sponsor-card").count(), homeSlotCount);
+  await openHomeSettings(page);
+  assert.deepEqual(await page.locator("#config-demo-timingMode option").evaluateAll(options => options.map(option => ({ value: option.value, label: option.textContent }))), [
+    { value: "melody", label: "Melody rhythm" },
+    { value: "fixed", label: "Fixed delay" },
+  ]);
+  assert.equal(await page.locator("#config-demo-timingMode").inputValue(), originalConfig.demo.timingMode, "timing control starts with the saved mode");
+  assert.equal(await page.locator("#config-demo-tempoBpm").inputValue(), String(originalConfig.demo.tempoBpm), "tempo control starts with the owner's BPM");
+  await page.locator("#config-demo-timingMode").selectOption("fixed");
+  assert.equal((await state(page)).config.demo.timingMode, "fixed", "Fixed delay previews immediately");
+  for (const invalid of ["181", "39", "96.5"]) {
+    await page.locator("#config-demo-tempoBpm").fill(invalid);
+    assert.equal(await page.locator("#admin-save").isEnabled(), false, "out-of-range or fractional BPM cannot be saved");
+    assert.equal((await state(page)).config.demo.tempoBpm, originalConfig.demo.tempoBpm, "invalid BPM preserves the previous preview tempo");
+  }
+  const tempoBpm = 108;
+  await page.locator("#config-demo-tempoBpm").fill(String(tempoBpm));
+  assert.equal((await state(page)).config.demo.tempoBpm, tempoBpm, "valid tempo previews immediately");
+  assert.equal(await page.locator("#config-demo-revealDelayMs").count(), 0, "retired reveal delay is absent from the editor");
+  await page.locator("#config-demo-stepDelayMs").fill("200");
+  await page.locator("#config-demo-stepDelayMs").fill("200.5");
+  assert.equal(await page.locator("#admin-save").isEnabled(), false, "fractional millisecond settings cannot be saved");
+  await page.locator("#config-demo-stepDelayMs").fill("200");
+  await page.locator("#config-demo-timingMode").selectOption("melody");
+  assert.equal((await state(page)).config.demo.timingMode, "melody", "Melody rhythm previews immediately");
+  assert.equal((await state(page)).config.demo.stepDelayMs, 200, "switching to Melody rhythm preserves the fixed pause");
+  await page.locator("#config-demo-tempoBpm").evaluate(input => input.closest(".admin-control").scrollIntoView({ block: "center" }));
+  const timingBounds = await page.evaluate(() => {
+    const panel = document.querySelector("#admin-panel").getBoundingClientRect();
+    return ["timingMode", "tempoBpm"].map(key => {
+      const box = document.querySelector(`#config-demo-${key}`).getBoundingClientRect();
+      return box.top >= panel.top && box.bottom <= panel.bottom && box.left >= panel.left && box.right <= panel.right;
+    });
+  });
+  assert.ok(timingBounds.every(Boolean), "timing selector and tempo fit together in the Home auto-solve panel");
+  await page.screenshot({ path: `${out}/admin-melody-timing.png` });
+  await page.locator("#config-demo-timingMode").selectOption("fixed");
+  assert.equal((await state(page)).config.demo.stepDelayMs, 200, "returning to Fixed delay keeps its pause");
+  await page.getByText("Connections and scene", { exact: true }).click();
+  await page.locator("#config-scene-connectionMs").fill("1200");
+  await page.locator("#config-scene-shapeTransitionMs").fill("900");
+  await page.locator("#config-scene-nodeFloatAmplitude").fill("0.035");
+  await page.locator("#config-scene-nodeFloatPeriodMs").fill("8000");
+  await page.locator("#config-scene-connectionEasing").selectOption("linear");
+  await page.getByText("Node dots", { exact: true }).click();
+  assert.equal(await page.locator("#config-scene-dotAnimation option").count(), 4);
+  await page.locator("#config-scene-dotAnimation").selectOption("orbit");
+  await page.locator("#config-scene-dotAnimationMs").fill("720");
+  await page.getByText("Sound", { exact: true }).click();
+  assert.deepEqual(await page.locator("#config-sound-connectionMelody option").evaluateAll(options => options.map(option => ({ value: option.value, label: option.textContent }))), [
+    { value: "odeToJoy", label: "Ode to Joy" },
+    { value: "furElise", label: "Für Elise" },
+    { value: "classic", label: "Original connection sound" },
+  ]);
+  await page.locator("#config-sound-connectionMelody").selectOption("furElise");
+  await page.locator("#config-sound-noteDurationMs").fill("540");
+  await page.locator("#config-sound-melodyVolume").fill("0.45");
+  assert.equal(await page.locator("#config-sound-completionNotes").count(), 0, "the retired note count is absent from Studio");
+  const completionToggle = page.locator("#config-sound-completionSound");
+  assert.equal(await completionToggle.getAttribute("type"), "checkbox");
+  assert.equal(await page.getByRole("checkbox", { name: "Play completion ending", exact: true }).count(), 1);
+  assert.equal(await completionToggle.isChecked(), originalConfig.sound.completionSound);
+  await completionToggle.uncheck();
+  assert.equal((await state(page)).config.sound.completionSound, false, "turning off the completion ending previews immediately");
+  await completionToggle.check();
+  assert.equal((await state(page)).config.sound.completionSound, true, "turning the completion ending back on previews immediately");
+  await page.locator("#config-sound-completionNoteIntervalMs").fill("79");
+  assert.equal(await page.locator("#admin-save").isEnabled(), false, "completion intervals below 80ms cannot be saved");
+  assert.equal((await state(page)).config.sound.completionNoteIntervalMs, originalConfig.sound.completionNoteIntervalMs);
+  await page.locator("#config-sound-completionNoteIntervalMs").fill("360");
+  const sound = { ...originalConfig.sound, connectionMelody: "furElise", noteDurationMs: 540, melodyVolume: .45, completionSound: true, completionNoteIntervalMs: 360 };
+  assert.deepEqual((await state(page)).config.sound, sound, "sound settings preview immediately");
+  await page.locator("#config-sound-melodyVolume").fill("1.1");
+  assert.equal(await page.locator("#admin-save").isEnabled(), false, "out-of-range melody volume cannot be saved");
+  assert.deepEqual((await state(page)).config.sound, sound, "invalid volume does not replace the valid live sound config");
+  await page.locator("#config-sound-melodyVolume").fill("0.45");
+  assert.equal(await page.locator("#admin-save").isEnabled(), true, "restoring valid volume allows saving again");
+  await page.getByText("Sound", { exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${out}/admin-sound.png` });
+  await completionToggle.evaluate(input => input.closest(".admin-control").scrollIntoView({ block: "center" }));
+  const completionBounds = await page.evaluate(() => {
+    const panel = document.querySelector("#admin-panel").getBoundingClientRect();
+    return ["completionSound", "completionNoteIntervalMs"].map(key => {
+      const box = document.querySelector(`#config-sound-${key}`).getBoundingClientRect();
+      return box.top >= panel.top && box.bottom <= panel.bottom && box.left >= panel.left && box.right <= panel.right;
+    });
+  });
+  assert.ok(completionBounds.every(Boolean), "both completion controls fit together in the Sound panel");
+  await page.screenshot({ path: `${out}/admin-sound-completion.png` });
+  assert.equal((await state(page)).config.demo.stepDelayMs, 200, "edits apply immediately");
+  const downloadPending = page.waitForEvent("download");
+  await page.locator("#admin-export").click();
+  const download = await downloadPending;
+  const exported = JSON.parse(await fs.readFile(await download.path(), "utf8"));
+  assert.equal(exported.scene.connectionMs, 1200);
+  assert.equal(exported.scene.shapeTransitionMs, 900);
+  assert.equal(exported.scene.nodeFloatAmplitude, .035);
+  assert.equal(exported.scene.nodeFloatPeriodMs, 8000);
+  assert.equal(exported.demo.stepDelayMs, 200);
+  assert.equal(exported.demo.timingMode, "fixed", "export includes the selected timing mode");
+  assert.equal(exported.demo.tempoBpm, tempoBpm, "export includes the saved melody tempo even in Fixed delay mode");
+  assert.equal(exported.demo.revealDelayMs, originalConfig.demo.revealDelayMs, "the hidden legacy reveal field remains unchanged in saved JSON");
+  assert.equal(exported.scene.dotAnimation, "orbit");
+  assert.equal(exported.scene.dotAnimationMs, 720);
+  assert.deepEqual(exported.sound, sound, "download includes all sound settings");
+  assert.equal(Object.hasOwn(exported.sound, "completionNotes"), false, "export uses only the new completion toggle");
+  const saveResponse = page.waitForResponse(response => response.url().endsWith("/api/admin/config") && response.request().method() === "PUT");
+  await page.locator("#admin-save").click();
+  assert.equal((await saveResponse).status(), 200);
+  written = await fs.readFile(configPath, "utf8");
+  await page.waitForFunction(() => document.querySelector("#admin-status").textContent.startsWith("Saved to"), null, { polling: 50 });
+  assert.deepEqual(JSON.parse(written), exported, "Save writes the actual committable project file");
+  await page.reload();
+  await page.locator("#admin-settings").waitFor();
+  assert.equal((await state(page)).config.scene.connectionMs, 1200, "session authentication and saved values survive reload");
+  assert.equal((await state(page)).config.scene.shapeTransitionMs, 900);
+  assert.equal((await state(page)).config.scene.nodeFloatAmplitude, .035);
+  assert.equal((await state(page)).config.scene.nodeFloatPeriodMs, 8000);
+  assert.equal((await state(page)).config.scene.dotAnimation, "orbit");
+  assert.equal((await state(page)).config.scene.dotAnimationMs, 720);
+  assert.equal((await state(page)).config.demo.timingMode, "fixed", "saved Fixed delay survives reload");
+  assert.equal((await state(page)).config.demo.tempoBpm, tempoBpm, "saved BPM survives reload");
+  assert.deepEqual((await state(page)).config.sound, sound, "saved melody, note duration, volume and completion settings survive reload");
+  await page.getByText("Sound", { exact: true }).click();
+  await completionToggle.uncheck();
+  assert.equal((await state(page)).config.sound.completionSound, false, "the disabled ending previews before saving");
+  const offSaveResponse = page.waitForResponse(response => response.url().endsWith("/api/admin/config") && response.request().method() === "PUT");
+  await page.locator("#admin-save").click();
+  assert.equal((await offSaveResponse).status(), 200);
+  written = await fs.readFile(configPath, "utf8");
+  await page.waitForFunction(() => document.querySelector("#admin-status").textContent.startsWith("Saved to"), null, { polling: 50 });
+  assert.deepEqual(JSON.parse(written), { ...exported, sound: { ...sound, completionSound: false } }, "saving Off preserves every other exported setting");
+  await page.reload();
+  await page.locator("#admin-settings").waitFor();
+  assert.deepEqual((await state(page)).config.sound, { ...sound, completionSound: false }, "Off and its interval survive an actual save and reload");
+  assert.equal(await completionToggle.isChecked(), false, "the form restores Off instead of the default On");
+  assert.deepEqual((await state(page)).config.demo, exported.demo, "the second save preserves all demo timing settings");
+  assert.equal(await page.locator("#config-demo-timingMode").inputValue(), "fixed", "the timing form restores the saved choice");
+  assert.equal(await page.locator("#config-demo-tempoBpm").inputValue(), String(tempoBpm));
+  await openHomeSettings(page);
+  await page.locator("#config-demo-stepDelayMs").fill("500");
+  await page.locator("#admin-reset").click();
+  assert.equal((await state(page)).config.demo.stepDelayMs, 200, "reset discards unsaved preview edits");
+  assert.equal((await state(page)).config.demo.timingMode, "fixed", "animation-duration checks use the saved Fixed delay mode");
+
+  // The editor is non-modal: preview timing continues while the controls are open.
+  for (let i = 0; i < 50 && !(await state(page)).edges.length; i++) await advance(page, 40);
+  let s = await state(page);
+  assert.equal(s.edges.length, 1);
+  assert.equal(s.connectionAnimations.length, 1);
+  assert.equal(s.connectionAnimations[0].durationMs, 1200);
+  const progress = s.connectionAnimations[0].progress;
+  await advance(page, 300);
+  s = await state(page);
+  assert.ok(Math.abs(s.connectionAnimations[0].progress - progress - .25) < .01, "linear growth follows the configured duration");
+  assert.equal(s.edges.length, 1, "the first link grows during its turn without starting another step");
+  await page.screenshot({ path: `${out}/admin-home.png` });
+
+  await page.getByText("Sponsors", { exact: true }).click();
+  if (!originalConfig.sponsors.showOnHome) await page.locator("#config-sponsors-showOnHome").check();
+  await page.locator("#config-sponsors-slots").fill("3");
+  assert.equal(await page.locator("#sponsor-slot-home .sponsor-card").count(), 3);
+  await page.locator("#admin-reset").click();
+  assert.equal(await page.locator("#sponsor-slot-home .sponsor-card").count(), homeSlotCount);
+  await page.locator("#admin-close").click();
+  await page.locator("#start-button").click();
+  await advance(page, 400);
+  s = await state(page);
+  const depth = n => [n.x, n.y, n.z].reduce((sum, value, index) => sum + value * s.view.direction[index], 0);
+  const visible = s.nodes.filter(n => n.screen.pickable).sort((a, b) => depth(b) - depth(a));
+  const a = visible.find(a => visible.some(b => Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z) === 1));
+  const b = visible.find(b => Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z) === 1);
+  await page.mouse.click(a.screen.x, a.screen.y);
+  assert.equal((await state(page)).selected, a.id, "selection has no animation delay");
+  await page.mouse.click(b.screen.x, b.screen.y);
+  assert.equal((await state(page)).edges.length, 1, "connection updates the model immediately");
+  await advance(page, 600);
+  assert.equal((await state(page)).connectionAnimations[0].progress, .5);
+  await page.screenshot({ path: `${out}/game-connection-growing.png` });
+  await page.locator("#undo-button").click();
+  assert.equal((await state(page)).edges.length, 0);
+  assert.equal((await state(page)).connectionAnimations.length, 0, "undo removes an unfinished rod");
+  await page.locator("#admin-open").click();
+  await page.getByText("Connections and scene", { exact: true }).click();
+  await page.locator("#config-scene-connectionMs").fill("0");
+  await page.locator("#admin-close").click();
+  await page.locator("#redo-button").click();
+  assert.equal((await state(page)).edges.length, 1);
+  assert.equal((await state(page)).connectionAnimations.length, 0, "zero duration draws immediately");
+  await page.locator("#admin-open").click();
+  await page.locator("#admin-reset").click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: `${out}/admin-mobile.png` });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "mobile admin does not overflow");
+  await page.locator("#admin-close").click();
+  await page.locator("#home-button").click();
+  await page.screenshot({ path: `${out}/six-sponsors-mobile.png`, fullPage: true });
+  assert.equal(errors.length, 0, errors.join("\n"));
+  console.log("Passed: private local access, live timing/tempo and sound/scene settings, validation, actual Fixed delay/BPM and completion ending Off save/reload, reset/export, configurable demo/growth, immediate clicks, undo cancellation, instant drawing, six sponsors and mobile editor.");
+} finally {
+  await browser.close();
+  // Never overwrite a file changed by another editor while the test was running.
+  if (written && await fs.readFile(configPath, "utf8") === written) await fs.writeFile(configPath, original);
+  await fs.writeFile(`${out}/errors.json`, JSON.stringify(errors, null, 2));
+}

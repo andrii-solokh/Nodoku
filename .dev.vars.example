@@ -1,0 +1,9 @@
+# Copy to .dev.vars for local Stripe testing. Never commit real credentials.
+# Leave APP_ORIGIN blank to use the local Vite address (5173 or 4173).
+# In Cloudflare production, configure your actual HTTPS site origin explicitly.
+APP_ORIGIN=""
+STRIPE_SECRET_KEY=""
+STRIPE_WEBHOOK_SECRET=""
+# One-time permanent ad removal, in USD cents. Empty disables new purchases.
+# Set only after choosing the price; existing verified receipts still work.
+REMOVE_ADS_AMOUNT=""
