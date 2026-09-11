@@ -11,7 +11,7 @@ test("home page publishes complete Open Graph and social-card metadata", async (
     ["property", "og:site_name", "Nodoku"],
     ["property", "og:url", "https://nodoku.solokh.com/"],
     ["property", "og:title", "Nodoku — 3D Spatial Reasoning Puzzle"],
-    ["property", "og:image", "https://nodoku.solokh.com/og-image.png?v=3d-green-logo"],
+    ["property", "og:image", "https://nodoku.solokh.com/og-image.png?v=3d-green-white"],
     ["property", "og:image:width", "1200"],
     ["property", "og:image:height", "630"],
     ["name", "twitter:card", "summary_large_image"],
@@ -27,6 +27,8 @@ test("Open Graph image uses the captured Three.js board and has large social-car
   assert.match(generator, /actual Three\.js home board/);
   assert.doesNotMatch(generator, /Complete one network\.|A TACTILE 3D PUZZLE/);
   assert.match(generator, /M8 9h18v17H8Z/);
+  assert.match(generator, /g fill="#a9cbbd"/);
+  assert.match(generator, /fill="#fcfaf5" stroke="#d7d2df"/);
   assert.doesNotMatch(generator, /M0 0H34V34H0Z/);
   const image = await sharp(new URL("../static/og-image.png", import.meta.url).pathname).metadata();
   assert.equal(image.format, "png");

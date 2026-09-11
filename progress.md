@@ -1500,3 +1500,8 @@ TODO / Note
 2026-09-11 Simplified help dialog
 - Removed the decorative node example, arrow, connection/orbit logos, and repeated explanation from “How to play.” The dialog now has the rule, a concrete three-dot example in text, one concise instruction for connecting/winning/rotating, and “Got it.”
 - Inspected the new dialog in a portrait browser capture; opening it remains reflected in game state and generates no browser errors. `npm test` passes 191 tests and the production build passes.
+
+2026-09-11 Render-aligned Nodoku mark
+- Updated the Nodoku mark to show three completed sage-green nodes and one porcelain-white node, matching the actual board’s completed and uncompleted node colors. Retained purple connection lines and added a subtle edge to the white node so it remains visible.
+- Applied the palette to the header, loader, favicon and generated Open Graph card. Bumped the social-image URL to `?v=3d-green-white` so crawlers request the new brand mark.
+- Inspected header and social-card captures; full tests pass (191), production build passes, and the browser run reports no errors.

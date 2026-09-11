@@ -35,8 +35,8 @@ const svg = `
   <!-- Match the app logo: its paths join the inset node centres, not their outer edges. -->
   <g transform="translate(68 57) scale(1.35)">
     <path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3" stroke-linejoin="round"/>
-    <g fill="#8270bd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g>
-    <circle cx="26" cy="26" r="5" fill="#a0beaf"/>
+    <g fill="#a9cbbd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g>
+    <circle cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/>
   </g>
   <text x="130" y="92" fill="#302b48" font-family="Outfit, Arial, sans-serif" font-size="38" font-weight="700" letter-spacing="-1.3">nodoku</text>
   <text x="74" y="245" fill="#302b48" font-family="Outfit, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="-3.2">3D spatial</text>
