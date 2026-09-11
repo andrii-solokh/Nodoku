@@ -351,10 +351,16 @@ function toast(message: string) {
     el("toast").textContent = "";
   }, 3400);
 }
-function tone(kind: "connect" | "disconnect" | "complete", count = 1, sequenceTempoBpm?: number) {
+function tone(
+  kind: "connect" | "disconnect" | "complete",
+  count = 1,
+  sequenceTempoBpm?: number,
+  rhythmTempoBpm?: number,
+) {
   const melodyIndex = melodyStep;
   if (kind === "connect") melodyStep += count;
-  if (soundEnabled && !document.hidden) gameAudio.play(kind, { melodyIndex, count, sequenceTempoBpm });
+  if (soundEnabled && !document.hidden)
+    gameAudio.play(kind, { melodyIndex, count, sequenceTempoBpm, rhythmTempoBpm });
 }
 function updateSound() {
   gameAudio.setEnabled(soundEnabled && !document.hidden);
@@ -681,7 +687,8 @@ function maybeComplete() {
     completionShown = true;
     if (attemptId) recordCompletion(puzzle, attemptId);
     savedPuzzle = null;
-    tone("complete");
+    // The cadence continues the player's score, including its rests and held notes.
+    tone("complete", 1, undefined, getConfig().demo.tempoBpm);
     completionShare.update(puzzle.settings, puzzle.edges.length);
     el<HTMLDialogElement>("completion-dialog").showModal();
   }

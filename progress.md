@@ -1563,3 +1563,8 @@ TODO / Note
 - Restyled the landing demo’s Solving / Continue Solving control to use the same group and selected-option surfaces as the perspective selector.
 - Kept it as one accessible button, preserving the play/pause behavior and existing labels.
 - Verified with the production build, 192 unit tests, active and paused browser captures, and the Playwright game client.
+
+## 2026-09-11 — Scored completion cadence
+- Passed the selected melody tempo into the resolved-puzzle completion phrase, preserving its original note lengths and rests through the next logical ending.
+- Added an app-level browser audio assertion that measures every scheduled completion onset against the score.
+- Verified with the production build, 192 unit tests, the browser sound suite, and the Playwright game client.

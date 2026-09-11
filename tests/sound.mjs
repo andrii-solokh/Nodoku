@@ -392,9 +392,12 @@ try {
   assert.equal(notes.length, 1 + continuationCount, 'Final connection plus the remaining notes through the next phrase ending are scheduled');
   assert.deepEqual(notes.map(event => round(event.frequency)), Array.from({ length: 1 + continuationCount }, (_, index) => round(midiToFrequency(melodyNote('odeToJoy', index)))), 'Completion starts at the next unplayed melody note and stops on the cadence');
   const continuation = notes.slice(1);
-  const interval = (await state(completing)).config.sound.completionNoteIntervalMs / 1000;
-  assert.ok(continuation[0].when >= notes[0].when + interval - 1e-6);
-  assert.ok(continuation.every((event, index) => Math.abs(event.when - continuation[0].when - index * interval) < 1e-6), 'Continuation follows the configured note spacing');
+  const tempo = (await state(completing)).config.demo.tempoBpm;
+  let elapsed = melodyStepMs('odeToJoy', 0, tempo) / 1000;
+  for (const [index, event] of continuation.entries()) {
+    assert.ok(Math.abs(event.when - notes[0].when - elapsed) < 1e-6, 'Completion preserves the score timing after the final connection');
+    elapsed += melodyStepMs('odeToJoy', index + 1, tempo) / 1000;
+  }
   assert.equal((await storage(completing)).melodyStep, 1, 'Celebration does not consume player melody progress');
   await completing.keyboard.press('Escape'); await settle(completing);
   assert.deepEqual(await sounds(completing), completed, 'The solved state does not replay its continuation');
