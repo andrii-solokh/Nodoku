@@ -1515,3 +1515,8 @@ TODO / Note
 - Centered the active puzzle size, difficulty, and progress indicator on wide screens.
 - Moved audience activity to the right side, directly before the help and sound controls.
 - Verified with the production build, test suite, visual browser capture, and Playwright game client.
+
+## 2026-09-11 — Unified preview solver control
+- Combined the landing-preview pause/play icon and solving label into one accessible button.
+- The complete control toggles the demo and updates its icon, label, pressed state, and tooltip together.
+- Verified with the production build, test suite, browser interaction capture, and Playwright game client.
