@@ -1534,3 +1534,8 @@ TODO / Note
 ## 2026-09-11 — Simplified statistics page
 - Removed the expandable “What these numbers mean” definitions block from the statistics page.
 - Verified the production build, full unit suite, direct statistics rendering check, and Playwright game client.
+
+## 2026-09-11 — Global sponsor-placement visibility
+- Added a Studio → Sponsors “Show sponsor placements” toggle, which immediately hides or restores all home and in-game sponsor placements.
+- Preserves the existing per-location visibility and slot settings, and migrates older saved configs to enabled by default.
+- Verified with 192 unit tests, production build, and the Playwright game client. The existing full admin browser suite could not complete because the local dev server left its app loader over the page.

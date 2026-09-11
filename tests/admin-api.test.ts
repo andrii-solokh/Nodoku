@@ -576,6 +576,15 @@ test("older configs gain floating defaults and persist validated motion settings
   assert.deepEqual(JSON.parse(readFileSync(path, "utf8")), next);
 });
 
+
+test("legacy sponsor settings gain the global placement toggle", () => {
+  const legacy = structuredClone(baseline);
+  delete legacy.sponsors.enabled;
+  assert.deepEqual(validateConfig(legacy), { ...baseline, sponsors: { ...baseline.sponsors, enabled: true } });
+  assert.deepEqual(validateConfig({ ...baseline, sponsors: { ...baseline.sponsors, enabled: false } }), { ...baseline, sponsors: { ...baseline.sponsors, enabled: false } });
+  assert.throws(() => validateConfig({ ...baseline, sponsors: { ...baseline.sponsors, enabled: "false" } }), /show sponsor placements/i);
+});
+
 test("legacy configs gain gum defaults and both material styles save without changing owner values", async t => {
   const { call, path } = fixture(t);
   const legacy = structuredClone(baseline);
