@@ -11,12 +11,13 @@ type Plan = { id: "spotlight"; name: string; days: number; amount: number; curre
 const DEFAULT_PLAN: Plan = { id: "spotlight", name: "Sponsored placement", days: 30, amount: 10000, currency: "usd" };
 const DRAFT_KEY = "nodoku.sponsor.draft.v1";
 let mounted = false;
-type SponsorshipConfig = { slots: number; showOnHome: boolean; showInGame: boolean };
-let sponsorshipConfig: SponsorshipConfig = { slots: 6, showOnHome: true, showInGame: true };
+type SponsorshipConfig = { enabled: boolean; slots: number; showOnHome: boolean; showInGame: boolean };
+let sponsorshipConfig: SponsorshipConfig = { enabled: true, slots: 6, showOnHome: true, showInGame: true };
 let applySponsorshipConfig: (() => void) | null = null;
 
 export function setSponsorshipConfig(config: SponsorshipConfig): void {
   sponsorshipConfig = {
+    enabled: config.enabled !== false,
     slots: Number.isFinite(config.slots) ? Math.max(1, Math.min(6, Math.round(config.slots))) : 6,
     showOnHome: config.showOnHome !== false,
     showInGame: config.showInGame !== false,
@@ -92,8 +93,8 @@ export function mountSponsorship(options: { beforeOpen: () => void }): void {
   document.querySelector(".game-main")?.appendChild(gameSlot);
   let adFree = false;
   const updateAdVisibility = () => {
-    homeSlot.hidden = adFree || !sponsorshipConfig.showOnHome;
-    gameSlot.hidden = adFree || !sponsorshipConfig.showInGame;
+    homeSlot.hidden = adFree || !sponsorshipConfig.enabled || !sponsorshipConfig.showOnHome;
+    gameSlot.hidden = adFree || !sponsorshipConfig.enabled || !sponsorshipConfig.showInGame;
   };
   const adFreePurchase = mountAdFree({
     beforeOpen: options.beforeOpen,

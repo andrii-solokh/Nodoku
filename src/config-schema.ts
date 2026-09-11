@@ -51,7 +51,7 @@ export interface GameConfig {
     showAmbientMusic: boolean;
     ambientVolume: number;
   };
-  sponsors: { slots: number; showOnHome: boolean; showInGame: boolean };
+  sponsors: { enabled: boolean; slots: number; showOnHome: boolean; showInGame: boolean };
 }
 
 type Rule = { label: string; description?: string } & (
@@ -177,6 +177,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors", Recor
     ambientVolume: { label: "Ambient music volume", kind: "number", min: 0, max: 1, step: .01, description: "Volume of Moonlight, controlled separately from sound effects. Set to 0 to silence background music." },
   },
   sponsors: {
+    enabled: { label: "Show sponsor placements", kind: "boolean", description: "Hide every sponsor placement across Nodoku while keeping the saved placement settings ready to restore." },
     slots: { label: "Sponsor slots", kind: "number", min: 1, max: 6, step: 1, integer: true },
     showOnHome: { label: "Show sponsors on home", kind: "boolean" },
     showInGame: { label: "Show sponsors during play", kind: "boolean" },
@@ -224,6 +225,8 @@ export function validateConfig(value: unknown): GameConfig {
       })()
       : group === "sound"
       ? migrateSound(source[group], hasSound)
+      : group === "sponsors"
+      ? { enabled: true, ...object(source[group]) }
       : object(source[group]);
     exactKeys(values, Object.keys(rules));
     const target: Record<string, unknown> = {};

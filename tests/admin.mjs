@@ -198,6 +198,10 @@ try {
   await page.screenshot({ path: `${out}/admin-home.png` });
 
   await page.getByText("Sponsors", { exact: true }).click();
+  await page.locator("#config-sponsors-enabled").uncheck();
+  assert.equal(await page.locator("#sponsor-slot-game").evaluate(slot => slot.hidden), true, "global sponsor toggle hides placements");
+  await page.locator("#config-sponsors-enabled").check();
+  assert.equal(await page.locator("#sponsor-slot-game").evaluate(slot => slot.hidden), false, "global sponsor toggle restores placements");
   if (!originalConfig.sponsors.showOnHome) await page.locator("#config-sponsors-showOnHome").check();
   await page.locator("#config-sponsors-slots").fill("3");
   assert.equal(await page.locator("#sponsor-slot-home .sponsor-card").count(), 1, "changing capacity keeps one available placement");
