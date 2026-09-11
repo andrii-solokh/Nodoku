@@ -67,6 +67,34 @@ a {
 #app {
   min-height: 100dvh;
 }
+.prerender-home {
+  min-height: 100dvh;
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding: 10vw;
+}
+.prerender-home h1 {
+  max-width: 720px;
+  font-size: clamp(48px, 7vw, 82px);
+  font-weight: 450;
+  letter-spacing: -3.8px;
+  line-height: 1.06;
+  margin: 0;
+}
+.prerender-home p {
+  max-width: 510px;
+  color: #7a728c;
+  font-size: 18px;
+  line-height: 1.6;
+  margin: 0;
+}
+.prerender-home .prerender-brand {
+  color: var(--purple);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
 .site-header {
   height: 110px;
   display: flex;
@@ -1130,6 +1158,9 @@ a {
   }
 }
 @media (max-width: 760px) {
+  .prerender-home { padding: 7vw; }
+  .prerender-home h1 { font-size: 46px; letter-spacing: -2.5px; }
+  .prerender-home p { font-size: 15px; }
   .home .site-header { height: 112px; padding-bottom: 32px; }
   .site-header {
     height: 80px;
