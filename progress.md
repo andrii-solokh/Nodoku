@@ -1520,3 +1520,8 @@ TODO / Note
 - Combined the landing-preview pause/play icon and solving label into one accessible button.
 - The complete control toggles the demo and updates its icon, label, pressed state, and tooltip together.
 - Verified with the production build, test suite, browser interaction capture, and Playwright game client.
+
+## 2026-09-11 — Aligned setup controls
+- Placed perspective, grid-size, and complexity controls in a shared centered control column.
+- Retained left-aligned row labels and responsive mobile sizing.
+- Verified equal control centers on desktop and mobile, plus the production build, test suite, and Playwright game client.
