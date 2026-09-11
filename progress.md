@@ -1505,3 +1505,8 @@ TODO / Note
 - Updated the Nodoku mark to show three completed sage-green nodes and one porcelain-white node, matching the actual board’s completed and uncompleted node colors. Retained purple connection lines and added a subtle edge to the white node so it remains visible.
 - Applied the palette to the header, loader, favicon and generated Open Graph card. Bumped the social-image URL to `?v=3d-green-white` so crawlers request the new brand mark.
 - Inspected header and social-card captures; full tests pass (191), production build passes, and the browser run reports no errors.
+
+## 2026-09-11 — Single available sponsor placement
+- Kept the six-placement capacity, while showing every active sponsor plus only one next available placement. The empty state now has one visible Advertise card.
+- Centered the lone desktop game placement vertically in its side column.
+- Verified with unit tests, production build, the Playwright game client, and direct empty/active sponsorship browser checks.
