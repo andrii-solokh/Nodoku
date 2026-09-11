@@ -1486,3 +1486,4 @@ TODO / Note
 2026-09-11 Simplified Open Graph scene
 - Removed “Complete one network.” and the “A TACTILE 3D PUZZLE” pill from the social card. The remaining copy is the title and “Connect every node.”
 - Re-captured the actual Three.js board after11 demo connections, so three completed nodes are sage green. Its opaque page-color pixels are converted to alpha before composition, leaving the board, links and soft shadows without a rectangular canvas backdrop. The generator and test assert the transparent scene source and removed copy; all190 tests and the production build pass.
+- Versioned the published Open Graph image URL with `?v=3d-green` after Cloudflare served the former asset from its four-hour cache, so social crawlers fetch the revised image immediately.
