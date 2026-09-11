@@ -131,7 +131,7 @@ function finishLoading() {
 app.className = "home";
 app.innerHTML = `
 <header class="site-header">
-  <button class="brand" id="home-button" aria-label="Nodoku home">${logo}nodoku</button>
+  <button class="brand" id="home-button" aria-label="Nodoku home">${logo}<span class="brand-name">nodoku</span></button>
   <div class="game-header-info">
     <div class="game-title" id="game-title"></div>
     <div class="progress-wrap"><div class="progress-track" role="progressbar" aria-label="Dots connected" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="progress-fill"></div></div><span id="progress-value">0%</span></div>
