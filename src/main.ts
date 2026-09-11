@@ -469,7 +469,6 @@ function onNode(id: number) {
     return;
   }
   tone(puzzle.edges.length > count ? "connect" : "disconnect");
-  scene.markChangeTarget(id);
   selectNode(null);
   updateGame();
 }
@@ -482,7 +481,6 @@ function onDoubleTap(id: number) {
   if (result.changed) {
     tone(result.removed ? "disconnect" : "connect", result.count,
       result.removed ? undefined : getConfig().demo.tempoBpm);
-    scene.markChangeTarget(id);
   }
   updateGame();
   if (!result.changed)
@@ -599,7 +597,6 @@ function onStrokeEdge(a: number, b: number): boolean {
   if (!result.changed) return false;
   strokeEdges.add(key);
   strokeChanged = true;
-  scene.markChangeTarget(b);
   if (mode === "onboarding") {
     scene.refresh();
     return true;
@@ -768,7 +765,6 @@ function hint() {
   }
   selectNode(null);
   if (result.edge) {
-    scene.markChangeTarget(result.edge[1]);
     scene.focusNode(result.edge[0]);
   }
   tone(result.removed ? "disconnect" : "connect");
@@ -1062,7 +1058,6 @@ Object.assign(window, {
       connectionAnimations: scene.getConnectionAnimationState(),
       dragConnection: scene.getDragConnectionState(),
       connectionColors: scene.getConnectionColorState(),
-      colorTransitions: scene.getColorTransitionState(),
       shapeTransition: scene.getShapeTransitionState(),
       floating: scene.getFloatingState(),
       gum: scene.getGumState(),

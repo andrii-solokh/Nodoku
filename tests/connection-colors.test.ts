@@ -6,6 +6,7 @@ import { ConnectionColors } from "../src/connection-colors.ts";
 const states = [[false, false], [false, true], [true, false], [true, true]] as const;
 const incomplete = new THREE.Color("#fcfaf5");
 const complete = new THREE.Color("#a9cbbd");
+const accent = new THREE.Color("#8170c9");
 function equalColor(actual: number[], expected: THREE.Color) {
   for (const [index, channel] of [expected.r, expected.g, expected.b].entries())
     assert.ok(Math.abs(actual[index] - channel) < 1e-7, `channel ${index}: ${actual[index]} != ${channel}`);
@@ -15,23 +16,26 @@ function colorAt(geometry: THREE.CylinderGeometry, index: number): number[] {
   return [color.getX(index), color.getY(index), color.getZ(index)];
 }
 
-test("matching endpoint states produce solid colors over side walls and caps", () => {
+test("every connection carries its node colors into an accent-colored center", () => {
   const base = new THREE.CylinderGeometry(1, 1, 1, 8, 4);
   const colors = new ConnectionColors(base);
-  colors.configure(incomplete, complete);
-  for (const done of [false, true]) {
-    const geometry = colors.geometry(done, done);
-    for (let index = 0; index < geometry.getAttribute("position").count; index++)
-      equalColor(colorAt(geometry, index), done ? complete : incomplete);
+  colors.configure(incomplete, complete, accent);
+  for (const [startDone, endDone] of states) {
+    const geometry = colors.geometry(startDone, endDone);
+    const positions = geometry.getAttribute("position");
+    for (const [y, expected] of [[-.5, startDone ? complete : incomplete], [0, accent], [.5, endDone ? complete : incomplete]] as const) {
+      const indices = Array.from({ length: positions.count }, (_, index) => index).filter(index => positions.getY(index) === y);
+      assert.ok(indices.length > 0);
+      for (const index of indices) equalColor(colorAt(geometry, index), expected);
+    }
   }
   colors.dispose(); base.dispose();
 });
 
-test("mixed states follow actual start/end orientation and interpolate in linear color space", () => {
+test("the two halves blend smoothly through the accent in linear color space", () => {
   const base = new THREE.CylinderGeometry(1, 1, 1, 8, 4);
   const colors = new ConnectionColors(base);
-  colors.configure(incomplete, complete);
-  const midpoint = incomplete.clone().lerp(complete, .5);
+  colors.configure(incomplete, complete, accent);
   for (const [startDone, endDone] of [[false, true], [true, false]] as const) {
     const geometry = colors.geometry(startDone, endDone);
     const positions = geometry.getAttribute("position");
@@ -40,7 +44,9 @@ test("mixed states follow actual start/end orientation and interpolate in linear
       assert.ok(indices.length > 0);
       const start = startDone ? complete : incomplete;
       const end = endDone ? complete : incomplete;
-      const expected = y === 0 ? midpoint : start.clone().lerp(end, y + .5);
+      const expected = y <= 0
+        ? start.clone().lerp(accent, 2 * y + 1)
+        : accent.clone().lerp(end, 2 * y);
       for (const index of indices) equalColor(colorAt(geometry, index), expected);
     }
   }
@@ -67,10 +73,10 @@ test("variants retain copied cylinder data and configuration updates reuse all f
     assert.deepEqual(geometry.groups, base.groups);
   }
   assert.equal(base.getAttribute("color"), undefined);
-  colors.configure(incomplete, complete);
+  colors.configure(incomplete, complete, accent);
   const versions = attributes.map(attribute => (attribute as THREE.BufferAttribute).version);
   const nextIncomplete = new THREE.Color("#123456"), nextComplete = new THREE.Color("#abcdef");
-  colors.configure(nextIncomplete, nextComplete);
+  colors.configure(nextIncomplete, nextComplete, accent);
   states.forEach((state, index) => {
     const geometry = colors.geometry(...state);
     assert.equal(geometry, variants[index]);
