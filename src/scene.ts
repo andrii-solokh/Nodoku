@@ -1265,7 +1265,10 @@ export class BoardScene {
   }
 
   zoom(delta: number): void {
-    if (this.shapeTransition) return;
+    // The landing board is an animated demonstration, not a player camera.
+    // Keep its framing fixed while allowing its rotation gesture to remain
+    // available for exploring the cube.
+    if (this.preview || this.shapeTransition) return;
     if (!Number.isFinite(delta)) return;
     if (delta !== 0) this.interactionRevision++;
     this.cancelTap();
@@ -2116,7 +2119,9 @@ export class BoardScene {
       if (this.pointers.size) return;
       this.endStroke(event.type === "pointerup");
       canvas.style.cursor = this.interactive ? "grab" : "default";
-      if (this.rotated)
+      // Preview rotation is deliberately freeform: snapping would add a camera
+      // animation that briefly holds the landing auto-solver after release.
+      if (this.rotated && !this.preview)
         this.settleGesture(
           end,
           event.type === "pointerup" && !this.pinchGesture,

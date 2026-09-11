@@ -9,8 +9,6 @@ export interface DemoScene {
   focusConnection(a: number, b: number, maxDurationMs?: number): void;
   refresh(): void;
   getViewState(): { animating: boolean };
-  isInteracting(): boolean;
-  getInteractionRevision(): number;
   readonly hasAnimations?: boolean;
   getShapeTransitionState?(): unknown;
 }
@@ -22,7 +20,6 @@ export class HomeDemo {
   private phase: "waiting" | "complete" = "waiting";
   private remaining = 900;
   private index = 0;
-  private interaction = 0;
   private config = getConfig().demo;
   private melody: ConnectionMelody = getConfig().sound.connectionMelody;
   private waitKey: DemoDelay = "initialDelayMs";
@@ -78,7 +75,6 @@ export class HomeDemo {
     this.scene.setPuzzle(this.puzzle, true, animateShape);
     this.index = 0;
     this.wait("waiting", "initialDelayMs");
-    this.interaction = this.scene.getInteractionRevision();
   }
 
   stop(): void { this.puzzle = null; this.cancelPendingSound(); }
@@ -88,7 +84,6 @@ export class HomeDemo {
   togglePaused(): void {
     this.paused = !this.paused;
     if (this.paused) this.cancelPendingSound();
-    // Recheck the camera after the user has explored a paused preview.
     if (!this.paused && this.phase !== "complete") {
       this.wait("waiting", "resumeDelayMs");
     }
@@ -97,13 +92,6 @@ export class HomeDemo {
   advanceTime(ms: number, suspended = false): void {
     const puzzle = this.puzzle;
     if (!puzzle || !Number.isFinite(ms) || ms <= 0) return;
-    const interaction = this.scene.getInteractionRevision();
-    if (interaction !== this.interaction || this.scene.isInteracting()) {
-      this.cancelPendingSound();
-      this.interaction = interaction;
-      this.wait(this.index === puzzle.solution.length ? "complete" : "waiting", "interactionPauseMs");
-      return;
-    }
     if (this.paused || suspended) { this.cancelPendingSound(); return; }
     if (this.scene.getShapeTransitionState?.()) return;
     const onBeat = this.usesMelodyRhythm && this.phase === "waiting" && this.waitKey === "stepDelayMs";

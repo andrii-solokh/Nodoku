@@ -1478,3 +1478,7 @@ TODO / Note
 2026-09-11 Three.js Open Graph card
 - Updated the page, Open Graph, Twitter and image-alt titles to “Nodoku — 3D Spatial Reasoning Puzzle.” The social description now states the core goal: connect every node and complete one network.
 - Replaced the hand-drawn card graphic with an asset captured from the real Three.js home board. The generator crops and composes that board beside the new title so `og-image.png` remains a static, crawler-friendly 1200 × 630 image. The Open Graph test checks that the generator uses the Three.js capture; generated card inspected before validation.
+
+2026-09-11 Fixed, uninterrupted landing preview
+- Landing previews now reject all scene zoom calls, so wheel, trackpad and pinch input cannot alter the preview framing. The board remains rotatable through a freeform drag, but preview release does not snap into a camera animation that could hold the solver.
+- HomeDemo no longer treats preview input as a reason to insert the interaction pause. It still waits for its own connection/camera animations, explicit pause, dialogs, suspension and shape transitions. Unit and real-browser coverage verify fixed camera distance, manual rotation and continued connection additions while the pointer is held. All190 tests and the production build pass; browser errors are empty.

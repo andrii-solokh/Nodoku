@@ -24,8 +24,6 @@ class FakeScene implements DemoScene {
   animating = false;
   growing = false;
   reshaping = false;
-  interacting = false;
-  revision = 0;
   focused: Edge[] = [];
   previews: Puzzle[] = [];
   refreshes: { puzzle: Puzzle; edges: Edge[]; solved: boolean }[] = [];
@@ -55,8 +53,6 @@ class FakeScene implements DemoScene {
   get hasAnimations(): boolean { return this.animating || this.growing || this.reshaping; }
   getShapeTransitionState(): unknown { return this.reshaping ? {} : null; }
   getViewState(): { animating: boolean } { return { animating: this.animating }; }
-  isInteracting(): boolean { return this.interacting; }
-  getInteractionRevision(): number { return this.revision; }
 }
 
 function setup(nextSettings = settings) {
@@ -139,26 +135,26 @@ test("pause freezes playback and resuming advances to the next edge after its de
   assert.equal(demo.puzzle!.edges.length, 2);
 });
 
-test("manual interaction preserves the in-progress edge and holds the next step until release", () => {
+test("manual preview rotation leaves the solving schedule uninterrupted", () => {
   const { scene, demo } = setup();
   revealNext(demo, scene);
-  scene.revision++;
-  scene.interacting = true;
-  demo.advanceTime(1000);
-  assert.equal(demo.getState()!.phase, "waiting");
-  assert.equal(demo.getState()!.delayMs, 1800);
-  demo.advanceTime(10000);
-  assert.equal(demo.getState()!.delayMs, 1800);
-  assert.equal(demo.puzzle!.edges.length, 1);
-  scene.interacting = false;
   scene.animating = false;
   scene.growing = false;
-  demo.advanceTime(1799);
-  assert.equal(scene.focused.length, 1);
+  demo.advanceTime(949);
+  assert.equal(demo.getState()!.phase, "waiting");
+  assert.equal(demo.puzzle!.edges.length, 1);
   demo.advanceTime(1);
   assert.equal(scene.focused.length, 2);
   assert.notDeepEqual(scene.focused[0], scene.focused[1]);
   assert.equal(demo.puzzle!.edges.length, 2);
+  scene.animating = false;
+  scene.growing = false;
+  demo.advanceTime(949);
+  assert.equal(scene.focused.length, 2);
+  assert.equal(demo.puzzle!.edges.length, 2);
+  demo.advanceTime(1);
+  assert.equal(scene.focused.length, 3);
+  assert.equal(demo.puzzle!.edges.length, 3);
 });
 
 test("suspension freezes initial and subsequent waits without consuming their timers", () => {
@@ -333,8 +329,8 @@ test("demo camera turns stay silent while connections and final completion sound
   }
 });
 
-test("stationary focus is silent and paused, suspended, interrupted, or replaced completion has no stale chime", () => {
-  for (const interrupt of ['pause', 'suspend', 'interaction', 'replace', 'stop', 'silence']) {
+test("stationary focus is silent and paused, suspended, replaced, or stopped completion has no stale chime", () => {
+  for (const interrupt of ['pause', 'suspend', 'replace', 'stop', 'silence']) {
     const scene = new FakeScene();
     const sounds: string[] = [];
     const demo = new HomeDemo(scene, sound => sounds.push(sound));
@@ -343,7 +339,6 @@ test("stationary focus is silent and paused, suspended, interrupted, or replaced
     while (!demo.puzzle!.solved) revealNext(demo, scene);
     if (interrupt === 'pause') { demo.togglePaused(); demo.advanceTime(10000); demo.togglePaused(); }
     if (interrupt === 'suspend') demo.advanceTime(10000, true);
-    if (interrupt === 'interaction') { scene.revision++; demo.advanceTime(1); }
     if (interrupt === 'replace') demo.start(settings);
     if (interrupt === 'stop') demo.stop();
     if (interrupt === 'silence') demo.cancelPendingSound();

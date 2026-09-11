@@ -13,6 +13,8 @@ const watch = page => {
 };
 const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text()));
 const advance = (page, ms) => page.evaluate(ms => window.advanceTime(ms), ms);
+const sameDistance = (actual, expected, message) =>
+  assert.ok(Math.abs(actual - expected) < 1e-8, message);
 const animating = s => s.view.animating || s.shapeTransition || s.connectionAnimations.length
   || s.dotAnimations.some(node => node.active) || s.gum.pulses.length;
 const connection = async page => {
@@ -99,15 +101,23 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem("nodoku.astra.v1")), savedBefore, "demo moves never update the player's save");
 
   const canvas = await page.locator('#home-stage canvas').boundingBox();
-  const count = (await state(page)).edges.length;
+  const beforeRotation = await state(page);
+  const count = beforeRotation.edges.length;
+  const distance = beforeRotation.view.distance;
+  await page.locator('#home-stage canvas').hover();
+  await page.mouse.wheel(0, -2000);
+  sameDistance((await state(page)).view.distance, distance, "the landing preview ignores wheel zoom");
   await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
   await page.mouse.down();
   await page.mouse.move(canvas.x + canvas.width / 2 + 80, canvas.y + canvas.height / 2 + 10, { steps: 5 });
+  const manuallyRotated = await state(page);
+  assert.notDeepEqual(manuallyRotated.view.direction, beforeRotation.view.direction, "the landing preview can still rotate");
+  sameDistance(manuallyRotated.view.distance, distance, "rotating the landing preview cannot change its zoom");
   await advance(page, 5000);
-  assert.equal((await state(page)).edges.length, count, "held drag suspends connections");
+  const duringRotation = await state(page);
+  sameDistance(duringRotation.view.distance, distance, "rotating the landing preview cannot change its zoom");
+  assert.ok(duringRotation.edges.length > count, "held rotation does not suspend auto-solving");
   await page.mouse.up();
-  await advance(page, 1000);
-  assert.equal((await state(page)).edges.length, count, "drag release leaves time to explore");
   await connection(page);
 
   await page.locator('[data-size="5"]').click();
@@ -149,7 +159,7 @@ try {
   assert.deepEqual((await state(reduced)).connectionAnimations, [], "actual reduced-motion scene has no growing rods");
   await reduced.close();
   assert.equal(errors.length, 0, errors.join("\n"));
-  console.log("Passed: real-time demo/pause, simultaneous turn and connection, immediate clues and rod growth, complete hold, reduced motion, visible endpoints, one edge per step, full cube/flat solutions, replay, dialogs/drag pause, settings changes, player save isolation, start/resume, large cube, mobile layout, and no browser errors.");
+  console.log("Passed: real-time demo/pause, simultaneous turn and connection, fixed preview zoom, uninterrupted manual rotation, immediate clues and rod growth, complete hold, reduced motion, visible endpoints, one edge per step, full cube/flat solutions, replay, dialogs, settings changes, player save isolation, start/resume, large cube, mobile layout, and no browser errors.");
 } finally {
   await fs.writeFile(`${out}/errors.json`, JSON.stringify(errors, null, 2));
   await browser.close();
