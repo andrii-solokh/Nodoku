@@ -1054,6 +1054,7 @@ Object.assign(window, {
       connectionAnimations: scene.getConnectionAnimationState(),
       dragConnection: scene.getDragConnectionState(),
       connectionColors: scene.getConnectionColorState(),
+      colorTransitions: scene.getColorTransitionState(),
       shapeTransition: scene.getShapeTransitionState(),
       floating: scene.getFloatingState(),
       gum: scene.getGumState(),
