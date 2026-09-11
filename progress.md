@@ -1510,3 +1510,8 @@ TODO / Note
 - Kept the six-placement capacity, while showing every active sponsor plus only one next available placement. The empty state now has one visible Advertise card.
 - Centered the lone desktop game placement vertically in its side column.
 - Verified with unit tests, production build, the Playwright game client, and direct empty/active sponsorship browser checks.
+
+## 2026-09-11 — Centered game state header
+- Centered the active puzzle size, difficulty, and progress indicator on wide screens.
+- Moved audience activity to the right side, directly before the help and sound controls.
+- Verified with the production build, test suite, visual browser capture, and Playwright game client.
