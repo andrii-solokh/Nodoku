@@ -157,6 +157,12 @@ export class BoardScene {
     color: 0xffffff,
     vertexColors: true,
     roughness: 0.4,
+    // Gum links overlap their endpoint spheres to create a continuous shape.
+    // Keep that overlapping surface just behind the sphere to avoid visible
+    // depth-fighting facets where the link leaves a node.
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1,
   });
   private highlightedRodMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xb77536,

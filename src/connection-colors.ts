@@ -26,7 +26,8 @@ export class ConnectionColors {
         // THREE.Color components are already in the renderer's linear space.
         const from = t <= .5 ? start : accent;
         const to = t <= .5 ? accent : end;
-        const blend = t <= .5 ? t * 2 : (t - .5) * 2;
+        const linear = t <= .5 ? t * 2 : (t - .5) * 2;
+        const blend = linear * linear * (3 - 2 * linear);
         colors.setXYZ(index,
           from.r + (to.r - from.r) * blend,
           from.g + (to.g - from.g) * blend,
