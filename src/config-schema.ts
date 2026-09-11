@@ -18,6 +18,7 @@ export interface GameConfig {
     shapeTransitionMs: number;
     rotationMs: number;
     connectionMs: number;
+    accentFadeMs: number;
     connectionEasing: "linear" | "easeOut" | "easeInOut";
     dragMaxLength: number;
     dragThickness: number;
@@ -105,6 +106,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors", Recor
     rotationMs: milliseconds("Camera turn duration", 0, 2000),
     shapeTransitionMs: { ...milliseconds("Preview transition duration", 0, 2000), description: "How long the home puzzle takes to change grid size or switch between 3D and Flat. Set to 0 for an instant switch." },
     connectionMs: milliseconds("Connection draw duration", 0, 2000),
+    accentFadeMs: { ...milliseconds("Accent fade duration", 0, 5000), description: "How long a changed node and its new connection blend from Accent color to their final colors. Set to 0 for an instant change." },
     connectionEasing: { label: "Connection easing", kind: "choice", options: { linear: "Steady", easeOut: "Gentle finish", easeInOut: "Gentle start and finish" } },
     dragMaxLength: {
       label: "Maximum reach", kind: "number", min: 1, max: 3, step: .05, unit: "grid steps",
@@ -218,7 +220,7 @@ export function validateConfig(value: unknown): GameConfig {
     const values = group === "demo"
       ? { timingMode: "melody", tempoBpm: 96, ...object(source[group]) }
       : group === "scene"
-      ? { materialStyle: "gum", gooStretch: .65, gooGloss: .7, dotAnimation: "glide", dotAnimationMs: 460, shapeTransitionMs: 700, nodeFloatAmplitude: .025, nodeFloatPeriodMs: 6000, ...dragDefaults, ...object(source[group]) }
+      ? { materialStyle: "gum", gooStretch: .65, gooGloss: .7, dotAnimation: "glide", dotAnimationMs: 460, shapeTransitionMs: 700, accentFadeMs: 2000, nodeFloatAmplitude: .025, nodeFloatPeriodMs: 6000, ...dragDefaults, ...object(source[group]) }
       : group === "sound"
       ? migrateSound(source[group], hasSound)
       : object(source[group]);
