@@ -416,33 +416,36 @@ a {
 }
 .demo-toggle {
   display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 48px;
-  padding: 0 16px 0 0;
-  border-radius: 24px;
-  color: #80758e;
+  padding: 4px;
+  border-radius: 14px;
+  color: #726a83;
+  background: #e4e1ee;
   font: inherit;
   pointer-events: auto;
+}
+.demo-toggle-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: #faf9fd;
+  box-shadow: 0 2px 7px #4438660b;
 }
 .demo-toggle-icon {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  color: #7966bd;
-  background: #e8e2f2;
-  transition: background .18s ease, transform .18s ease;
+  width: 15px;
+  height: 15px;
+  color: #66529e;
 }
 .demo-toggle svg {
-  width: 20px;
-  height: 20px;
+  width: 15px;
+  height: 15px;
 }
-.demo-toggle:hover { color: #645080; background: #ebe6f4; }
-.demo-toggle:hover .demo-toggle-icon { background: #dfd6ee; transform: scale(1.04); }
+.demo-toggle:hover { color: #645080; background: #ded9eb; }
 .demo-toggle:focus-visible { outline: 2px solid #8270bd; outline-offset: 3px; }
-@media (prefers-reduced-motion: reduce) { .demo-toggle-icon { transition: none; } }
 .hidden,
 [hidden] {
   display: none !important;
