@@ -564,7 +564,7 @@ function onStrokeStart(id: number) {
   if (!puzzle || document.querySelector("dialog[open]"))
     return;
   if (mode === "onboarding") {
-    if (onboardingStep !== 0) return;
+    if (onboardingStep > 1) return;
     onStrokeEnd(false);
     strokePuzzle = puzzle;
     strokeChanged = false;

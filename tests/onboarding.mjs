@@ -31,6 +31,20 @@ try {
   await page.mouse.up();
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 3');
   assert.match(await page.locator('#onboarding-message').textContent(), /Every dot needs a connection/);
+  const afterFirst = await state(page);
+  const connected = new Set(afterFirst.edges.map(edge => [...edge].sort((a, b) => a - b).join(':')));
+  const source = afterFirst.nodes.find(node => node.remaining > 0 && afterFirst.nodes.some(other =>
+    other.remaining > 0 && adjacent(node, other) && !connected.has([node.id, other.id].sort((a, b) => a - b).join(':')),
+  ));
+  const target = afterFirst.nodes.find(other => source && other.remaining > 0 && adjacent(source, other)
+    && !connected.has([source.id, other.id].sort((a, b) => a - b).join(':')));
+  assert.ok(source && target, 'the goal lesson keeps another legal connection available');
+  await page.mouse.move(source.screen.x, source.screen.y);
+  await page.mouse.down();
+  await page.mouse.move(target.screen.x, target.screen.y, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).edges.length === 2);
+  assert.equal(await page.locator('#onboarding-step').textContent(), '2 of 3', 'the goal copy stays visible while the board remains playable');
   await page.locator('#onboarding-next').click();
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 3');
   assert.equal((await state(page)).nodes.length, 26, 'The next lesson switches to a 3D board');
