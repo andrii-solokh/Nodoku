@@ -62,6 +62,8 @@ let settings: PuzzleSettings = {
 };
 let soundEnabled = true;
 let musicEnabled = false;
+let onboardingCompleted = false;
+let showOnboarding = new URLSearchParams(location.search).has("onboarding");
 let melodyStep = 0;
 let savedPuzzle: Puzzle | null = null;
 let savedView: unknown = null;
@@ -70,7 +72,8 @@ let attemptId: string | null = null;
 let resumeOnLoad = false;
 let puzzle: Puzzle | null = null;
 let selected: number | null = null;
-let mode: "home" | "playing" = "home";
+let mode: "home" | "playing" | "onboarding" = "home";
+let onboardingStep = 0;
 let toastTimer: ReturnType<typeof setTimeout>;
 let completionShown = false;
 let keyboardIndex = -1;
@@ -83,6 +86,7 @@ const ambientAudio = new AmbientAudio(moonlightUrl);
 try {
   const stored = JSON.parse(localStorage.getItem(storageKey) || "null");
   if (stored) {
+    onboardingCompleted = stored.onboardingCompleted === true;
     savedPuzzle = Puzzle.restore(stored.game);
     if (savedPuzzle) settings = { ...savedPuzzle.settings };
     if (stored.settings) {
@@ -107,7 +111,7 @@ try {
         && savedPuzzle.nodes.some(node => node.id === stored.selected)
         ? stored.selected : null;
     }
-  }
+  } else showOnboarding = showOnboarding || !navigator.webdriver;
 } catch {
   /* A fresh game remains available when stored settings are invalid. */
 }
@@ -160,6 +164,16 @@ app.innerHTML = `
     <div class="tools-group"><button class="tool-button" id="undo-button" disabled>${icon("undo")}Undo</button><button class="tool-button" id="redo-button" disabled>${icon("redo")}Redo</button><button class="tool-button" id="restart-button">${icon("restart")}Restart</button><button class="tool-button hint" id="hint-button">${icon("hint")}Hint</button></div>
     <div class="rotation-tools" role="group" aria-label="Board view"><button class="icon-button" data-rotate="left" aria-label="Rotate left">${icon("left")}</button><button class="icon-button" data-rotate="up" aria-label="Rotate up">${icon("up")}</button><button class="icon-button view-reset" id="view-button">${icon("cube")}Reset view</button><button class="icon-button" data-rotate="down" aria-label="Rotate down">${icon("down")}</button><button class="icon-button" data-rotate="right" aria-label="Rotate right">${icon("right")}</button></div>
   </div>
+</main>
+<main class="onboarding-main" aria-labelledby="onboarding-title">
+  <div id="onboarding-stage" class="stage onboarding-stage"></div>
+  <section class="onboarding-copy" aria-live="polite">
+    <span class="onboarding-step" id="onboarding-step">1 of 3</span>
+    <h1 id="onboarding-title">Make one connection.</h1>
+    <p id="onboarding-message">Drag from one node to a neighboring node.</p>
+    <button class="onboarding-next" id="onboarding-next" hidden>Show me 3D${icon("right")}</button>
+  </section>
+  <button class="onboarding-skip" id="onboarding-skip">Skip tutorial</button>
 </main>
 <div id="toast" class="status-toast" role="status" aria-live="polite"></div>
 <div id="node-announcement" class="sr-only" aria-live="polite"></div>
@@ -240,6 +254,12 @@ try {
     onStrokeStart: onStrokeStart,
     onStrokeEdge: onStrokeEdge,
     onStrokeEnd: onStrokeEnd,
+    onRotate: () => {
+      if (mode === "onboarding" && onboardingStep === 2) {
+        onboardingStep = 3;
+        renderOnboarding();
+      }
+    },
     onViewChange: () => {
       if (mode === "playing") persist();
     },
@@ -306,6 +326,7 @@ function persist() {
         settings,
         sound: soundEnabled,
         music: musicEnabled,
+        onboardingCompleted,
         melodyStep,
         screen: mode,
         game: (puzzle || savedPuzzle)?.serialize() ?? null,
@@ -469,9 +490,88 @@ function onDoubleTap(id: number) {
         "The neighboring nodes have no room for another connection.",
     );
 }
+function renderOnboarding() {
+  const copy = [
+    {
+      step: "1 of 3",
+      title: "Make one connection.",
+      message: "Drag from one node to a neighboring node.",
+      action: null,
+    },
+    {
+      step: "2 of 3",
+      title: "Clear every dot.",
+      message: "Join every node into one network. Every dot needs a connection, so use every available connection.",
+      action: "Show me 3D",
+    },
+    {
+      step: "3 of 3",
+      title: "There is another side.",
+      message: "In 3D, drag empty space to rotate the puzzle.",
+      action: null,
+    },
+    {
+      step: "Done",
+      title: "You’re ready.",
+      message: "Turn the puzzle, follow the dots, and bring it all together.",
+      action: "Start connecting",
+    },
+  ][onboardingStep];
+  el("onboarding-step").textContent = copy.step;
+  el("onboarding-title").textContent = copy.title;
+  el("onboarding-message").textContent = copy.message;
+  const next = el<HTMLButtonElement>("onboarding-next");
+  next.hidden = !copy.action;
+  next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
+}
+function finishOnboarding() {
+  onboardingCompleted = true;
+  showOnboarding = false;
+  onStrokeEnd(false);
+  puzzle = null;
+  selected = null;
+  mode = "home";
+  app.className = "home";
+  moveCanvas("home-stage");
+  updateOptions();
+  persist();
+  el("start-button").focus({ preventScroll: true });
+}
+function startOnboarding() {
+  if (demoFrame) cancelAnimationFrame(demoFrame);
+  demoFrame = 0;
+  demo.stop();
+  puzzle = new Puzzle({ size: 3, depth: 1, difficulty: "easy", seed: 17 });
+  selected = null;
+  onboardingStep = 0;
+  mode = "onboarding";
+  app.className = "onboarding";
+  moveCanvas("onboarding-stage");
+  scene.setPuzzle(puzzle);
+  scene.setInteractive(true);
+  renderOnboarding();
+}
+function showOnboarding3d() {
+  if (mode !== "onboarding" || onboardingStep !== 1) return;
+  onboardingStep = 2;
+  puzzle = new Puzzle({ size: 3, depth: 3, difficulty: "easy", seed: 17 });
+  scene.setPuzzle(puzzle);
+  scene.setInteractive(true);
+  renderOnboarding();
+}
 function onStrokeStart(id: number) {
-  if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]"))
+  if (!puzzle || document.querySelector("dialog[open]"))
     return;
+  if (mode === "onboarding") {
+    if (onboardingStep !== 0) return;
+    onStrokeEnd(false);
+    strokePuzzle = puzzle;
+    strokeChanged = false;
+    strokeEdges.clear();
+    puzzle.beginBatch();
+    return;
+  }
+  if (mode !== "playing") return;
   onStrokeEnd();
   strokePuzzle = puzzle;
   strokeChanged = false;
@@ -498,6 +598,10 @@ function onStrokeEdge(a: number, b: number): boolean {
   if (!result.changed) return false;
   strokeEdges.add(key);
   strokeChanged = true;
+  if (mode === "onboarding") {
+    scene.refresh();
+    return true;
+  }
   selectNode(b);
   tone(puzzle.edges.length > count ? "connect" : "disconnect");
   updateGame();
@@ -513,6 +617,13 @@ function onStrokeEnd(showCompletion = true) {
   strokeEdges.clear();
   if (active === puzzle) {
     selectNode(null);
+    if (mode === "onboarding") {
+      if (changed && onboardingStep === 0) {
+        onboardingStep = 1;
+        renderOnboarding();
+      }
+      return;
+    }
     if (changed) {
       updateGame(showCompletion);
     } else if (showCompletion) maybeComplete();
@@ -688,6 +799,11 @@ function startFresh() {
 }
 el("start-button").addEventListener("click", startFresh);
 el("resume-button").addEventListener("click", () => startGame(true));
+el("onboarding-skip").addEventListener("click", finishOnboarding);
+el("onboarding-next").addEventListener("click", () => {
+  if (onboardingStep === 1) showOnboarding3d();
+  else if (onboardingStep === 3) finishOnboarding();
+});
 el("home-button").addEventListener("click", () => {
   if (mode === "playing") goHome();
 });
@@ -971,7 +1087,8 @@ updateSound();
 updateMusic();
 if (document.hidden) ambientAudio.suspend();
 startCompletionTracking();
-if (resumeOnLoad) startGame(true);
+if (showOnboarding) startOnboarding();
+else if (resumeOnLoad) startGame(true);
 else updateOptions();
 mountSponsorship({
   beforeOpen: () => {
