@@ -265,18 +265,10 @@ const demo = new HomeDemo(scene, kind => {
   }
 }, () => soundEnabled && !demoSuspended() ? gameAudio.getCompletionDurationMs(demoSoundOptions("complete")) : 0);
 let activeMelody = getConfig().sound.connectionMelody;
-let activeDemoTiming = `${getConfig().demo.timingMode}:${getConfig().demo.tempoBpm}`;
-let activeTempoBpm = getConfig().demo.tempoBpm;
 subscribeConfig(config => {
   scene.setConfig(config);
   demo.setConfig(config);
   gameAudio.setConfig(config.sound);
-  const demoTiming = `${config.demo.timingMode}:${config.demo.tempoBpm}`;
-  if (activeDemoTiming !== demoTiming) {
-    if (mode === "home" || activeTempoBpm !== config.demo.tempoBpm) gameAudio.stop();
-    activeDemoTiming = demoTiming;
-    activeTempoBpm = config.demo.tempoBpm;
-  }
   ambientAudio.setVolume(config.sound.ambientVolume);
   updateMusic();
   if (activeMelody !== config.sound.connectionMelody) {
@@ -374,7 +366,6 @@ function limitNewPuzzleSize() {
 }
 function updateOptions(animateShape = false) {
   limitNewPuzzleSize();
-  gameAudio.stop();
   document
     .querySelectorAll<HTMLButtonElement>("[data-size]")
     .forEach((button) => {
@@ -428,7 +419,6 @@ function onTap(id: number): (() => void) | void {
   return () => {
     if (puzzle === active) {
       restore();
-      if (melodyStep !== restoreMelodyStep) gameAudio.stop();
       melodyStep = restoreMelodyStep;
     }
   };
@@ -585,7 +575,6 @@ function startGame(resume = false) {
   if (demoFrame) cancelAnimationFrame(demoFrame);
   demoFrame = 0;
   demo.stop();
-  gameAudio.stop();
   onStrokeEnd();
   const resumedPuzzle = resume ? savedPuzzle : null;
   if (!resumedPuzzle) limitNewPuzzleSize();
@@ -725,10 +714,7 @@ el("music-toggle").addEventListener("click", event => {
 for (const event of ["pointerdown", "keydown"])
   document.addEventListener(event, input => {
     if (!input.isTrusted) return;
-    if (mode === "home") {
-      demo.cancelPendingSound();
-      gameAudio.stop();
-    }
+    // A gesture may unlock audio, but must never cut off a note already playing.
     gameAudio.unlock();
     if (!document.hidden) ambientAudio.unlock();
   }, { capture: true });
@@ -751,7 +737,6 @@ document.addEventListener("visibilitychange", () => {
 });
 el("demo-toggle").addEventListener("click", () => {
   demo.togglePaused();
-  if (demo.paused) gameAudio.stop();
   el("demo-toggle").innerHTML = icon(demo.paused ? "play" : "pause");
   const label = demo.paused ? "Resume demo" : "Pause demo";
   el("demo-toggle").setAttribute("aria-label", label);
@@ -791,7 +776,6 @@ el("restart-button").addEventListener("click", () => {
     puzzle?.reset();
     scene.resetView();
     melodyStep = 0;
-    gameAudio.stop();
     selectNode(null);
     updateGame();
     return;
@@ -803,7 +787,6 @@ el("restart-button").addEventListener("click", () => {
     () => {
       puzzle?.reset();
       melodyStep = 0;
-      gameAudio.stop();
       selectNode(null);
       updateGame();
       toast("A fresh start on the same puzzle.");
