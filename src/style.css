@@ -1063,6 +1063,20 @@ a {
 .playing .header-actions {
   gap: 16px;
 }
+@media (min-width: 1200px) {
+  .playing .game-header-info {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .playing .game-activity {
+    position: static;
+    clip: auto;
+    flex: 0 0 auto;
+    margin-left: auto;
+    overflow: visible;
+  }
+}
 @media (max-height: 700px) {
   .onboarding-main { padding-bottom: max(205px, calc(176px + env(safe-area-inset-bottom))); }
   .onboarding-copy h2 { font-size: 28px; }
