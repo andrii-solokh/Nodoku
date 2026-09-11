@@ -47,7 +47,7 @@ const icon = (name: string) =>
 const complexityIcon = (level: number) =>
   `<svg class="complexity-icon" viewBox="0 0 40 20" aria-hidden="true"><path class="complexity-track" d="M6 10h28"/>${level > 1 ? `<path class="complexity-link" d="M6 10h${(level - 1) * 14}"/>` : ""}${[1, 2, 3].map(dot => `<circle class="complexity-dot${dot <= level ? " filled" : ""}" cx="${6 + (dot - 1) * 14}" cy="10" r="3.5"/>`).join("")}</svg>`;
 const logo =
-  '<svg viewBox="0 0 34 34" aria-hidden="true"><path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3"/><g fill="#8270bd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g><circle cx="26" cy="26" r="5" fill="#a0beaf"/></svg>';
+  '<svg viewBox="0 0 34 34" aria-hidden="true"><path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3"/><g fill="#a9cbbd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g><circle cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/></svg>';
 const labels: Record<Difficulty, string> = {
   easy: "Gentle",
   medium: "Focused",

@@ -58,5 +58,7 @@ test("homepage ships a motion-safe branded loading screen", async () => {
   assert.match(html, /prefers-reduced-motion: reduce/);
   assert.match(html, /M8 9h18v17H8Z/);
   assert.match(app, /function finishLoading\(\)/);
+  assert.match(app, /g fill="#a9cbbd"/);
+  assert.match(app, /fill="#fcfaf5" stroke="#d7d2df"/);
   assert.match(app, /loadingScreen\.classList\.add\("is-ready"\)/);
 });
