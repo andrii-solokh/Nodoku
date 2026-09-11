@@ -1543,3 +1543,8 @@ TODO / Note
 ## 2026-09-11 — Optically aligned wordmark
 - Wrapped the Nodoku wordmark and shifted its visible lettering upward slightly to align it optically with the square node mark.
 - Verified with a compact header capture, production build, unit suite, and Playwright game client.
+
+## 2026-09-11 — Category statistics histograms
+- Replaced the Popular grids and Popular difficulties lists with proportional completed-puzzle histograms, while keeping each category label and exact total visible.
+- Used distinct grid and difficulty colors; each bar preserves its scale if categories wrap on smaller screens.
+- Verified with the production build, 192 unit tests, direct mocked desktop and mobile browser captures, and the Playwright game client.

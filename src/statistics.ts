@@ -105,13 +105,24 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
       list.appendChild(empty);
       return;
     }
-    for (const entry of [...entries].sort((a, b) => b.count - a.count)) {
+    const sorted = [...entries].sort((a, b) => b.count - a.count);
+    const maximum = Math.max(1, ...sorted.map(entry => entry.count));
+    for (const entry of sorted) {
       const row = document.createElement('li');
+      row.setAttribute('aria-label', `${entry.label}: ${format.format(entry.count)} completed puzzles`);
+      const bar = document.createElement('span');
+      bar.className = 'statistics-ranking-bar';
+      bar.style.setProperty('--ranking-height', `${entry.count / maximum * 100}%`);
+      bar.setAttribute('aria-hidden', 'true');
       const label = document.createElement('span');
+      label.className = 'statistics-ranking-label';
       label.textContent = entry.label;
       const value = document.createElement('strong');
       value.textContent = format.format(entry.count);
-      row.append(label, value);
+      const meta = document.createElement('span');
+      meta.className = 'statistics-ranking-meta';
+      meta.append(label, value);
+      row.append(bar, meta);
       list.appendChild(row);
     }
   }

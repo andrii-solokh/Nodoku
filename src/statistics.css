@@ -45,11 +45,14 @@
 .statistics-page th { color: #62506f; }
 .statistics-page th:first-child, .statistics-page td:first-child { text-align: left; white-space: nowrap; }
 .statistics-breakdowns { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 22px; }
-.statistics-ranking { margin: 16px 0 0; padding: 0; list-style: none; }
-.statistics-ranking li { display: flex; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid #e4dfeb; font-size: 14px; }
-.statistics-ranking li:last-child { border-bottom: 0; }
-.statistics-ranking strong { font-weight: 450; color: #796491; font-variant-numeric: tabular-nums; }
-.statistics-ranking li.statistics-empty { color: #8b7b94; font-size: 13px; line-height: 1.6; }
+.statistics-ranking { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); align-items: stretch; gap: 14px; margin: 18px 0 0; padding: 0; list-style: none; }
+.statistics-ranking li { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 9px; min-width: 0; height: 166px; font-size: 13px; }
+.statistics-ranking-bar { align-self: end; display: block; height: var(--ranking-height); min-height: 5px; border-radius: 7px 7px 2px 2px; background: #ad9dce; box-shadow: inset 0 1px #ffffff50; }
+.statistics-breakdowns > :last-child .statistics-ranking-bar { background: #9fbcad; }
+.statistics-ranking-meta { display: flex; align-items: start; justify-content: space-between; gap: 7px; min-height: 34px; color: #6f627d; line-height: 1.3; }
+.statistics-ranking-label { overflow-wrap: anywhere; }
+.statistics-ranking strong { flex: 0 0 auto; font-weight: 500; color: #796491; font-variant-numeric: tabular-nums; }
+.statistics-ranking li.statistics-empty { display: block; grid-column: 1 / -1; height: auto; color: #8b7b94; font-size: 13px; line-height: 1.6; }
 .statistics-tracking { margin: 19px 0 6px; color: #93869d; font-size: 12px; line-height: 1.6; }
 .statistics-definitions { margin: 13px 0 34px; }
 .statistics-definitions dl { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 13px 24px; padding: 15px 0; line-height: 1.6; }
