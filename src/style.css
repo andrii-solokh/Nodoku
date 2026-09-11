@@ -762,46 +762,17 @@ a {
 .music-credit a { text-underline-offset: 3px; }
 .music-credit a:hover { color: var(--purple); }
 .music-source { font-size: 13px; color: var(--purple); }
-.help-demo {
-  width: 100%;
-  height: auto;
-  margin: 8px auto 24px;
-  max-width: 300px;
-}
-.help-intro strong {
-  display: block;
-  margin-top: 5px;
+.help-summary { margin-bottom: 6px !important; }
+.dialog .help-rule {
+  margin: 0 0 22px;
   color: var(--ink);
+  font-size: 16px;
   font-weight: 500;
+  line-height: 1.45;
 }
-.dialog .help-goal {
-  margin-top: 0;
-  color: var(--ink);
-}
-.help-list {
-  display: grid;
-  gap: 14px;
-  padding: 0;
-  list-style: none;
-  margin: 0 0 24px;
-}
-.help-list li {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-.help-list svg {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  color: var(--purple);
-  margin-top: 1px;
-}
-.help-list span {
-  color: #8b7c98;
-  font-size: 13px;
-  line-height: 1.6;
-  display: block;
+.dialog .help-instructions {
+  margin: 0 0 26px;
+  color: #7d718c;
 }
 .keyboard-help {
   color: var(--ink);

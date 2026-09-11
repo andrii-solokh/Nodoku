@@ -1496,3 +1496,7 @@ TODO / Note
 - Added a first-paint Nodoku loader that reuses the real inset-node mark. Its three links draw and four nodes pulse in sequence above “Connecting the dots,” then it dissolves only after two animation frames, when the real board is available.
 - The loader has no dependencies outside the document head, respects reduced motion, keeps the pre-rendered page available to crawlers, and removes itself after the transition so it cannot block input. Focused metadata coverage added.
 - Visual browser checks inspected the loader and the completed game handoff. The game starts normally after the fade with no browser errors. `npm test` passes 191 tests and the production build passes.
+
+2026-09-11 Simplified help dialog
+- Removed the decorative node example, arrow, connection/orbit logos, and repeated explanation from “How to play.” The dialog now has the rule, a concrete three-dot example in text, one concise instruction for connecting/winning/rotating, and “Got it.”
+- Inspected the new dialog in a portrait browser capture; opening it remains reflected in game state and generates no browser errors. `npm test` passes 191 tests and the production build passes.
