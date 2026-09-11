@@ -6,11 +6,12 @@ const output = path.resolve("static/og-image.png");
 const sceneSource = path.resolve("static/og-scene.png");
 await mkdir(path.dirname(output), { recursive: true });
 
-// This is a Playwright capture of the actual Three.js home board, rather than a
-// hand-drawn stand-in. Refresh it after a material or camera redesign.
+// This transparent Playwright capture shows the actual Three.js home board in
+// a partly solved state, rather than using a hand-drawn stand-in. Refresh it
+// after a material or camera redesign.
 const scene = await sharp(await readFile(sceneSource))
   .extract({ left: 400, top: 18, width: 400, height: 440 })
-  .resize({ width: 590, height: 630, fit: "contain", background: "#eeedf6" })
+  .resize({ width: 590, height: 630, fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
   .png()
   .toBuffer();
 
@@ -39,9 +40,6 @@ const svg = `
   <text x="74" y="245" fill="#302b48" font-family="Outfit, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="-3.2">3D spatial</text>
   <text x="74" y="308" fill="#302b48" font-family="Outfit, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="-3.2">reasoning puzzle.</text>
   <text x="78" y="388" fill="#746d87" font-family="Outfit, Arial, sans-serif" font-size="26" font-weight="500">Connect every node.</text>
-  <text x="78" y="425" fill="#746d87" font-family="Outfit, Arial, sans-serif" font-size="26" font-weight="500">Complete one network.</text>
-  <rect x="74" y="504" width="313" height="45" rx="22.5" fill="#e3dcf4"/>
-  <text x="98" y="533" fill="#6453a7" font-family="Outfit, Arial, sans-serif" font-size="17" font-weight="700" letter-spacing=".8">A TACTILE 3D PUZZLE</text>
 </svg>`;
 
 await sharp({
