@@ -40,7 +40,8 @@
     "background": "#eeedf6",
     "nodeColor": "#fcfaf5",
     "connectionColor": "#8170c9",
-    "completedColor": "#a9cbbd"
+    "completedColor": "#a9cbbd",
+    "accentFadeMs": 2000
   },
   "sound": {
     "connectionMelody": "odeToJoy",

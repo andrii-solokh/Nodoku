@@ -469,6 +469,7 @@ function onNode(id: number) {
     return;
   }
   tone(puzzle.edges.length > count ? "connect" : "disconnect");
+  scene.markChangeTarget(id);
   selectNode(null);
   updateGame();
 }
@@ -478,8 +479,11 @@ function onDoubleTap(id: number) {
   const result = puzzle.toggleNode(id);
   el("toast").textContent = "";
   selectNode(null);
-  if (result.changed) tone(result.removed ? "disconnect" : "connect", result.count,
-    result.removed ? undefined : getConfig().demo.tempoBpm);
+  if (result.changed) {
+    tone(result.removed ? "disconnect" : "connect", result.count,
+      result.removed ? undefined : getConfig().demo.tempoBpm);
+    scene.markChangeTarget(id);
+  }
   updateGame();
   if (!result.changed)
     toast(
@@ -595,6 +599,7 @@ function onStrokeEdge(a: number, b: number): boolean {
   if (!result.changed) return false;
   strokeEdges.add(key);
   strokeChanged = true;
+  scene.markChangeTarget(b);
   if (mode === "onboarding") {
     scene.refresh();
     return true;
@@ -762,7 +767,10 @@ function hint() {
     return;
   }
   selectNode(null);
-  if (result.edge) scene.focusNode(result.edge[0]);
+  if (result.edge) {
+    scene.markChangeTarget(result.edge[1]);
+    scene.focusNode(result.edge[0]);
+  }
   tone(result.removed ? "disconnect" : "connect");
   updateGame();
   toast(

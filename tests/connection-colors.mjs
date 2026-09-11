@@ -17,7 +17,7 @@ const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text(
 const savedGame = page => page.evaluate(() => JSON.parse(localStorage.getItem('nodoku.astra.v1')).game);
 const key = edge => [...edge].sort((a, b) => a - b).join(':');
 const sortedEdges = edges => edges.map(key).sort();
-const advance = (page, ms = 1200) => page.evaluate(ms => window.advanceTime(ms), ms);
+const advance = (page, ms = 2400) => page.evaluate(ms => window.advanceTime(ms), ms);
 const rodFor = (current, edge) => current.connectionColors.find(rod => key(rod.edge) === key(edge));
 const nodeFor = (current, id) => current.nodes.find(node => node.id === id);
 const hex = color => color.replace('#', '').toLowerCase();
@@ -159,7 +159,7 @@ try {
   assert.equal(reverse.endNode, 0);
   assert.equal(reverse.startColor, accent, 'the new connection starts at the accent color');
   assert.equal(reverse.endColor, accent, 'the new connection starts at the accent color');
-  assert.deepEqual(current.colorTransitions.nodes.map(pulse => pulse.nodeId).sort((a, b) => a - b), [0, 1], 'only changed endpoints pulse');
+  assert.deepEqual(current.colorTransitions.nodes.map(pulse => pulse.nodeId), [0], 'only the target endpoint pulses');
   assert.ok(current.colorTransitions.rods.some(pulse => key(pulse.edge) === '0:1'), 'the new connection pulses');
   await advance(page, 200);
   current = await state(page);

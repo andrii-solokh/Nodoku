@@ -90,8 +90,9 @@ export class BoardScene {
   private connectionGrowth = new Map<string, Growth>();
   private nodeColorPulses = new Map<number, NodeColorPulse>();
   private rodColorPulses = new Map<string, RodColorPulse>();
+  private colorPulseTargets = new Set<number>();
   private config: SceneConfig = {
-    rotationMs: 320, connectionMs: 420, connectionEasing: "easeOut",
+    rotationMs: 320, connectionMs: 420, accentFadeMs: 2000, connectionEasing: "easeOut",
     dragMaxLength: 1.15, dragThickness: 1.15, dragMinThickness: .3, dragTipSize: .05,
     dragFollowMs: 90, dragMagnetRange: .45, dragMagnetStrength: .7, dragMagnetResponseMs: 120,
     dragReturnMs: 520, dragElasticity: .55,
@@ -341,6 +342,7 @@ export class BoardScene {
 
   setPuzzle(puzzle: Puzzle, preview = false, animateShape = false): void {
     this.clearColorPulses();
+    this.colorPulseTargets.clear();
     this.gumPulses.clear();
     this.updateGumNodes();
     this.gumDegrees.clear();
@@ -583,6 +585,10 @@ export class BoardScene {
       this.board.add(object);
     }
     return decorations;
+  }
+
+  markChangeTarget(id: number): void {
+    this.colorPulseTargets.add(id);
   }
 
   setSelection(id: number | null): void {
@@ -948,7 +954,7 @@ export class BoardScene {
   }
 
   private beginNodeColorPulse(id: number): void {
-    if (this.reducedMotion || this.config.connectionMs <= 0) return;
+    if (this.reducedMotion || this.config.accentFadeMs <= 0) return;
     const mesh = this.nodeMeshes.get(id);
     if (!mesh) return;
     const existing = this.nodeColorPulses.get(id);
@@ -963,13 +969,13 @@ export class BoardScene {
     material.color.set(this.config.connectionColor);
     mesh.material = material;
     this.nodeColorPulses.set(id, {
-      elapsed: 0, duration: this.config.connectionMs, material,
+      elapsed: 0, duration: this.config.accentFadeMs, material,
       target: targetMaterial.color.clone(), targetMaterial,
     });
   }
 
   private beginRodColorPulse(rod: Rod): void {
-    if (this.reducedMotion || this.config.connectionMs <= 0) return;
+    if (this.reducedMotion || this.config.accentFadeMs <= 0) return;
     const key = rod.edge.join(":");
     this.endRodColorPulse(key);
     const geometry = this.connectionGeometry(rod).clone();
@@ -980,7 +986,7 @@ export class BoardScene {
       colors.setXYZ(index, accent.r, accent.g, accent.b);
     colors.needsUpdate = true;
     rod.mesh.geometry = geometry;
-    this.rodColorPulses.set(key, { elapsed: 0, duration: this.config.connectionMs, geometry, target });
+    this.rodColorPulses.set(key, { elapsed: 0, duration: this.config.accentFadeMs, geometry, target });
   }
 
   private advanceColorPulses(ms: number): void {
@@ -1079,11 +1085,15 @@ export class BoardScene {
       this.syncDots(node.id);
     }
     this.updateMaterials();
-    if (animateConnections && !this.reducedMotion && this.config.connectionMs > 0) {
-      for (const id of changed) this.beginNodeColorPulse(id);
-      for (const rod of this.rodMeshes.values())
-        if (added.has(rod.edge.join(":")) || changed.has(rod.startNode) || changed.has(rod.endNode))
-          this.beginRodColorPulse(rod);
+    const targets = new Set(this.colorPulseTargets);
+    this.colorPulseTargets.clear();
+    if (animateConnections && !this.reducedMotion && this.config.accentFadeMs > 0) {
+      for (const key of added) {
+        const rod = this.rodMeshes.get(key);
+        if (rod && targets.size === 0) targets.add(rod.endNode);
+        if (rod) this.beginRodColorPulse(rod);
+      }
+      for (const id of targets) if (changed.has(id)) this.beginNodeColorPulse(id);
     }
     this.render();
     if (this.wantsFrames) this.ensureAnimationFrame(); else this.stopAnimationFrame();
