@@ -148,6 +148,8 @@ try {
   assert.equal(await copy(page).isVisible(), true);
   for (const [role, name] of [
     ['link', 'Share on X (opens in a new tab)'],
+    ['link', 'Open Instagram to share (opens in a new tab)'],
+    ['link', 'Open TikTok to share (opens in a new tab)'],
     ['link', 'Share on WhatsApp (opens in a new tab)'],
     ['link', 'Share on Telegram (opens in a new tab)'],
     ['button', 'Share using your device'],
@@ -157,13 +159,19 @@ try {
   await checkLayout(page, 'desktop');
   await page.screenshot({ path: `${out}/completion-desktop.png` });
   await page.setViewportSize({ width: 320, height: 568 });
-  await checkLayout(page, '320px with five share icons');
+  await checkLayout(page, '320px with seven share icons');
   await page.screenshot({ path: `${out}/completion-320-icons.png` });
   await page.setViewportSize({ width: 1200, height: 850 });
 
-  const destinations = { x: ['https://x.com/intent/tweet', { text: expected.text, url: expected.url }], whatsapp: ['https://wa.me/', { text: expected.message }], telegram: ['https://t.me/share/url', { url: expected.url, text: expected.text }] };
+  const destinations = {
+    x: ['https://x.com/intent/tweet', { text: expected.text, url: expected.url }],
+    instagram: ['https://www.instagram.com/', {}],
+    tiktok: ['https://www.tiktok.com/', {}],
+    whatsapp: ['https://wa.me/', { text: expected.message }],
+    telegram: ['https://t.me/share/url', { url: expected.url, text: expected.text }],
+  };
   const intercepted = [];
-  await page.context().route(/^https:\/\/(x\.com|wa\.me|t\.me)\//, route => {
+  await page.context().route(/^https:\/\/(x\.com|www\.instagram\.com|www\.tiktok\.com|wa\.me|t\.me)\//, route => {
     intercepted.push(route.request().url());
     return route.fulfill({ contentType: 'text/html', body: '<title>Intercepted share destination</title>' });
   });
@@ -182,7 +190,7 @@ try {
     assert.equal(popup.url(), href);
     await popup.close();
   }
-  assert.equal(intercepted.length, 3, 'All social navigations are intercepted without contacting a platform');
+  assert.equal(intercepted.length, 5, 'All social navigations are intercepted without contacting a platform');
 
   await page.evaluate(() => { window.__sharing.nativeMode = 'abort'; });
   await native(page).click();
@@ -246,7 +254,7 @@ try {
   await checkLayout(unsupported, 'desktop without native Share');
   await unsupported.screenshot({ path: `${out}/completion-no-native.png` });
   await unsupported.setViewportSize({ width: 320, height: 568 });
-  await checkLayout(unsupported, '320px with four share icons');
+  await checkLayout(unsupported, '320px with six share icons');
   await unsupported.screenshot({ path: `${out}/completion-320-no-native.png` });
   await copy(unsupported).click();
   await fallback(unsupported).waitFor({ state: 'visible' });
@@ -257,7 +265,7 @@ try {
   assert.equal((await state(unsupported)).mode, 'home');
   await unsupported.close();
   assert.deepEqual(errors, [], 'No browser or console errors');
-  console.log('Passed: accessible share icons and 44px targets, completed flat/cube board details, clean invite URLs, encoded/intercepted social destinations, native success/cancel/failure, clipboard success/rejection/unavailable, selected fallback, stale async results, next/home, desktop and 320px four/five-icon layouts. No real shares or messages sent.');
+  console.log('Passed: accessible share icons and 44px targets, completed flat/cube board details, clean invite URLs, encoded/intercepted social destinations, native success/cancel/failure, clipboard success/rejection/unavailable, selected fallback, stale async results, next/home, desktop and 320px six/seven-icon layouts. No real shares or messages sent.');
 } finally {
   await browser.close();
   await fs.writeFile(`${out}/errors.json`, JSON.stringify(errors, null, 2));
