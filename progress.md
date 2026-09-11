@@ -1548,3 +1548,8 @@ TODO / Note
 - Replaced the Popular grids and Popular difficulties lists with proportional completed-puzzle histograms, while keeping each category label and exact total visible.
 - Used distinct grid and difficulty colors; each bar preserves its scale if categories wrap on smaller screens.
 - Verified with the production build, 192 unit tests, direct mocked desktop and mobile browser captures, and the Playwright game client.
+
+## 2026-09-11 — Sponsor-report visibility
+- Connected the private placement-report section to the Studio sponsor-placement toggle.
+- Turning sponsor placements off now hides the report and clears any entered private code; restoring placements makes the report available again.
+- Verified with the production build, 192 unit tests, a mocked browser check, and the Playwright game client.

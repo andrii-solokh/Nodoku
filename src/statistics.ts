@@ -59,6 +59,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
   let active: AbortController | null = null;
   let reportActive: AbortController | null = null;
   let reportReceipt = '';
+  let sponsorsVisible = document.documentElement.dataset.sponsorsEnabled !== 'false';
   let returnFocus: HTMLElement | null = null;
   let previousHash = '';
 
@@ -192,6 +193,11 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
       if (reportActive === controller && dialog.open) el('statistics-report-status').textContent = 'We could not load that report. Check your sponsor code and try again.';
     } finally { window.clearTimeout(timeout); if (reportActive === controller) { reportActive = null; submit.disabled = false; } }
   }
+  function setSponsorshipVisible(enabled: boolean) {
+    sponsorsVisible = enabled;
+    el('statistics-report').hidden = !enabled;
+    if (!enabled) clearReport();
+  }
   function show(report = false) {
     if (!dialog.open) {
       returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -201,7 +207,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
       dialog.scrollTop = 0;
       void load();
     }
-    if (report) { el('statistics-report').scrollIntoView(); el<HTMLInputElement>('statistics-report-code').focus(); }
+    if (report && sponsorsVisible) { el('statistics-report').scrollIntoView(); el<HTMLInputElement>('statistics-report-code').focus(); }
   }
   function syncLocation() {
     if (location.hash === '#statistics') show();
@@ -243,6 +249,11 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
   });
   el('statistics-retry').addEventListener('click', () => void load());
   el('statistics-report-form').addEventListener('submit', event => { event.preventDefault(); reportReceipt = el<HTMLInputElement>('statistics-report-code').value.trim(); if (reportReceipt) void loadReport(); });
+  window.addEventListener('nodoku:sponsorship-config', event => {
+    const detail = event instanceof CustomEvent ? event.detail : null;
+    setSponsorshipVisible(!detail || typeof detail !== 'object' || (detail as { enabled?: unknown }).enabled !== false);
+  });
+  setSponsorshipVisible(sponsorsVisible);
   window.addEventListener('popstate', syncLocation);
   window.addEventListener('hashchange', syncLocation);
   window.addEventListener('pagehide', () => { active?.abort(); active = null; clearReport(); });

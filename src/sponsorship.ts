@@ -22,6 +22,8 @@ export function setSponsorshipConfig(config: SponsorshipConfig): void {
     showOnHome: config.showOnHome !== false,
     showInGame: config.showInGame !== false,
   };
+  document.documentElement.dataset.sponsorsEnabled = String(sponsorshipConfig.enabled);
+  window.dispatchEvent(new CustomEvent('nodoku:sponsorship-config', { detail: { enabled: sponsorshipConfig.enabled } }));
   applySponsorshipConfig?.();
 }
 
