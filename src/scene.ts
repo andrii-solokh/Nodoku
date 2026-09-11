@@ -21,7 +21,7 @@ type GestureCallbacks = {
   onViewChange?: () => void;
 };
 
-type ScreenNode = { id: number; x: number; y: number; visible: boolean; pickable: boolean };
+type ScreenNode = { id: number; x: number; y: number; radius: number; visible: boolean; pickable: boolean };
 type PickFace = { axis: "x" | "y" | "z"; coordinate: number };
 type NodeTap = {
   id: number;
@@ -1273,7 +1273,7 @@ export class BoardScene {
     this.zoomLevel = THREE.MathUtils.clamp(
       this.zoomLevel * Math.exp(delta),
       0.65,
-      1.8,
+      this.maximumZoom(this.orientation),
     );
     this.updateCamera();
     this.render();
@@ -1305,7 +1305,7 @@ export class BoardScene {
     }
     this.cancelMotion();
     this.orientation.copy(orientation);
-    this.zoomLevel = THREE.MathUtils.clamp(view.zoom, 0.65, 1.8);
+    this.zoomLevel = THREE.MathUtils.clamp(view.zoom, 0.65, this.maximumZoom(orientation));
     this.updateCamera();
     this.render();
     return true;
@@ -1395,7 +1395,7 @@ export class BoardScene {
     }
     if (this.shapeTransition) {
       const distance = Math.max(
-        this.isFlat ? this.minimumDistance(this.shapeTransition.toOrientation) : this.boardRadius + this.camera.near + .1,
+        this.minimumDistance(this.shapeTransition.toOrientation),
         this.fitDistance / this.zoomLevel,
       );
       // Haze distances are measured from the camera. Resize moves the fitted
@@ -1427,13 +1427,26 @@ export class BoardScene {
     return distance * 1.025;
   }
 
+  /**
+   * Zoom is expressed relative to the whole-board fit distance. The closest
+   * safe distance changes with the current perspective, aspect ratio, node
+   * size and floating amplitude, so a fixed multiplier can crop a large cube.
+   */
+  private maximumZoom(orientation: THREE.Quaternion): number {
+    if (!this.puzzle || !Number.isFinite(this.fitDistance) || this.fitDistance <= 0)
+      return 1.8;
+    return THREE.MathUtils.clamp(
+      this.fitDistance / this.minimumDistance(orientation),
+      0.65,
+      1.8,
+    );
+  }
+
   private updateCamera(): void {
     const distance = this.shapeTransition
       ? THREE.MathUtils.lerp(this.shapeTransition.fromDistance, this.shapeTransition.toDistance, this.shapeProgress())
       : Math.max(
-      this.isFlat
-        ? this.minimumDistance(this.orientation)
-        : this.boardRadius + this.camera.near + 0.1,
+      this.minimumDistance(this.orientation),
       this.fitDistance / this.zoomLevel,
     );
     this.camera.position.set(0, 0, distance).applyQuaternion(this.orientation);
@@ -1636,12 +1649,20 @@ export class BoardScene {
       const projected = position.clone().project(this.camera);
       const x = rect.left + ((projected.x + 1) / 2) * rect.width;
       const y = rect.top + ((1 - projected.y) / 2) * rect.height;
+      const edge = position.clone().add(
+        new THREE.Vector3(1, 0, 0)
+          .applyQuaternion(this.camera.quaternion)
+          .multiplyScalar(this.nodeRadius * this.nodeMeshes.get(id)!.scale.x),
+      ).project(this.camera);
+      const edgeX = rect.left + ((edge.x + 1) / 2) * rect.width;
+      const edgeY = rect.top + ((1 - edge.y) / 2) * rect.height;
       const inView = Math.abs(projected.x) <= 1 && Math.abs(projected.y) <= 1;
       const visible = inView && this.rayHit(x, y) === id;
       return {
         id,
         x,
         y,
+        radius: Math.hypot(edgeX - x, edgeY - y),
         visible,
         pickable: face
           ? inView && this.onFace(id, face) && this.hit(x, y, face) === id
