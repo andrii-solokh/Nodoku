@@ -245,15 +245,26 @@ try {
   await page.locator("#start-button").click();
   if ((await state(page)).dialog === "confirm-dialog")
     await page.locator("#confirm-button").click();
-  await page.locator('[data-rotate="up"]').click();
+  const flatInitial = await state(page);
+  assert.equal(await page.locator('.rotation-tools').isVisible(), false, 'flat boards hide rotation controls');
+  const flatBoard = await page.locator('#game-stage canvas').boundingBox();
+  const flatEmptyPoint = await emptyBoardPoint(page, flatInitial, flatBoard);
+  await page.mouse.move(flatEmptyPoint.x, flatEmptyPoint.y);
+  await page.mouse.down();
+  await page.mouse.move(flatEmptyPoint.x + 80, flatEmptyPoint.y + 55);
+  await page.mouse.up();
+  await settle(page);
+  await page.locator('#game-stage canvas').focus();
+  await page.keyboard.press('ArrowRight');
   await settle(page);
   s = await state(page);
   checkFace(s);
   assert.equal(
     axis(s.view.direction),
     axis(originalDirection),
-    "flat board never stops edge-on",
+    "flat board stays face-on after drag and keyboard rotation inputs",
   );
+  assert.deepEqual(s.view.up, flatInitial.view.up, 'flat board does not turn in-plane');
   await page.close();
   const desktopCube = await newPage({ viewport: { width: 1440, height: 960 } });
   await desktopCube.locator('[data-size="5"]').click();

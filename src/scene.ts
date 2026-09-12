@@ -1161,7 +1161,7 @@ export class BoardScene {
   }
 
   rotate(direction: TurnDirection): void {
-    if (this.shapeTransition) return;
+    if (this.shapeTransition || this.isFlat) return;
     this.interactionRevision++;
     // Use the destination of an active turn, so quick repeated taps accumulate.
     const from = this.motion?.target ?? this.orientation;
@@ -1301,11 +1301,9 @@ export class BoardScene {
     const length = Math.hypot(x, y, z, w);
     if (!Number.isFinite(length) || length < 1e-6 || length > 1e6) return false;
     const orientation = new THREE.Quaternion(x / length, y / length, z / length, w / length);
-    if (this.isFlat) {
-      // Flat boards support in-plane turns only, including a saved mid-drag angle.
-      if (Math.abs(orientation.x) > 1e-6 || Math.abs(orientation.y) > 1e-6) return false;
-      orientation.set(0, 0, orientation.z, orientation.w).normalize();
-    }
+    // Flat puzzles always resume from their fixed, face-on view. Older saves
+    // may contain an in-plane rotation from before Flat was view-locked.
+    if (this.isFlat) orientation.identity();
     this.cancelMotion();
     this.orientation.copy(orientation);
     this.zoomLevel = THREE.MathUtils.clamp(view.zoom, 0.65, this.maximumZoom(orientation));
@@ -2070,32 +2068,24 @@ export class BoardScene {
           this.followDragStrand(next);
           return;
         }
+        if (this.isFlat) return;
         this.cancelMotion();
         if (!this.rotated) this.gestures.onRotate?.();
         this.rotated = true;
         const dx = next.x - previous.x;
         const dy = next.y - previous.y;
-        if (this.isFlat) {
-          this.orientation.multiply(
-            new THREE.Quaternion().setFromAxisAngle(
-              new THREE.Vector3(0, 0, 1),
-              (dx - dy) * 0.007,
-            ),
-          );
-        } else {
-          this.orientation.multiply(
-            new THREE.Quaternion().setFromAxisAngle(
-              new THREE.Vector3(0, 1, 0),
-              -dx * 0.007,
-            ),
-          );
-          this.orientation.multiply(
-            new THREE.Quaternion().setFromAxisAngle(
-              new THREE.Vector3(1, 0, 0),
-              -dy * 0.007,
-            ),
-          );
-        }
+        this.orientation.multiply(
+          new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            -dx * 0.007,
+          ),
+        );
+        this.orientation.multiply(
+          new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(1, 0, 0),
+            -dy * 0.007,
+          ),
+        );
         this.orientation.normalize();
         this.updateCamera();
         this.render();

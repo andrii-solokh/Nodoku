@@ -1632,3 +1632,8 @@ TODO / Note
 - Replaced the unavailable daily-puzzle prompt with “Solve another puzzle” and renamed the exit action “Return home.”
 - Added browser coverage for both completion labels.
 - Verified with `npm run build` and `npm run test:share`.
+
+## 2026-09-12 — Fixed Flat view
+- Locked Flat boards to their face-on view: pointer drags, keyboard turns, toolbar turns, and legacy saved in-plane rotations no longer rotate them.
+- Hid the unavailable rotation controls and rotation shortcut in Flat mode.
+- Verified with `npm run build`, `npm test` (193 passing), `npm run test:camera`, and the web-game Playwright smoke check.

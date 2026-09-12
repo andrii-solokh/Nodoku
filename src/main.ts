@@ -757,7 +757,7 @@ function startGame(resume = false) {
   viewRotationTracked = false;
   gameStartedAt = performance.now();
   mode = "playing";
-  app.className = "playing";
+  app.className = `playing${puzzle.settings.depth === 1 ? " flat-playing" : ""}`;
   el("toast").textContent = "";
   const s = puzzle.settings;
   el("game-title").innerHTML =
@@ -1052,7 +1052,7 @@ document.addEventListener("keydown", (event) => {
   };
   if (rotations[key]) {
     event.preventDefault();
-    scene.rotate(rotations[key]);
+    if (puzzle.settings.depth !== 1) scene.rotate(rotations[key]);
   } else if (key === "z" && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();
     if (event.shiftKey) redo();
