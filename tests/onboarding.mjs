@@ -111,7 +111,14 @@ try {
   assert.equal(await page.locator('#completion-moment').isVisible(), true, 'The solved 2D lesson gets a completion beat before changing scenes');
   await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/2d-completion-moment.png' });
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '5 of 7');
-  assert.equal((await state(page)).nodes.length, 26, 'The next lesson switches to a 3D board');
+  let transition = await state(page);
+  assert.ok(transition.shapeTransition?.active, 'The flat tutorial board expands into the 3D lesson');
+  assert.equal(transition.shapeTransition.fromDepth, 1);
+  assert.equal(transition.shapeTransition.toDepth, 3);
+  await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/flat-to-3d-transition.png' });
+  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).shapeTransition === null);
+  transition = await state(page);
+  assert.equal(transition.nodes.length, 26, 'The next lesson switches to a 3D board');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Turn the puzzle.');
   assert.match(await page.locator('#onboarding-message').textContent(), /Swipe over the board, or use the direction controls/);
   assert.equal(await page.locator('#onboarding-turn-controls').isVisible(), true, 'The turn lesson exposes direction controls');

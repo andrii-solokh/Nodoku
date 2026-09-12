@@ -766,7 +766,9 @@ function showOnboarding3d() {
   if (mode !== "onboarding" || onboardingStep !== 3) return;
   onboardingStep = 4;
   puzzle = new Puzzle({ size: 3, depth: 3, difficulty: "easy", seed: 17 });
-  scene.setPuzzle(puzzle);
+  // Let the completed flat board open into the first 3D puzzle rather than
+  // replacing the scene in a single frame.
+  scene.setPuzzle(puzzle, false, true);
   scene.setInteractive(true);
   renderOnboarding();
 }

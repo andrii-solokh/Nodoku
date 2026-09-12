@@ -1772,3 +1772,9 @@ TODO / Note
 - Renamed the last onboarding action to “Finish tutorial”; it exits onboarding to the home screen instead of implying it starts a game.
 - Added browser coverage for the final label and preserved the existing completion-to-home flow check.
 - Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, `npm run test` (194 passing), and browser screenshots.
+
+## 2026-09-12 — Animated onboarding 2D-to-3D handoff
+- The solved flat tutorial board now morphs into the first 3D puzzle instead of being replaced in one frame. The existing shape transition spreads depth layers, fades entering nodes, and respects reduced-motion and the configured duration.
+- The onboarding browser flow asserts the active Flat-to-3D transition before waiting for the rotation lesson; captured the transition at `output/web-game/onboarding-auto-3d/flat-to-3d-transition.png`.
+- Fixed the deterministic shape-transition fixture to remove the production loading splash after freezing animation frames, allowing its manual animation clock to run.
+- Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, `npm run test:shape-transition`, `npm run test` (194 passing), and browser visual review.
