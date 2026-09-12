@@ -5,7 +5,7 @@ import { CONFIG_RULES, validateConfig } from "./config-schema";
 const TOKEN_KEY = "nodoku.admin-session.v1";
 type Snapshot = { config: GameConfig; revision: string };
 
-export async function mountAdmin(previewTutorial: () => void): Promise<void> {
+export async function mountAdmin(previewTutorial: () => void, previewSelection: () => void): Promise<void> {
   let token = "";
   const url = new URL(location.href);
   const fragment = new URLSearchParams(url.hash.slice(1));
@@ -63,6 +63,7 @@ export async function mountAdmin(previewTutorial: () => void): Promise<void> {
     const dragKeys = Object.keys(CONFIG_RULES.scene).filter(key => key.startsWith("drag"));
     const sections: { title: string; group: Group; keys: string[] }[] = [
       { title: "Gum materials", group: "scene", keys: gumKeys },
+      { title: "Selected node", group: "selection", keys: Object.keys(CONFIG_RULES.selection) },
       { title: "Tutorial visuals", group: "tutorial", keys: Object.keys(CONFIG_RULES.tutorial) },
       { title: "Drag feel", group: "scene", keys: dragKeys },
       { title: "Home auto-solve", group: "demo", keys: Object.keys(CONFIG_RULES.demo).filter(key => key !== "revealDelayMs") },
@@ -98,12 +99,12 @@ export async function mountAdmin(previewTutorial: () => void): Promise<void> {
       summary.textContent = title;
       section.appendChild(summary);
       fields.appendChild(section);
-      if (group === "tutorial") {
+      if (group === "tutorial" || group === "selection") {
         const preview = document.createElement("button");
         preview.type = "button";
         preview.className = "admin-preview";
-        preview.textContent = "Preview tutorial";
-        preview.addEventListener("click", previewTutorial);
+        preview.textContent = group === "tutorial" ? "Preview tutorial" : "Preview selection";
+        preview.addEventListener("click", group === "tutorial" ? previewTutorial : previewSelection);
         section.appendChild(preview);
       }
       for (const key of keys) {

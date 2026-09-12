@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { Puzzle } from "./puzzle";
 import type { GameConfig } from "./config";
+import { SELECTION_DEFAULTS } from "./config-schema";
 import { DotAnimation } from "./dot-animation";
 import { GumMaterials } from "./gum-materials";
 import { ConnectionColors } from "./connection-colors";
@@ -94,6 +95,7 @@ export class BoardScene {
   private rods = new THREE.Group();
   private rodMeshes = new Map<string, Rod>();
   private connectionGrowth = new Map<string, Growth>();
+  private selectionConfig = { ...SELECTION_DEFAULTS };
   private cueCycleMs = 2400;
   private removalCue: { key: string; elapsed: number; material: THREE.MeshPhysicalMaterial } | null = null;
   private config: SceneConfig = {
@@ -217,6 +219,8 @@ export class BoardScene {
   private ringMaterial = new THREE.MeshBasicMaterial({
     color: COLORS.lilac,
     fog: false,
+    transparent: true,
+    depthWrite: false,
   });
   private selectionRing = new THREE.Mesh(this.ring, this.ringMaterial);
   private floor: THREE.Mesh;
@@ -624,13 +628,35 @@ export class BoardScene {
     this.selection = id;
     this.updateMaterials();
     const position = id === null ? null : this.nodeMeshes.get(id)?.position;
-    this.selectionRing.visible = !!position;
+    this.selectionRing.visible = !!position && this.selectionConfig.ringEnabled;
     if (position) this.selectionRing.position.copy(position);
     this.render();
   }
 
+  getSelectionVisualState() {
+    return {
+      nodeId: this.selection,
+      ring: { visible: this.selectionRing.visible, color: `#${this.ringMaterial.color.getHexString()}`,
+        radius: this.ring.parameters.radius, thickness: this.ring.parameters.tube, opacity: this.ringMaterial.opacity },
+      guides: { visible: this.selectionPaths.visible, count: this.selectionPaths.children.length,
+        color: `#${this.selectionPathMaterial.color.getHexString()}`, opacity: this.selectionPathMaterial.opacity,
+        radii: this.selectionPaths.children.map(mesh => mesh.scale.x) },
+    };
+  }
+
   setConfig(config: GameConfig): void {
     this.config = { ...config.scene };
+    const selection = config.selection;
+    if (selection.ringSize !== this.selectionConfig.ringSize || selection.ringThickness !== this.selectionConfig.ringThickness) {
+      this.ring.dispose();
+      this.ring = new THREE.TorusGeometry(RADIUS * selection.ringSize, .014 * selection.ringThickness, 8, 64);
+      this.selectionRing.geometry = this.ring;
+    }
+    this.selectionConfig = { ...selection };
+    this.selectionRing.visible = this.selection !== null && selection.ringEnabled;
+    this.ringMaterial.opacity = selection.ringOpacity;
+    this.selectionPathMaterial.opacity = selection.guideOpacity;
+    this.selectionPaths.visible = selection.guidesEnabled;
     this.cueCycleMs = config.tutorial.gestureCycleMs;
     if (this.removalCue) this.removalCue.elapsed %= this.cueCycleMs;
     this.updateGumMaterials();
@@ -638,10 +664,10 @@ export class BoardScene {
     this.white.color.set(this.config.nodeColor);
     this.finished.color.set(this.config.completedColor);
     this.connectionColors.configure(this.white.color, this.finished.color, new THREE.Color(this.config.connectionColor));
-    this.ringMaterial.color.set(this.config.connectionColor);
-    this.selectionPathMaterial.color.set(this.config.connectionColor);
-    this.selected.color.set(this.config.connectionColor).lerp(this.white.color, .75);
-    this.neighborMaterial.color.set(this.config.connectionColor).lerp(this.white.color, .9);
+    this.ringMaterial.color.set(selection.ringColor);
+    this.selectionPathMaterial.color.set(selection.guideColor);
+    this.selected.color.set(selection.ringColor).lerp(this.white.color, .75);
+    this.neighborMaterial.color.set(selection.guideColor).lerp(this.white.color, .9);
     (this.scene.fog as THREE.Fog).color.set(this.config.background);
     this.renderer.setClearColor(this.config.background, 1);
     (this.floor.material as THREE.ShadowMaterial).opacity = this.config.shadowOpacity;
@@ -1346,8 +1372,9 @@ export class BoardScene {
           new THREE.Vector3(0, 1, 0),
           delta.clone().normalize(),
         );
-        path.scale.set(0.012, delta.length(), 0.012);
-        path.userData.link = { start, end, radius: .012, progress: 1 } satisfies LinkEndpoints;
+        const radius = .012 * this.selectionConfig.guideThickness;
+        path.scale.set(radius, delta.length(), radius);
+        path.userData.link = { start, end, radius, progress: 1 } satisfies LinkEndpoints;
         this.selectionPaths.add(path);
       }
     }

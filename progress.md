@@ -1839,3 +1839,8 @@ TODO / Note
 - Added live tutorial drag-trail tuning: independent color, line thickness/opacity, moving-dot size/opacity, and easing. Existing gesture cycle keeps removal timing synchronized; trail thickness stays centered on projected endpoints.
 - Legacy config gains missing defaults during validation. Owner's uncommitted ring settings are left untouched; refreshed local preview on port 4173 for the new admin schema.
 - Build, 197 unit tests, live admin controls including zero-width trail, full onboarding regression, desktop/mobile screenshots and web-game client passed.
+
+2026-09-12
+- Added Studio → Selected node with Preview selection and live ring visibility/color/size/thickness/opacity plus available-guide visibility/color/thickness/opacity. Shared scene settings apply in gameplay and tutorial; preview selects a real practice node without changing puzzle edges.
+- Dimension changes replace/dispose ring geometry; styling preserves floating attachment. Legacy config retains the original appearance and saved connection accent. Owner JSON tuning remains uncommitted and untouched.
+- Build, 198 unit tests, selected-node Studio/browser tests (including reset and normal gameplay), full onboarding regression, desktop/mobile screenshots and required web-game client passed. Local preview restarted on 4173 for the new config schema.

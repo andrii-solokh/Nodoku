@@ -51,6 +51,17 @@ export interface GameConfig {
     showAmbientMusic: boolean;
     ambientVolume: number;
   };
+  selection: {
+    ringEnabled: boolean;
+    ringColor: string;
+    ringSize: number;
+    ringThickness: number;
+    ringOpacity: number;
+    guidesEnabled: boolean;
+    guideColor: string;
+    guideThickness: number;
+    guideOpacity: number;
+  };
   tutorial: {
     enabled: boolean;
     color: string;
@@ -85,6 +96,10 @@ const dragDefaults = {
   dragFollowMs: 90, dragMagnetRange: .45, dragMagnetStrength: .7,
   dragMagnetResponseMs: 120, dragReturnMs: 520, dragElasticity: .55,
 };
+export const SELECTION_DEFAULTS: GameConfig["selection"] = {
+  ringEnabled: true, ringColor: "#8170c9", ringSize: 1.28, ringThickness: 1, ringOpacity: 1,
+  guidesEnabled: true, guideColor: "#8170c9", guideThickness: 1, guideOpacity: .46,
+};
 export const TUTORIAL_DEFAULTS: GameConfig["tutorial"] = {
   enabled: true, color: "#8870bd", focusCircles: true, ringWidth: 2,
   ringScale: 1.08, ringOpacity: .8, dragCue: true, dragColor: "#8870bd",
@@ -92,7 +107,7 @@ export const TUTORIAL_DEFAULTS: GameConfig["tutorial"] = {
   dragEasing: "ease-in-out", doubleTapCue: true,
   removalCue: true, rotationCue: true, toolCue: true, gestureCycleMs: 2400,
 };
-export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tutorial", Record<string, Rule>> = {
+export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tutorial" | "selection", Record<string, Rule>> = {
   demo: {
     timingMode: {
       label: "Connection timing", kind: "choice", options: { melody: "Melody rhythm", fixed: "Fixed delay" },
@@ -203,6 +218,17 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     showAmbientMusic: { label: "Show ambient music", kind: "boolean", description: "Show the music button and let players listen to Moonlight. Hidden by default; turning this off also stops ambient playback." },
     ambientVolume: { label: "Ambient music volume", kind: "number", min: 0, max: 1, step: .01, description: "Volume of Moonlight, controlled separately from sound effects. Set to 0 to silence background music." },
   },
+  selection: {
+    ringEnabled: { label: "Show selection ring", kind: "boolean" },
+    ringColor: { label: "Selection ring color", kind: "color" },
+    ringSize: { label: "Selection ring size", kind: "number", min: 1.05, max: 1.8, step: .01, unit: "× node", description: "Distance from the node center to the middle of the ring, relative to the node radius." },
+    ringThickness: { label: "Selection ring thickness", kind: "number", min: .25, max: 3, step: .05, unit: "×" },
+    ringOpacity: { label: "Selection ring opacity", kind: "number", min: .1, max: 1, step: .05 },
+    guidesEnabled: { label: "Show available-connection guides", kind: "boolean" },
+    guideColor: { label: "Connection guide color", kind: "color" },
+    guideThickness: { label: "Connection guide thickness", kind: "number", min: .25, max: 4, step: .05, unit: "×" },
+    guideOpacity: { label: "Connection guide opacity", kind: "number", min: .05, max: 1, step: .05 },
+  },
   tutorial: {
     enabled: { label: "Show tutorial visuals", kind: "boolean", description: "Show visual guidance alongside the tutorial instructions." },
     color: { label: "Cue color", kind: "color" },
@@ -257,7 +283,7 @@ function migrateSound(value: unknown, present: boolean): Record<string, unknown>
 export function validateConfig(value: unknown): GameConfig {
   const source = object(value);
   const hasSound = Object.hasOwn(source, "sound");
-  exactKeys(source, ["version", "demo", "scene", "sponsors", ...(hasSound ? ["sound"] : []), ...(Object.hasOwn(source, "tutorial") ? ["tutorial"] : [])]);
+  exactKeys(source, ["version", "demo", "scene", "sponsors", ...(hasSound ? ["sound"] : []), ...(Object.hasOwn(source, "tutorial") ? ["tutorial"] : []), ...(Object.hasOwn(source, "selection") ? ["selection"] : [])]);
   if (source.version !== 1) throw new Error("Unsupported configuration version.");
   const result: Record<string, unknown> = { version: 1 };
   for (const [group, rules] of Object.entries(CONFIG_RULES)) {
@@ -272,6 +298,9 @@ export function validateConfig(value: unknown): GameConfig {
       })()
       : group === "sound"
       ? migrateSound(source[group], hasSound)
+      : group === "selection"
+      ? { ...SELECTION_DEFAULTS, ringColor: object(source.scene).connectionColor, guideColor: object(source.scene).connectionColor,
+        ...(Object.hasOwn(source, group) ? object(source[group]) : {}) }
       : group === "tutorial"
       ? { ...TUTORIAL_DEFAULTS, ...(Object.hasOwn(source, group) ? object(source[group]) : {}) }
       : group === "sponsors"
