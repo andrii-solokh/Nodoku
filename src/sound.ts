@@ -36,6 +36,9 @@ export class GameAudio {
   private enabled = false;
   private disposed = false;
   private resuming = false;
+  private resumePromise?: Promise<void>;
+  private pendingSound?: { kind: GameSound; options: SoundOptions };
+  private warmed = false;
   private voices = new Set<Voice>();
   private lastPlayed: Partial<Record<GameSound, number>> = {};
   private nextMelodyAt = 0;
@@ -142,12 +145,13 @@ export class GameAudio {
   setEnabled(enabled: boolean): void {
     this.enabled = enabled && !this.disposed;
     if (!this.enabled) {
+      this.pendingSound = undefined;
       this.stopAll();
       this.lastPlayed = {};
     }
   }
 
-  /** Call synchronously from a pointer or keyboard gesture; never queue sounds. */
+  /** Call synchronously from a pointer or keyboard gesture. */
   unlock(): void {
     if (!this.enabled || this.disposed || typeof window === "undefined") return;
     try {
@@ -163,7 +167,17 @@ export class GameAudio {
       }
       if (this.context.state !== "running" && this.context.state !== "closed" && !this.resuming) {
         this.resuming = true;
-        void this.context.resume().catch(() => {}).finally(() => { this.resuming = false; });
+        // iOS can require an actual source to be started in the trusted gesture
+        // which resumes Web Audio. It remains silent and is never a game sound.
+        this.warmContext(this.context);
+        const resume = Promise.resolve(this.context.resume()).catch(() => {}).then(() => {
+          if (this.context?.state === "running") this.flushPendingSound();
+          else this.pendingSound = undefined;
+        }).finally(() => {
+          if (this.resumePromise === resume) this.resumePromise = undefined;
+          this.resuming = false;
+        });
+        this.resumePromise = resume;
       }
       this.decodeRotationSample();
     } catch {
@@ -189,8 +203,11 @@ export class GameAudio {
     if (options.unlock !== false) this.unlock();
     const context = this.context;
     if (!context || context.state !== "running") {
-      // Suspended contexts must not replay a previously scheduled melody later.
-      this.stop();
+      // The first mobile connection can arrive before resume() settles. Retain
+      // one immediate, gesture-triggered sound rather than dropping it.
+      if (options.unlock !== false && context && this.resumePromise)
+        this.pendingSound = { kind, options: { ...options, unlock: false } };
+      else this.stop();
       return;
     }
     const now = context.currentTime;
@@ -288,8 +305,34 @@ export class GameAudio {
 
   /** Cancel current sounds without changing the saved speaker preference. */
   stop(): void {
+    this.pendingSound = undefined;
     this.stopAll();
     this.lastPlayed = {};
+  }
+
+  private flushPendingSound(): void {
+    const pending = this.pendingSound;
+    this.pendingSound = undefined;
+    if (!pending || !this.enabled || this.disposed || this.context?.state !== "running") return;
+    this.playCurrent(pending.kind, pending.options);
+  }
+
+  private warmContext(context: AudioContext): void {
+    if (this.warmed || typeof context.createBuffer !== "function") return;
+    this.warmed = true;
+    try {
+      const source = context.createBufferSource();
+      const gain = context.createGain();
+      gain.gain.value = 0;
+      source.buffer = context.createBuffer(1, 1, context.sampleRate || 44_100);
+      source.connect(gain);
+      gain.connect(context.destination);
+      source.onended = () => { source.disconnect(); gain.disconnect(); };
+      source.start();
+      source.stop(context.currentTime + .001);
+    } catch {
+      // Some Web Audio implementations do not need a warm-up source.
+    }
   }
 
   private createVoice(kind: GameSound, start: number): Voice {
