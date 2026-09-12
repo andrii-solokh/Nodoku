@@ -205,7 +205,8 @@ app.innerHTML = `
 </section>
 <section class="onboarding-main" aria-labelledby="onboarding-title">
   <svg id="onboarding-tool-arrow" class="onboarding-tool-arrow" aria-hidden="true" focusable="false">
-    <g><path d="M-48-12 Q-28-24 0 0"/><path d="M-13-10 0 0-15 5"/></g>
+    <g data-target="tool"><g><path class="tool-arrow-shaft" pathLength="1" d="M-70 20 C-48 42-30-4 0 0"/><path class="tool-arrow-head" d="M-12-8 0 0-13 7"/></g></g>
+    <g data-target="keys"><g><path class="tool-arrow-shaft" pathLength="1" d="M-70 20 C-48 42-30-4 0 0"/><path class="tool-arrow-head" d="M-12-8 0 0-13 7"/></g></g>
   </svg>
   <div id="onboarding-stage" class="stage onboarding-stage"></div>
   <div class="onboarding-cue" id="onboarding-cue" aria-hidden="true" hidden>

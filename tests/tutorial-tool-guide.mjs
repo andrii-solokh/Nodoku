@@ -18,32 +18,35 @@ try {
       assert.equal(await arrow.getAttribute('data-tool'), `onboarding-${tool}`);
       assert.equal(await arrow.getAttribute('data-shortcut'), String(!mobile));
       assert.equal(await arrow.evaluate(node => getComputedStyle(node).pointerEvents), 'none');
-      const samples = await arrow.locator('g').evaluate(group => {
-        const animation = group.getAnimations()[0];
-        animation.pause();
-        return [0, .2, .5, .65, .9].map(t => {
-          animation.currentTime = Number(animation.effect.getTiming().duration) * t;
-          const box = group.getBoundingClientRect();
-          return { x: box.x, y: box.y, right: box.right, bottom: box.bottom, width: innerWidth, height: innerHeight };
-        });
-      });
-      assert.notDeepEqual(samples[0], samples[1], 'Arrow moves around the targets');
-      for (const box of samples) assert.ok(box.x >= 0 && box.y >= 0 && box.right <= box.width && box.bottom <= box.height, `Arrow remains inside viewport (${mobile ? 'mobile' : 'desktop'} ${tool}: ${JSON.stringify(box)})`);
-      for (const [name, phase] of [['tool', .12], ['keys', .58]]) {
-        await arrow.locator('g').evaluate((group, phase) => {
-          const animation = group.getAnimations()[0];
-          animation.currentTime = Number(animation.effect.getTiming().duration) * phase;
-        }, phase);
-        if (!mobile && name === 'keys') {
-          const distance = await arrow.locator('g').evaluate(group => {
-            const tip = new DOMPoint(0, 0).matrixTransform(group.getScreenCTM());
-            const caps = [...document.querySelectorAll('#onboarding-shortcut kbd')].map(node => node.getBoundingClientRect());
-            const left = Math.min(...caps.map(box => box.left)), right = Math.max(...caps.map(box => box.right));
-            const top = Math.min(...caps.map(box => box.top)), bottom = Math.max(...caps.map(box => box.bottom));
-            return Math.hypot(tip.x - Math.max(left, Math.min(right, tip.x)), tip.y - Math.max(top, Math.min(bottom, tip.y)));
+      for (const target of mobile ? ['tool'] : ['tool', 'keys']) {
+        const group = arrow.locator(`[data-target="${target}"]`);
+        const samples = await group.evaluate(group => {
+          const animations = group.getAnimations({ subtree: true });
+          animations.forEach(animation => animation.pause());
+          return [.32, .6].map(phase => {
+            animations.forEach(animation => {
+              const timing = animation.effect.getTiming();
+              animation.currentTime = Number(timing.delay) + Number(timing.duration) * phase;
+            });
+            const shaft = group.querySelector('.tool-arrow-shaft');
+            const tip = shaft.getPointAtLength(shaft.getTotalLength()).matrixTransform(shaft.getScreenCTM());
+            return { tip: { x: tip.x, y: tip.y }, dash: Number.parseFloat(getComputedStyle(shaft).strokeDashoffset), box: group.getBoundingClientRect().toJSON(), width: innerWidth, height: innerHeight };
           });
-          assert.ok(distance < 40, 'The arrow flies beside the actual keycaps, not the wider caption container');
+        });
+        assert.ok(samples[0].dash > samples[1].dash + .1, 'The curved path grows toward its target');
+        assert.ok(Math.hypot(samples[0].tip.x - samples[1].tip.x, samples[0].tip.y - samples[1].tip.y) < .01, 'The arrow tip stays anchored instead of flying');
+        for (const { box, width, height } of samples)
+          assert.ok(box.left >= 0 && box.top >= 0 && box.right <= width && box.bottom <= height, `The ${target} curve stays onscreen`);
+        if (target === 'keys') {
+          const left = await page.locator('#onboarding-shortcut kbd').first().evaluate(key => key.getBoundingClientRect().left);
+          assert.ok(Math.abs(samples[1].tip.x - left) < 20, 'The curve points beside the actual keycaps');
         }
+      }
+      for (const [name, phase] of [['growing', .32], ['drawn', .6]]) {
+        await arrow.evaluate((svg, phase) => svg.getAnimations({ subtree: true }).forEach(animation => {
+          const timing = animation.effect.getTiming();
+          animation.currentTime = Number(timing.delay) + Number(timing.duration) * phase;
+        }), phase);
         await page.screenshot({ path: `output/web-game/tool-arrow/${mobile ? 'mobile' : 'desktop'}-${tool}-${name}.png` });
       }
       await page.locator(`#onboarding-${tool}`).evaluate(button => {
@@ -62,11 +65,11 @@ try {
     await page.goto(`${base}/?onboarding=1&step=8`);
     await page.locator('#app-loader').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('#onboarding-tool-arrow').isVisible(), true);
-    assert.equal(await page.locator('#onboarding-tool-arrow g').evaluate(node => node.getAnimations().length), 0, 'Reduced motion uses a static pointer');
+    assert.equal(await page.locator('#onboarding-tool-arrow').evaluate(node => node.getAnimations({ subtree: true }).length), 0, 'Reduced motion uses a static pointer');
     await page.locator('#onboarding-skip').click();
     assert.equal(await page.locator('#onboarding-tool-arrow').isVisible(), false);
     await page.close();
   }
   assert.deepEqual(errors, []);
-  console.log('Tool arrows passed for Undo, Redo and Hint on desktop/mobile, success, exit and reduced motion');
+  console.log('Growing, anchored curves passed for Undo, Redo and Hint on desktop/mobile, success, exit and reduced motion');
 } finally { await browser.close(); }

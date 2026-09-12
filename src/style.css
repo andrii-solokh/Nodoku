@@ -1887,3 +1887,4 @@ a {
   opacity: .85;
 }
 .onboarding-tool-arrow g { transform-origin: 0 0; }
+.tool-arrow-shaft { stroke-dasharray: 1; stroke-dashoffset: 0; }
