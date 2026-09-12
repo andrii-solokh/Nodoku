@@ -946,7 +946,6 @@ function renderOnboarding() {
   next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
   el("onboarding-turn-controls").hidden = onboardingStep !== 4;
   el("onboarding-control-lesson").hidden = onboardingStep < 6;
-  app.classList.toggle("onboarding-controls-active", onboardingStep >= 6);
   renderOnboardingTools();
   renderRotationGuidance();
   onboardingCue = onboardingCueForStep();

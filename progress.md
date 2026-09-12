@@ -1865,3 +1865,8 @@ TODO / Note
 - Anchored tutorial success messages above the projected puzzle bounds, centered on the board and updated as nodes float or rotate. A compact horizontal checkmark/text layout fits shorter screens. Normal game completion retains its existing positioning.
 - Targeted browser placement checks cover desktop, mobile and short viewports; the visual capture holds the acknowledgement timer so screenshots remain reliable under load.
 - Build and targeted placement assertions/screenshots passed at 1200×850, 390×844 and 844×390; required web-game client ran. Full-flow screenshot timing proved unreliable under load, so the placement capture held the success timer without changing production timing.
+
+2026-09-12
+- Removed the tool-lesson-specific board offsets that moved the puzzle upward when Undo/Redo/Hint instructions appeared. Tutorial sizing now reserves space for the tallest lesson from the start and keeps the board center independent of text and shortcuts.
+- Anchored captions to a consistent top edge. Short landscape screens place instructions alongside the board with separate space for controls.
+- Build and full onboarding walkthrough passed, including regression assertions for unchanged stage bounds and caption position when the tool lesson appears. Checked desktop, portrait mobile, small mobile and landscape geometry/screenshots; all caption variants stay clear of nodes and fit the viewport. Required web-game client ran and its screenshot was inspected.
