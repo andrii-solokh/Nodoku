@@ -65,11 +65,32 @@ try {
   mirror.toggle(firstA, firstB);
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 7');
   assert.match(await page.locator('#onboarding-message').textContent(), /same linked pair again to remove it/);
+  await page.waitForFunction(() => document.querySelector('#onboarding-cue')?.classList.contains('is-remove'));
+  const removal = await page.evaluate(() => {
+    const initial = JSON.parse(window.render_game_to_text());
+    window.advanceTime((1900 - initial.removalCue.elapsed + 2400) % 2400);
+    const faded = JSON.parse(window.render_game_to_text());
+    window.advanceTime(500);
+    return { initial, faded, restored: JSON.parse(window.render_game_to_text()) };
+  });
+  assert.equal(removal.faded.removalCue.opacity, 0, 'The removal demonstration visibly hides the actual rod');
+  assert.equal(removal.restored.removalCue.opacity, 1, 'The demonstration restores the rod for another gesture');
+  assert.deepEqual(removal.faded.edges, removal.initial.edges, 'The removal cue does not make the move for the player');
+  await page.evaluate(() => {
+    const cue = JSON.parse(window.render_game_to_text()).removalCue;
+    window.advanceTime((1900 - cue.elapsed + 2400) % 2400);
+    document.querySelector('.onboarding-cue-line').getAnimations({subtree: true}).forEach(animation => {
+      animation.pause(); animation.currentTime = 1900;
+    });
+  });
+  await page.screenshot({path: 'output/web-game/onboarding-cues/remove-desktop.png'});
+
   assert.equal(await page.locator('#onboarding-next').isHidden(), true, 'The tutorial cannot jump to 3D before the 2D board is solved');
   await drag(page, a, b);
   mirror.toggle(firstA, firstB);
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 7');
   assert.match(await page.locator('#onboarding-message').textContent(), /Double-tap a node/);
+  assert.equal((await state(page)).removalCue, null, 'The removal preview is cleared when the player removes the link');
   assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-double-tap')), true, 'The fill lesson demonstrates the double-tap gesture');
   for (const selector of ['.onboarding-cue-line', '.onboarding-cue-end', '.onboarding-cue-hand'])
     assert.equal(await page.locator(`#onboarding-cue ${selector}`).isVisible(), false, 'Double tap shows only a ping on one sphere');

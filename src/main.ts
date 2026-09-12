@@ -669,7 +669,7 @@ function onDoubleTap(id: number) {
         "The neighboring nodes have no room for another connection.",
     );
 }
-type OnboardingCueKind = "drag" | "double-tap" | "turn" | "none";
+type OnboardingCueKind = "drag" | "remove" | "double-tap" | "turn" | "none";
 type OnboardingCue = {
   kind: OnboardingCueKind;
   start?: number;
@@ -698,7 +698,7 @@ function onboardingCueForStep(): OnboardingCue {
       : { kind: "none" };
   }
   if (onboardingStep === 1 && onboardingConnection)
-    return { kind: "drag", start: onboardingConnection[0], end: onboardingConnection[1] };
+    return { kind: "remove", start: onboardingConnection[0], end: onboardingConnection[1] };
   if (onboardingStep === 2 || onboardingStep === 3) {
     const [start, end] = firstAvailableConnection() ?? [];
     return Number.isInteger(start) && Number.isInteger(end)
@@ -766,6 +766,7 @@ function renderOnboardingCue() {
   line.style.top = `${fromY}px`;
   line.style.width = `${length}px`;
   line.style.transform = `rotate(${angle}deg)`;
+  line.style.setProperty("--cue-label-angle", `${-angle}deg`);
   hand.style.left = `${fromX}px`;
   hand.style.top = `${fromY}px`;
   hand.style.setProperty("--cue-dx", `${dx * length}px`);
@@ -782,7 +783,7 @@ function renderOnboarding() {
     },
     {
       step: "2 of 7",
-      title: "Remove that connection.",
+      title: "Remove the link.",
       message: "Drag across the same linked pair again to remove it.",
       action: null,
     },
@@ -827,6 +828,7 @@ function renderOnboarding() {
   el("onboarding-control-lesson").hidden = onboardingStep !== 6;
   app.classList.toggle("onboarding-controls-active", onboardingStep === 6);
   onboardingCue = onboardingCueForStep();
+  scene.setRemovalCue(onboardingStep === 1 ? onboardingConnection : null);
   requestAnimationFrame(renderOnboardingCue);
   captureAnalytics("onboarding_lesson_viewed", {
     lesson: ["connection", "remove", "node_fill", "network", "rotation", "3d_connection", "controls"][onboardingStep],
@@ -1549,6 +1551,7 @@ Object.assign(window, {
       settings: displayed?.settings ?? settings,
       selected: mode === "home" ? null : selected,
       view: scene.getViewState(),
+      removalCue: scene.getRemovalCueState(),
       progress: displayed?.progress ?? 0,
       solved: displayed?.solved ?? false,
       disconnected: displayed?.disconnected ?? false,
