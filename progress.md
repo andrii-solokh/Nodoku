@@ -1830,3 +1830,7 @@ TODO / Note
 - Rotation lesson now requires left/right/up/down checkpoints. Desktop players receive arrow-key/WASD prompts and highlighted keycaps; touch players receive matching control-panel guidance and pings. Primary-input changes update the instructions live.
 - Wrong-direction turns do not advance; held keys and input during camera motion cannot skip checkpoints. Directional arrows track the expected orientation, with vertical arrows beside the puzzle.
 - Build, complete onboarding regression through wrong-direction input, desktop keys and touch controls, all four checkpoints, subsequent tools, desktop/mobile screenshots and web-game client passed.
+
+2026-09-12
+- Moved Undo/Redo/Hint keyboard combinations out of tutorial prose into prominent raised keycaps (24px labels, 52px keys). Command/Ctrl follows the platform; touch devices keep concise control-panel guidance.
+- Verified build, full onboarding flow, each key combination, rendered font size, touch visibility and desktop/mobile screenshots. Required web-game client exercised.

@@ -1804,3 +1804,28 @@ a {
 .onboarding-rotation-keys kbd { padding: 6px 10px; border: 1px solid #dcd6e8; border-radius: 8px; font: inherit; font-size: 13px; opacity: .5; }
 .onboarding-rotation-keys .current { opacity: 1; border-color: #8870bd; background: #e7e0f3; }
 .onboarding-rotation-keys .done { opacity: .8; background: #dfece6; }
+
+.onboarding-shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+  color: var(--ink);
+}
+.onboarding-shortcut[hidden] { display: none; }
+.onboarding-shortcut kbd {
+  display: grid;
+  place-items: center;
+  min-width: 52px;
+  min-height: 52px;
+  padding: 6px 16px;
+  border: 1px solid #c9bedf;
+  border-bottom-width: 4px;
+  border-radius: 12px;
+  background: #faf8ff;
+  box-shadow: 0 3px 10px #4430620a;
+  color: #584484;
+  font: 500 24px/1.2 Outfit, sans-serif;
+}
+.onboarding-shortcut > span { color: #887a96; font-size: 20px; }

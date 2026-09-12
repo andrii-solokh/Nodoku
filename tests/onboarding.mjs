@@ -244,6 +244,11 @@ try {
   await drag(page, source, target);
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '7 of 9');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Undo your move.');
+  assert.equal(await page.locator('#onboarding-shortcut').isVisible(), true);
+  assert.equal(await page.locator('#onboarding-shortcut kbd').first().evaluate(e => getComputedStyle(e).fontSize), '24px');
+  const modifier = await page.evaluate(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? '⌘' : 'Ctrl');
+  assert.deepEqual(await page.locator('#onboarding-shortcut kbd').allTextContents(), [modifier, 'Z']);
+
   assert.equal(await page.locator('#onboarding-next').isHidden(), true, 'Finish is unavailable before practicing tools');
   assert.equal(await page.locator('#onboarding-control-lesson').isVisible(), true, 'The final lesson shows the game toolbar');
   assert.equal(await page.locator('#onboarding-control-lesson').evaluate(node => node.classList.contains('game-toolbar')), true, 'The tutorial uses the game toolbar component instead of a separate layout');
@@ -255,10 +260,18 @@ try {
   await page.screenshot({ path: 'output/web-game/onboarding-controls/desktop.png' });
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(await page.locator('#onboarding-control-lesson .tools-group').evaluate(node => getComputedStyle(node).gridTemplateColumns), '42px 42px', 'Mobile uses the same compact two-by-two game toolbar');
+  const shortcutDevice = await page.context().newCDPSession(page);
+  await shortcutDevice.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+  await page.waitForTimeout(100);
+  assert.equal(await page.locator('#onboarding-shortcut').isHidden(), true, 'Touch instruction focuses on the control panel');
   await page.screenshot({ path: 'output/web-game/onboarding-controls/mobile.png' });
+  await shortcutDevice.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+  await shortcutDevice.detach();
+
   const beforeUndo = (await state(page)).edges;
   await page.locator('#onboarding-undo').click();
   assert.equal(await page.locator('#onboarding-step').textContent(), '8 of 9');
+  assert.deepEqual(await page.locator('#onboarding-shortcut kbd').allTextContents(), [modifier, 'Shift', 'Z']);
   assert.ok((await state(page)).edges.length < beforeUndo.length, 'Undo removes the real connection');
   assert.equal(await page.locator('#onboarding-redo').isEnabled(), true);
   assert.equal(await page.locator('#onboarding-redo.tutorial-tool-ping').count(), 1);
@@ -268,11 +281,13 @@ try {
   assert.equal(await page.locator('#onboarding-step').textContent(), '9 of 9');
   assert.deepEqual((await state(page)).edges, beforeUndo, 'Redo restores the same connection');
   assert.equal(await page.locator('#onboarding-hint.tutorial-tool-ping').count(), 1);
+  assert.deepEqual(await page.locator('#onboarding-shortcut kbd').allTextContents(), ['H']);
   assert.equal(await page.locator('#onboarding-next').isHidden(), true);
   await page.screenshot({ path: 'output/web-game/onboarding-controls/hint-mobile.png' });
   await page.locator('#onboarding-hint').click();
   assert.notDeepEqual((await state(page)).edges, beforeUndo, 'Hint changes the real puzzle');
   assert.equal(await page.locator('.tutorial-tool-ping').count(), 0);
+  assert.equal(await page.locator('#onboarding-shortcut').isHidden(), true);
   assert.match(await page.locator('#onboarding-next').textContent(), /Finish tutorial/);
   // Restart provides a route back into the practice sequence.
   await page.locator('#onboarding-restart').click();
@@ -286,6 +301,7 @@ try {
   await drag(page, practiceA, practiceB);
   await page.keyboard.press('Control+z');
   assert.equal(await page.locator('#onboarding-step').textContent(), '8 of 9');
+  assert.deepEqual(await page.locator('#onboarding-shortcut kbd').allTextContents(), [modifier, 'Shift', 'Z']);
   await page.locator('#onboarding-redo').click();
   assert.equal(await page.locator('#onboarding-step').textContent(), '9 of 9');
   await page.keyboard.press('h');
