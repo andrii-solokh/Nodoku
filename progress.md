@@ -1591,3 +1591,8 @@ TODO / Note
 ## 2026-09-12 — Compact sponsor plaques
 - Reduced sponsor plaque size on the landing screen and game canvas.
 - Verified 136px landing plaques and capped in-game plaques at 280 × 132px, with interactive sponsor controls intact.
+
+## 2026-09-12 — Concise landing-page guide
+- Reduced the crawlable guide to the core rule, a short 3D explanation, and three essential FAQ answers.
+- Kept the visible FAQ and JSON-LD FAQ aligned.
+- Verified with the production build, full unit suite, and browser interaction capture.

@@ -28,12 +28,11 @@ test("homepage has visible crawlable rules and an FAQ, while the game owns the s
 
   for (const [id, heading] of [
     ["how-to-play-title", "How to Play Nodoku"],
-    ["logic-title", "A Puzzle About Logic and Spatial Reasoning"],
     ["three-d-title", "Why Nodoku Is 3D"],
-    ["play-online-title", "Play Nodoku Online"],
     ["faq-title", "Frequently Asked Questions"],
   ]) assert.ok(html.includes(`<h2 id="${id}">${heading}</h2>`), `missing H2 for ${heading}`);
-  assert.match(html, /Nodoku is a 3D spatial reasoning puzzle built around nodes and connections\./);
+  assert.match(html, /Nodoku is a 3D connection puzzle\./);
+  assert.doesNotMatch(html, /A Puzzle About Logic and Spatial Reasoning|Play Nodoku Online|Is Nodoku a number puzzle/);
   assert.equal((app.match(/<h1\b/g) || []).length, 1);
   assert.match(app, /<h1 id="home-title">3D Spatial Reasoning Puzzle<\/h1>/);
   assert.equal((statistics.match(/<h1\b/g) || []).length, 0);
