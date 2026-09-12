@@ -1623,3 +1623,7 @@ TODO / Note
 - Centered each Popular grids and Popular difficulties label beneath its bar while retaining the count at the bar’s right edge.
 - Added browser layout coverage for label-to-bar center alignment.
 - Verified with `npm test`, `npm run build`, and the web-game Playwright smoke check.
+
+## 2026-09-12 — PostHog Session Replay readiness
+- Explicitly enabled PostHog Session Replay in the browser client and kept all form input values masked.
+- Verified with `npm run build` and `npm test` (193 passing).
