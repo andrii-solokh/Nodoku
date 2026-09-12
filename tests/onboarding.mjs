@@ -180,6 +180,24 @@ try {
   assert.match(await page.locator('#onboarding-message').textContent(), /Swipe over the board, or use the direction controls/);
   assert.equal(await page.locator('#onboarding-turn-controls').isVisible(), true, 'The turn lesson exposes direction controls');
   assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-turn')), true, 'The turn lesson shows an animated turning cue on the board');
+  assert.equal(await page.locator('.rotation-arrow-head').count(), 1, 'Rotation uses a directional arrow');
+  const arrow = page.locator('.onboarding-cue-turn');
+  const assertArrowPosition = async () => {
+    const box = await arrow.boundingBox();
+    const rendered = (await state(page)).nodes;
+    const center = rendered.reduce((sum, node) => sum + node.screen.x, 0) / rendered.length;
+    assert.ok(box && Math.abs(box.x + box.width / 2 - center) < 8, 'Arrow is centered over the rendered puzzle');
+    assert.ok(box.y >= 0 && box.x >= 0, 'Arrow stays within the viewport');
+  };
+  await assertArrowPosition();
+  await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(250);
+  await assertArrowPosition();
+  await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-mobile.png' });
+  await page.setViewportSize({ width: 1200, height: 850 });
+  await page.waitForTimeout(250);
+
   await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/solved-2d-3d.png' });
   await page.locator('[data-onboarding-rotate="right"]').click();
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '6 of 7');

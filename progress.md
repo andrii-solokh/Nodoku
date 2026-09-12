@@ -1816,3 +1816,7 @@ TODO / Note
 - Added Studio → Tutorial visuals: global and individual cue toggles, color, ring thickness/size/opacity, and drag/removal cycle timing. Quick double-ping cadence remains independent.
 - Preview tutorial starts the real onboarding with live settings; Studio can reopen without the normal header. Existing save/reset/reload/export support includes the new section with legacy defaults and strict validation.
 - Verified 196 unit tests, full onboarding regression, tutorial-settings browser coverage, desktop/mobile screenshots, and the required web-game client. Admin browser testing uses a newly started preview on 4190 so the server loads the current schema.
+
+2026-09-12
+- Replaced the onboarding orbit badge with a curved directional swipe arrow above the 3D puzzle, anchored to live rendered sphere bounds. A traveling highlight demonstrates the direction; reduced motion leaves the static arrow.
+- Retained Studio rotation visibility and cue color. Build, full onboarding flow, desktop/mobile arrow placement screenshots, and required web-game client passed.
