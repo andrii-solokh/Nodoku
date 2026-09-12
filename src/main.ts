@@ -76,7 +76,7 @@ let selected: number | null = null;
 let mode: "home" | "playing" | "onboarding" = "home";
 const tutorialDirections = ["left", "right", "up", "down"] as const;
 type TutorialDirection = typeof tutorialDirections[number];
-const tutorialKeys = { left: "← / A", right: "→ / D", up: "↑ / W", down: "↓ / S" };
+const tutorialKeys = { left: ["←", "A"], right: ["→", "D"], up: ["↑", "W"], down: ["↓", "S"] };
 const touchInput = window.matchMedia("(pointer: coarse)");
 let onboardingRotation = 0;
 let onboardingStep = 0;
@@ -239,7 +239,7 @@ app.innerHTML = `
     <h2 id="onboarding-title">Select two neighbors.</h2>
     <p id="onboarding-message">Select one node, then a neighboring node to connect them.</p>
     <div class="onboarding-shortcut" id="onboarding-shortcut" role="group" aria-label="Keyboard shortcut" hidden></div>
-    <div class="onboarding-rotation-keys" id="onboarding-rotation-keys" aria-label="Rotation keys" hidden></div>
+    <div class="onboarding-shortcut" id="onboarding-rotation-keys" role="group" aria-label="Rotation keys" hidden></div>
     <button class="onboarding-next" id="onboarding-next" hidden>Show me 3D${icon("right")}</button>
   </section>
   <button class="onboarding-skip" id="onboarding-skip">Skip tutorial</button>
@@ -924,7 +924,7 @@ function renderOnboarding() {
       title: `Turn ${tutorialDirections[onboardingRotation]}.`,
       message: touchInput.matches
         ? `Drag to rotate, or tap the ${tutorialDirections[onboardingRotation]} arrow in the control panel.`
-        : `Drag to rotate, or press ${tutorialKeys[tutorialDirections[onboardingRotation]]} on your keyboard.`,
+        : "Drag to rotate, or use either key below.",
       action: null,
     },
     {
@@ -967,7 +967,7 @@ function renderOnboarding() {
   const next = el<HTMLButtonElement>("onboarding-next");
   next.hidden = !copy.action;
   next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
-  el("onboarding-turn-controls").hidden = onboardingStep !== 5 && !isOnboardingPractice();
+  el("onboarding-turn-controls").hidden = !touchInput.matches || (onboardingStep !== 5 && !isOnboardingPractice());
   el("onboarding-control-lesson").hidden = onboardingStep < 7;
   renderOnboardingTools();
   renderRotationGuidance();
@@ -982,9 +982,11 @@ function renderOnboarding() {
 function renderRotationGuidance() {
   const keys = el("onboarding-rotation-keys");
   keys.hidden = onboardingStep !== 5 || touchInput.matches;
-  keys.innerHTML = tutorialDirections.map((direction, index) =>
-    `<kbd class="${index === onboardingRotation ? "current" : index < onboardingRotation ? "done" : ""}">${tutorialKeys[direction]}</kbd>`,
-  ).join("");
+  const direction = tutorialDirections[onboardingRotation];
+  keys.setAttribute("aria-label", `Turn ${direction} keyboard shortcuts`);
+  keys.innerHTML = tutorialKeys[direction].map((key, index) =>
+    `<kbd${index === 0 ? ` aria-label="Arrow ${direction}"` : ""}>${key}</kbd>`,
+  ).join('<span>or</span>');
   const controls = el("onboarding-turn-controls");
   controls.style.setProperty("--tool-cue-color", tutorialSettings.color);
   controls.querySelectorAll<HTMLButtonElement>("[data-onboarding-rotate]").forEach(button => {
