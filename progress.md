@@ -1893,3 +1893,7 @@ TODO / Note
 - Unlocked free play after the final Hint lesson. Tap-to-connect, drag add/remove, double-tap fill/clear, rotation controls, shared keyboard shortcuts and tools remain available on the tutorial cube. Restart preserves the unlocked state.
 - Added guarded cube completion handling with the existing success animation/sound and completed copy, while retaining the optional Finish tutorial action. Kept mobile captions and the finish action clear of both control groups. Reset keyboard focus on tutorial entry and preserve melody position when a tentative tap is rolled back.
 - Production build and full tutorial walkthrough passed. Regression flow exercises each free-play input, undo/redo/hint/restart, rotation, final connection via drag, exactly one cube completion acknowledgement and exit. Inspected mobile free play and completion screenshots and required web-game client output.
+
+2026-09-12
+- Disabled browser text selection, Safari touch callouts, and native image/SVG dragging across the site to prevent selection handles during play. Kept text selection available in editable fields.
+- Build passed; Chromium browser check confirmed dragging tutorial text selects nothing and Skip tutorial remains clickable. Inspected mobile screenshot and ran the web-game client. WebKit browser is not installed locally, so physical Safari behavior was not directly tested.
