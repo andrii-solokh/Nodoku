@@ -255,6 +255,17 @@ try {
   assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-turn')), true, 'The turn lesson shows an animated turning cue on the board');
   assert.equal(await page.locator('.rotation-arrow-head').count(), 1, 'Rotation uses a directional arrow');
   const arrow = page.locator('.onboarding-cue-turn');
+  const assertArrowDirection = async direction => {
+    const delta = await arrow.locator('.rotation-arrow-track').evaluate(path => {
+      const matrix = path.getScreenCTM();
+      const start = path.getPointAtLength(0).matrixTransform(matrix);
+      const end = path.getPointAtLength(path.getTotalLength()).matrixTransform(matrix);
+      return { x: end.x - start.x, y: end.y - start.y };
+    });
+    assert.ok(direction === 'left' ? delta.x > 0 : direction === 'right' ? delta.x < 0
+      : direction === 'up' ? delta.y > 0 : delta.y < 0, 'Rotation arrow shows the reversed swipe direction');
+  };
+  await assertArrowDirection('left');
   const assertArrowPosition = async () => {
     const box = await arrow.boundingBox();
     const rendered = (await state(page)).nodes;
@@ -292,11 +303,13 @@ try {
   } else await page.keyboard.press('ArrowLeft');
   await settleSuccess(page);
   assert.equal((await state(page)).tutorialRotation, 'right');
+  await assertArrowDirection('right');
   assert.match(await page.locator('#onboarding-step').textContent(), /Direction 2 of 4/);
   if (swipeRotations) await swipeTurn(page, 'right');
   else await page.keyboard.press('d');
   await settleSuccess(page);
   assert.equal((await state(page)).tutorialRotation, 'up');
+  await assertArrowDirection('up');
   assert.equal(await page.locator('.onboarding-cue-turn').getAttribute('data-direction'), 'up');
   await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-up-desktop.png' });
   const device = await page.context().newCDPSession(page);
@@ -313,6 +326,7 @@ try {
   else await page.locator('[data-onboarding-rotate="up"]').click();
   await settleSuccess(page);
   assert.equal((await state(page)).tutorialRotation, 'down');
+  await assertArrowDirection('down');
   assert.equal(await page.locator('[data-onboarding-rotate="down"].tutorial-tool-ping').count(), 1);
   const downArrow = await arrow.boundingBox();
   const downBoardRight = Math.max(...(await state(page)).nodes.map(node => node.screen.x + node.screen.radius));

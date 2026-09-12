@@ -209,9 +209,9 @@ app.innerHTML = `
     <span class="onboarding-cue-node onboarding-cue-end"></span>
     <span class="onboarding-cue-hand"></span>
     <span class="onboarding-cue-turn"><svg viewBox="0 0 220 64" fill="none" aria-hidden="true">
-      <path class="rotation-arrow-track" d="M18 48 Q110 2 202 48" />
-      <path class="rotation-arrow-motion" d="M18 48 Q110 2 202 48" />
-      <path class="rotation-arrow-head" d="M188 51 L202 48 L199 34" />
+      <path class="rotation-arrow-track" d="M202 48 Q110 2 18 48" />
+      <path class="rotation-arrow-motion" d="M202 48 Q110 2 18 48" />
+      <path class="rotation-arrow-head" d="M32 51 L18 48 L21 34" />
     </svg></span>
   </div>
   <div class="onboarding-turn-controls" id="onboarding-turn-controls" role="group" aria-label="Turn the 3D puzzle" hidden>
