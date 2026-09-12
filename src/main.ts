@@ -377,8 +377,8 @@ subscribeConfig(config => {
   })) cues.style.setProperty(`--cue-ping-${name}`, String(value));
   // Keep two distinct pings with independently tunable pulse, gap and rest times.
   doubleTapStyle.textContent = `@keyframes onboarding-cue-double-ping {
-    0%, ${secondStart}% { opacity: var(--cue-ping-opacity); transform: translate(-50%, -50%) scale(1); }
-    ${firstEnd}%, ${secondStart - .001}%, ${secondEnd}%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(var(--cue-ping-scale)); }
+    0%, ${secondStart}% { opacity: var(--cue-ping-opacity); transform: scale(1); }
+    ${firstEnd}%, ${secondStart - .001}%, ${secondEnd}%, 100% { opacity: 0; transform: scale(var(--cue-ping-scale)); }
   }`;
   scene.setRemovalCue(mode === "onboarding" && !onboardingCelebrating && onboardingStep === 2 && tutorial.enabled && tutorial.removalCue ? onboardingConnection : null);
   requestAnimationFrame(() => { renderOnboardingCue(); if (mode === "onboarding") { renderRotationGuidance(); } });
@@ -862,9 +862,12 @@ function renderOnboardingCue() {
   const angle = Math.atan2(end.y - start.y, end.x - start.x) * 180 / Math.PI;
   for (const [ring, node] of [[startRing, start], [endRing, end]] as const) {
     ring.dataset.nodeId = String(node.id);
-    ring.style.left = `${node.x}px`;
-    ring.style.top = `${node.y}px`;
-    ring.style.width = ring.style.height = `${node.radius * 2 + 3}px`;
+    // Anchor the border box to the live sphere. Keep percentage translation out
+    // of the pulse animation so its centering cannot vary between browsers.
+    const diameter = node.radius * 2 + 3;
+    ring.style.left = `${node.x - diameter / 2}px`;
+    ring.style.top = `${node.y - diameter / 2}px`;
+    ring.style.width = ring.style.height = `${diameter}px`;
   }
   const dx = (end.x - start.x) / (distance || 1);
   const dy = (end.y - start.y) / (distance || 1);

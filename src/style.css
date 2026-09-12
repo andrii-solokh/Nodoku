@@ -461,14 +461,15 @@ a {
   display: none;
   border: var(--cue-ring-width, 2px) solid var(--cue-color, #8870bd);
   border-radius: 50%;
-  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  transform-origin: center;
 }
 .onboarding-cue.is-drag .onboarding-cue-node,
 .onboarding-cue.is-remove .onboarding-cue-node {
   display: block;
   border-width: var(--cue-ring-width, 2px);
   opacity: var(--cue-ring-opacity, .8);
-  transform: translate(-50%, -50%) scale(var(--cue-ring-scale, 1.08));
+  transform: scale(var(--cue-ring-scale, 1.08));
 }
 .onboarding-cue.is-remove .onboarding-cue-line { background: none; opacity: 1; }
 .onboarding-cue.is-select .onboarding-cue-line,
@@ -485,9 +486,9 @@ a {
 }
 .onboarding-cue.is-select[data-selected="true"] .onboarding-cue-end { animation-delay: 0s; }
 @keyframes onboarding-select-ping {
-  0%, 35%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
-  8% { opacity: var(--cue-ring-opacity, .8); transform: translate(-50%, -50%) scale(1); }
-  30% { opacity: 0; transform: translate(-50%, -50%) scale(var(--cue-ring-scale, 1.08)); }
+  0%, 35%, 100% { opacity: 0; transform: scale(1); }
+  8% { opacity: var(--cue-ring-opacity, .8); transform: scale(1); }
+  30% { opacity: 0; transform: scale(var(--cue-ring-scale, 1.08)); }
 }
 .onboarding-cue.is-remove .onboarding-cue-line::after {
   content: "−";
