@@ -84,7 +84,7 @@ try {
   await tapLesson.waitForFunction(nodeId => JSON.parse(window.render_game_to_text()).selected === nodeId, firstA);
   await tapLesson.mouse.click(tapB.screen.x, tapB.screen.y);
   await tapLesson.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 8');
-  assert.equal((await state(tapLesson)).edges.length, 0, 'The practice connection resets for the drag lesson');
+  assert.deepEqual((await state(tapLesson)).edges, [[firstA, firstB]], 'The selection connection remains for the drag lesson');
   await tapLesson.close();
   await drag(page, a, b);
   assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 8', 'Dragging cannot skip the selection lesson');
@@ -104,7 +104,8 @@ try {
   await settleSuccess(page);
   assert.equal(await page.locator('#onboarding-step').textContent(), '2 of 8');
   assert.deepEqual(await page.locator('#onboarding-stage').boundingBox(), initialStageBounds, 'The selection-to-drag transition keeps the board stationary');
-  assert.equal((await state(page)).edges.length, 0);
+  assert.deepEqual((await state(page)).edges, [[firstA, firstB]]);
+  mirror.toggle(firstA, firstB);
   const bottomNodes = (await state(page)).nodes.sort((a, b) => b.screen.y - a.screen.y).slice(0, 2).sort((a, b) => a.screen.x - b.screen.x);
   const [dragA, dragB] = bottomNodes;
   assert.ok(![firstA, firstB].includes(dragA.id) && ![firstA, firstB].includes(dragB.id), 'Drag uses a different pair from the tap lesson');
@@ -117,7 +118,7 @@ try {
   await page.screenshot({ path: 'output/web-game/onboarding-cues/drag-bottom-desktop.png' });
   await page.mouse.click(dragA.screen.x, dragA.screen.y);
   await page.mouse.click(dragB.screen.x, dragB.screen.y);
-  assert.equal((await state(page)).edges.length, 0, 'The drag lesson requires dragging');
+  assert.deepEqual((await state(page)).edges, [[firstA, firstB]], 'Tapping during the drag lesson leaves the first connection intact');
   await page.mouse.move(dragA.screen.x, dragA.screen.y);
   await page.mouse.down();
   // A small drag begins the tutorial stroke without reaching a neighbour.
@@ -176,6 +177,7 @@ try {
   mirror.toggle(dragA.id, dragB.id);
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '4 of 8');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Double-tap a node.');
+  assert.deepEqual((await state(page)).edges, [[firstA, firstB]], 'Removing the drag connection keeps the original selection connection');
   assert.match(await page.locator('#onboarding-message').textContent(), /Tap twice quickly.*double-click/);
   assert.equal((await state(page)).removalCue, null, 'The removal preview is cleared when the player removes the link');
   assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-double-tap')), true, 'The fill lesson demonstrates the double-tap gesture');

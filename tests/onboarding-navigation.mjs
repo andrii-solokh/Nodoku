@@ -25,8 +25,8 @@ try {
     const current = await state(page);
     assert.equal(current.nodes.length, step <= 5 ? 4 : 8);
     if (step === 3) {
-      assert.deepEqual(current.edges, [[0, 1]], 'Removal has a bottom connection ready');
-      const [a, b] = current.edges[0].map(id => current.nodes.find(node => node.id === id));
+      assert.deepEqual(current.edges, [[2, 3], [0, 1]], 'Removal preserves the first connection and has the bottom connection ready');
+      const [a, b] = current.edges[1].map(id => current.nodes.find(node => node.id === id));
       await page.mouse.move(a.screen.x, a.screen.y);
       await page.mouse.down();
       await page.mouse.move(b.screen.x, b.screen.y, { steps: 8 });

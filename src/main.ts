@@ -641,9 +641,6 @@ function onOnboardingTap(id: number): (() => void) | void {
   scene.refresh();
   if (onboardingStep === 0 && added) {
     celebrateOnboarding("Connection made", () => {
-      restore();
-      selectNode(null);
-      scene.refresh();
       onboardingStep = 1;
     });
   } else if (onboardingStep === 4) {
@@ -751,11 +748,19 @@ function firstAvailableConnection(): [number, number] | null {
   return null;
 }
 
+function onboardingDragPair(): [number, number] | null {
+  if (!puzzle) return null;
+  const bottom = puzzle.nodes.filter(node => node.y === 0 && node.z === 0).map(node => node.id);
+  if (bottom.length === 2 && !puzzle.edges.some(edge => edgeKey(...edge) === edgeKey(bottom[0], bottom[1])))
+    return [bottom[0], bottom[1]];
+  return firstAvailableConnection();
+}
+
 function onboardingCueForStep(): OnboardingCue {
   if (!puzzle) return { kind: "none" };
   if (onboardingStep === 0 || onboardingStep === 1) {
-    const example = onboardingStep === 1
-      ? puzzle.nodes.filter(node => node.y === 0 && node.z === 0).map(node => node.id)
+    const example: number[] = onboardingStep === 1
+      ? onboardingDragPair() ?? []
       : puzzle.solution[0] ?? [];
     const [start, end] = onboardingStep === 0 && selected !== null
       ? [selected, example.includes(selected) ? example.find(id => id !== selected)
@@ -890,7 +895,9 @@ function renderOnboarding() {
     {
       step: "2 of 8",
       title: "Make one connection.",
-      message: "Drag between the two bottom nodes to connect them.",
+      message: onboardingDragPair()?.every(id => puzzle!.nodes[id].y === 0)
+        ? "Drag between the two bottom nodes to connect them."
+        : "Drag between the highlighted nodes to connect them.",
       action: null,
     },
     {
@@ -1051,6 +1058,8 @@ function startOnboarding(step = 0, rotation = 0) {
   onboardingPuzzleCompleted = false;
   keyboardIndex = -1;
   onboardingConnection = null;
+  // Keep the selection lesson's connection when entering later flat lessons directly.
+  if (step >= 1 && step <= 4) puzzle.toggle(...puzzle.solution[0]);
   // Direct links prepare the prerequisite move without skipping the lesson itself.
   if (step === 2) {
     onboardingConnection = [0, 1];
