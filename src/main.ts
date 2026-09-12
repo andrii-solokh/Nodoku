@@ -1303,8 +1303,6 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     hint();
   } else if (key === "r") scene.resetView();
-  else if (key === "+" || key === "=") scene.zoom(0.15);
-  else if (key === "-") scene.zoom(-0.15);
   else if (key === "escape") {
     scene.cancelPendingTap();
     selectNode(null);

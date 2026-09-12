@@ -34,7 +34,7 @@ async function fixture(value) {
 function equalView(actual, expected, label) {
   assert.deepEqual(actual.direction, expected.direction, `${label}: orientation`);
   assert.deepEqual(actual.up, expected.up, `${label}: camera up`);
-  assert.ok(Math.abs(actual.distance - expected.distance) < .01, `${label}: zoom distance`);
+  assert.ok(Math.abs(actual.distance - expected.distance) < .01, `${label}: fixed camera distance`);
 }
 async function connect(page, a, b) {
   await page.mouse.click(a.screen.x, a.screen.y);
@@ -54,9 +54,11 @@ try {
   await connect(page, a, b);
   assert.equal((await state(page)).edges.length, 1, 'real clicks connect nodes');
   await page.locator('[data-rotate="right"]').click(); await settle(page);
+  const fixedDistance = s.view.distance;
   await page.locator('#game-stage canvas').focus();
-  await page.keyboard.press('+'); await page.keyboard.press('+'); await settle(page);
+  await page.keyboard.press('+'); await page.keyboard.press('+'); await page.mouse.wheel(0, -2000); await settle(page);
   s = await state(page);
+  assert.ok(Math.abs(s.view.distance - fixedDistance) < 1e-8, 'saved games keep their fixed framing after zoom inputs');
   const selected = s.nodes.find(n => n.screen.pickable);
   await page.mouse.click(selected.screen.x, selected.screen.y); await page.waitForTimeout(320);
   s = await state(page);

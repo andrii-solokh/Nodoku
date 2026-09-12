@@ -410,6 +410,7 @@ try {
   await settle(mobile);
   s = await state(mobile);
   const node = s.nodes.find((n) => n.screen.pickable);
+  const distanceBeforePinch = s.view.distance;
   await touch("touchStart", [node.screen]);
   await touch("touchStart", [
     node.screen,
@@ -428,6 +429,7 @@ try {
     "pinching from a node creates no connections",
   );
   assert.deepEqual(s.view.direction, initial, "pinch does not rotate");
+  assert.ok(Math.abs(s.view.distance - distanceBeforePinch) < 1e-8, "pinch cannot zoom the puzzle");
   await mobile.screenshot({ path: `${out}/cube-touch.png`, fullPage: true });
   await mobile.close();
   assert.equal(errors.length, 0, errors.join("\n"));
