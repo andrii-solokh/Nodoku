@@ -4,6 +4,7 @@ import "@fontsource/outfit/500.css";
 import "@fontsource/outfit/600.css";
 import "./style.css";
 import { Puzzle, dailyPuzzleSeed, edgeKey, type Difficulty, type Edge, type PuzzleSettings } from "./puzzle";
+import { updateAudiencePuzzle } from "./audience";
 import { BoardScene } from "./scene";
 import { HomeDemo } from "./demo";
 import { mountSponsorship, setSponsorshipConfig } from "./sponsorship";
@@ -1079,6 +1080,7 @@ function updateOnboardingUrl() {
   if (url.href !== location.href) history.replaceState(history.state, "", url);
 }
 function startOnboarding(step = 0, rotation = 0) {
+  updateAudiencePuzzle(null);
   clearCompletionMoment();
   if (mode === "playing" && puzzle && !puzzle.solved) {
     onStrokeEnd(false);
@@ -1277,6 +1279,9 @@ function updateGame(showCompletion = true) {
   updateNetworkStatus();
   if (showCompletion) maybeComplete();
   if (!puzzle.solved) completionShown = false;
+  if (mode === "playing" && attemptId) updateAudiencePuzzle({
+    attemptId, connections: puzzle.edges.length, solved: completionShown,
+  });
   if (!strokePuzzle) persist();
 }
 function puzzleAnalyticsProperties() {
@@ -1370,6 +1375,7 @@ function maybeComplete() {
     !document.querySelector("dialog[open]")
   ) {
     completionShown = true;
+    if (attemptId) updateAudiencePuzzle({ attemptId, connections: puzzle.edges.length, solved: true });
     if (attemptId) recordCompletion(puzzle, attemptId);
     captureAnalytics("puzzle_completion_viewed", {
       ...puzzleAnalyticsProperties(),
@@ -1459,6 +1465,7 @@ function goHome() {
   savedSelection = savedPuzzle ? selected : null;
   puzzle = null;
   mode = "home";
+  updateAudiencePuzzle(null);
   app.className = "home";
   updateNetworkStatus();
   el("toast").textContent = "";

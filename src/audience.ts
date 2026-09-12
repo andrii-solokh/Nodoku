@@ -2,12 +2,19 @@ import { mountStatistics, openStatistics, parseStatistics, type StatisticsData }
 
 const HEARTBEAT_MS = 30_000;
 const STATISTICS_REFRESH_MS = 60_000;
-const ROTATE_MS = 10_000;
 const metrics = [
   { key: 'puzzlesSolved', id: 'puzzles-solved-count', label: 'Puzzles solved' },
+  { key: 'connectionsCompleted', id: 'connections-completed-count', label: 'Connections' },
   { key: 'dotsCleared', id: 'dots-cleared-count', label: 'Dots cleared' },
   { key: 'visitors', id: 'visitor-count', label: 'Visitors' },
 ] as const;
+
+type PuzzleActivity = { attemptId: string; connections: number; solved: boolean };
+let currentPuzzleActivity: PuzzleActivity | null = null;
+export function updateAudiencePuzzle(activity: PuzzleActivity | null): void {
+  currentPuzzleActivity = activity;
+  window.dispatchEvent(new CustomEvent('nodoku:puzzle-activity', { detail: activity }));
+}
 
 /** One browser identity counts once, even when several tabs send heartbeats. */
 export function mountAudience(widgets: HTMLElement[], visitorId: string, options: { beforeOpen?: () => void } = {}): void {
@@ -24,9 +31,7 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
       <span class="audience-divider" aria-hidden="true"></span>
       <span class="audience-rotating">${metrics.map((metric, metricIndex) => `<span class="audience-counter audience-${metric.key}" ${metricIndex ? 'hidden' : ''}><strong id="${metric.id}${suffix}">—</strong><span>${metric.label}</span></span>`).join('')}</span>
     </button>`;
-    widget.querySelector('button')!.addEventListener('click', () => { pauseRotation(); openStatistics(); });
-    for (const name of ['pointerenter', 'focusin']) widget.addEventListener(name, pauseRotation);
-    for (const name of ['pointerleave', 'focusout']) widget.addEventListener(name, () => queueMicrotask(scheduleRotation));
+    widget.querySelector('button')!.addEventListener('click', () => openStatistics());
   }
   const format = new Intl.NumberFormat();
   const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 });
@@ -34,9 +39,10 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
   let registeredDay = '';
   let statisticsUpdatedAt = -Infinity;
   let timer: number | undefined;
-  let rotationTimer: number | undefined;
-  let fadeTimer: number | undefined;
   let metricIndex = 0;
+  let activity: (PuzzleActivity & { showProgress: boolean }) | null = currentPuzzleActivity
+    ? { ...currentPuzzleActivity, showProgress: false } : null;
+  let detailTimer: number | undefined;
   let active: AbortController | null = null;
   let away = false;
   let statistics: StatisticsData | null = null;
@@ -59,48 +65,62 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
 
   function updateAccessibleLabels() {
     const metric = metrics[metricIndex];
-    const value = statistics?.totals[metric.key];
     const presence = onlineCount === null ? 'Online count unavailable' : `${format.format(onlineCount)} online`;
-    const total = value === undefined ? `${metric.label} unavailable` : `${format.format(value)} ${metric.label.toLowerCase()} all time`;
-    const label = `${statistics?.scope === 'local' ? 'Local preview. ' : ''}${presence}, ${total}. Open statistics`;
-    for (const widget of widgets) widget.querySelector('button')!.setAttribute('aria-label', label);
+    for (const widget of widgets) {
+      const { value, scope } = metricValue(widget, metric.key);
+      const total = value === undefined ? `${metric.label} unavailable` : `${format.format(value)} ${metric.label.toLowerCase()} ${scope}`;
+      widget.querySelector('button')!.setAttribute('aria-label', `${statistics?.scope === 'local' ? 'Local preview. ' : ''}${presence}, ${total}. Open statistics`);
+    }
   }
 
+  function metricValue(widget: HTMLElement, key: typeof metrics[number]['key']) {
+    if (widget.classList.contains('visitor-game') && activity?.showProgress && !activity.solved) {
+      if (key === 'connectionsCompleted') return { value: activity.connections, scope: 'in this puzzle' };
+      if (key === 'dotsCleared') return { value: activity.connections * 2, scope: 'in this puzzle' };
+    }
+    return { value: statistics?.totals[key], scope: 'all time' };
+  }
   function renderMetrics() {
     for (const widget of widgets) {
       for (const metric of metrics) {
         const counter = widget.querySelector<HTMLElement>(`.audience-${metric.key}`)!;
-        const value = statistics?.totals[metric.key];
+        const { value, scope } = metricValue(widget, metric.key);
         counter.querySelector('strong')!.textContent = value === undefined ? '—' : value >= 100_000 ? compact.format(value) : format.format(value);
-        counter.title = value === undefined ? `${metric.label} are temporarily unavailable` : `${format.format(value)} ${metric.label.toLowerCase()} · All time`;
+        counter.title = value === undefined ? `${metric.label} are temporarily unavailable` : `${format.format(value)} ${metric.label.toLowerCase()} · ${scope}`;
         counter.classList.toggle('is-unavailable', value === undefined);
       }
       if (statistics) widget.querySelector<HTMLElement>('.visitor-scope')!.hidden = statistics.scope !== 'local';
     }
     updateAccessibleLabels();
   }
-  function pauseRotation() {
-    window.clearTimeout(rotationTimer);
-    window.clearTimeout(fadeTimer);
-    for (const widget of widgets) widget.querySelector('.audience-rotating')?.classList.remove('is-changing');
+  function showMetric(key: typeof metrics[number]['key']) {
+    metricIndex = metrics.findIndex(metric => metric.key === key);
+    for (const widget of widgets) {
+      metrics.forEach(metric => { widget.querySelector<HTMLElement>(`.audience-${metric.key}`)!.hidden = metric.key !== key; });
+      if (!reducedMotion.matches) widget.querySelector(`.audience-${key} strong`)!.animate(
+        [{ color: '#7966bd', transform: 'translateY(-2px)' }, { color: 'inherit', transform: 'translateY(0)' }],
+        { duration: 450, easing: 'ease-out' },
+      );
+    }
+    updateAccessibleLabels();
   }
-  function scheduleRotation() {
-    pauseRotation();
-    if (document.hidden || away || reducedMotion.matches || document.querySelector('#statistics-dialog[open]') || widgets.some(widget => widget.matches(':hover') || widget.contains(document.activeElement))) return;
-    rotationTimer = window.setTimeout(() => {
-      if (document.hidden || away || reducedMotion.matches) return;
-      for (const widget of widgets) widget.querySelector('.audience-rotating')!.classList.add('is-changing');
-      fadeTimer = window.setTimeout(() => {
-        metricIndex = (metricIndex + 1) % metrics.length;
-        for (const widget of widgets) {
-          metrics.forEach((metric, index) => { widget.querySelector<HTMLElement>(`.audience-${metric.key}`)!.hidden = index !== metricIndex; });
-          widget.querySelector('.audience-rotating')!.classList.remove('is-changing');
-        }
-        updateAccessibleLabels();
-        scheduleRotation();
-      }, 160);
-    }, ROTATE_MS);
-  }
+  window.addEventListener('nodoku:puzzle-activity', event => {
+    const next = (event as CustomEvent<PuzzleActivity | null>).detail;
+    if (next && activity && next.attemptId === activity.attemptId
+      && next.connections === activity.connections && next.solved === activity.solved) return;
+    window.clearTimeout(detailTimer);
+    const samePuzzle = next && next.attemptId === activity?.attemptId;
+    activity = next ? { ...next, showProgress: !!samePuzzle } : null;
+    renderMetrics();
+    if (!activity || !samePuzzle || activity.solved) {
+      showMetric('puzzlesSolved');
+      return;
+    }
+    showMetric('connectionsCompleted');
+    // Both values changed in this move: show the connection, then its cleared dots.
+    // This is a single follow-up, never an idle rotation.
+    detailTimer = window.setTimeout(() => showMetric('dotsCleared'), 1000);
+  });
   function online(value: number | null, scope?: string) {
     onlineCount = value;
     for (const widget of widgets) {
@@ -141,9 +161,11 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
       if (!response.ok) throw new Error('Unavailable');
       const result = parseStatistics(await response.json(), 'all');
       if (active !== controller || document.hidden || away) return;
+      const changed = statistics && metrics.find(metric => result.totals[metric.key] !== statistics!.totals[metric.key]);
       statistics = result;
       statisticsUpdatedAt = Date.now();
       renderMetrics();
+      if (changed && (!activity?.showProgress || activity.solved)) showMetric(changed.key);
     } catch {
       if (active === controller && !document.hidden && !away) { statistics = null; renderMetrics(); }
     } finally {
@@ -166,7 +188,6 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
   };
   const pause = () => {
     window.clearTimeout(timer);
-    pauseRotation();
     const pending = active;
     active = null;
     pending?.abort();
@@ -177,15 +198,12 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
     statisticsUpdatedAt = -Infinity;
     online(null);
     void poll();
-    scheduleRotation();
   };
   document.addEventListener('visibilitychange', () => document.hidden ? pause() : resume());
   window.addEventListener('pagehide', () => { away = true; pause(); });
   window.addEventListener('pageshow', event => { if (event.persisted) { away = false; resume(); } });
   window.addEventListener('online', resume);
   window.addEventListener('nodoku:statistics-updated', resume);
-  document.querySelector('#statistics-dialog')?.addEventListener('close', scheduleRotation);
-  reducedMotion.addEventListener('change', scheduleRotation);
   renderMetrics(); online(null);
-  void poll(); scheduleRotation();
+  void poll();
 }
