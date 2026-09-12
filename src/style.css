@@ -1822,6 +1822,17 @@ a {
   .start-button { padding: 9px 14px; }
 }
 .onboarding-toolbar > div { pointer-events: auto; }
+@media (max-width: 760px) and (orientation: portrait) {
+  .onboarding-practice .onboarding-copy {
+    top: calc(100% - var(--onboarding-copy-space) - 28px);
+  }
+  .onboarding-practice .onboarding-turn-controls {
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    transform: none;
+  }
+  .onboarding-practice .onboarding-next { padding: 10px 8px; font-size: 12px; gap: 4px; }
+}
 .tutorial-tool-ping { position: relative; }
 .tutorial-tool-ping::after {
   content: "";

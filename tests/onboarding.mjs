@@ -405,33 +405,80 @@ try {
   assert.equal(await page.locator('.tutorial-tool-ping').count(), 0);
   assert.equal(await page.locator('#onboarding-shortcut').isHidden(), true);
   assert.match(await page.locator('#onboarding-next').textContent(), /Finish tutorial/);
-  // Restart provides a route back into the practice sequence.
+  // Finishing the lessons unlocks normal play on the same cube.
   await page.locator('#onboarding-restart').click();
-  assert.equal(await page.locator('#onboarding-step').textContent(), '7 of 10');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '10 of 10');
   assert.equal((await state(page)).edges.length, 0);
+  assert.equal(await page.locator('#onboarding-turn-controls').isVisible(), true);
+  assert.match(await page.locator('#onboarding-message').textContent(), /Finish connecting the cube/);
+  await page.screenshot({ path: 'output/web-game/onboarding-controls/free-play-mobile.png' });
+  const overlapsControls = await page.evaluate(() => {
+    const controls = ['#onboarding-control-lesson .tools-group', '#onboarding-turn-controls'].map(selector => document.querySelector(selector).getBoundingClientRect());
+    return ['#onboarding-title', '#onboarding-message', '#onboarding-next'].some(selector => {
+      const box = document.querySelector(selector).getBoundingClientRect();
+      return controls.some(control => box.left < control.right && box.right > control.left && box.top < control.bottom && box.bottom > control.top);
+    });
+  });
+  assert.equal(overlapsControls, false, 'Free-play instructions and finish action stay clear of mobile controls');
   await page.setViewportSize({ width: 1200, height: 850 });
   await page.waitForTimeout(250);
   const practice = (await state(page)).nodes;
   const practiceA = practice.find(n => n.screen?.pickable && practice.some(b => b.screen?.pickable && adjacent(n,b)));
   const practiceB = practice.find(n => n.screen?.pickable && adjacent(practiceA,n));
+  await page.mouse.click(practiceA.screen.x, practiceA.screen.y);
+  await page.mouse.click(practiceB.screen.x, practiceB.screen.y);
+  assert.equal((await state(page)).edges.length, 1, 'Selections connect in free play');
   await drag(page, practiceA, practiceB);
-  await settleSuccess(page);
+  assert.equal((await state(page)).edges.length, 0, 'Dragging can remove connections in free play');
+  await page.mouse.dblclick(practiceA.screen.x, practiceA.screen.y, { delay: 40 });
+  const filled = (await state(page)).edges;
+  assert.ok(filled.length > 0, 'Double tap fills neighbors in free play');
+  await page.mouse.dblclick(practiceA.screen.x, practiceA.screen.y, { delay: 40 });
+  assert.equal((await state(page)).edges.length, 0, 'Double tapping a cleared node removes its connections');
   await page.keyboard.press('Control+z');
-  await settleSuccess(page);
-  assert.equal(await page.locator('#onboarding-step').textContent(), '9 of 10');
-  assert.deepEqual(await page.locator('#onboarding-shortcut kbd').allTextContents(), [modifier, 'Shift', 'Z']);
-  await page.locator('#onboarding-redo').click();
-  await settleSuccess(page);
-  assert.equal(await page.locator('#onboarding-step').textContent(), '10 of 10');
+  assert.deepEqual((await state(page)).edges.map(edge => edge.join(':')).sort(), filled.map(edge => edge.join(':')).sort(), 'Undo works after lessons');
+  await page.keyboard.press('Control+Shift+z');
+  assert.equal((await state(page)).edges.length, 0, 'Redo works after lessons');
+  await page.locator('[data-onboarding-rotate="left"]').click();
+  await page.waitForFunction(() => !JSON.parse(window.render_game_to_text()).view.animating);
+  await page.keyboard.press('w');
+  await page.waitForFunction(() => !JSON.parse(window.render_game_to_text()).view.animating);
+  await swipeTurn(page, 'right');
+  await page.waitForFunction(() => !JSON.parse(window.render_game_to_text()).view.animating);
+  assert.equal(await page.locator('#onboarding-step').textContent(), '10 of 10', 'Rotation does not restart lessons');
+  assert.equal((await state(page)).tutorialSuccess, null, 'Free-play moves do not trigger lesson acknowledgements');
   await page.keyboard.press('h');
+  assert.ok((await state(page)).edges.length > 0, 'Hint remains usable after lessons');
+  await page.locator('#onboarding-restart').click();
+  assert.equal((await state(page)).edges.length, 0);
+  const solution = new Puzzle({ size: 2, depth: 2, difficulty: 'easy', seed: 17 });
+  for (let i = 0; i < solution.solution.length - 1; i++) {
+    await page.locator('#onboarding-hint').click();
+    await page.waitForFunction(() => !JSON.parse(window.render_game_to_text()).view.animating);
+  }
+  const almostSolved = await state(page);
+  const missing = solution.solution.find(([a,b]) => !almostSolved.edges.some(([x,y]) => a === x && b === y));
+  assert.ok(missing, 'One final connection remains for the player');
+  let finalPair;
+  for (let attempt = 0; attempt < 24; attempt++) {
+    const nodes = (await state(page)).nodes;
+    const pair = missing.map(id => nodes.find(n => n.id === id));
+    if (pair.every(n => n.screen.pickable)) { finalPair = pair; break; }
+    await page.keyboard.press(attempt % 4 === 3 ? 'w' : 'd');
+    await page.waitForFunction(() => !JSON.parse(window.render_game_to_text()).view.animating);
+  }
+  assert.ok(finalPair, 'The final connection can be brought into view');
+  await drag(page, finalPair[0], finalPair[1]);
+  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).tutorialSuccess === 'All connected');
+  await page.screenshot({ path: 'output/web-game/onboarding-controls/free-play-complete.png' });
   await settleSuccess(page);
-  assert.equal(await page.locator('#onboarding-title').textContent(), 'You’re ready.');
+  assert.equal((await state(page)).solved, true, 'Free play completes the real cube');
+  assert.equal(await page.locator('#onboarding-title').textContent(), 'All connected.');
   assert.deepEqual(await page.evaluate(() => window.tutorialSuccessMessages), [
     'Connection made', 'Connection made', 'Connection removed', 'Neighbors connected', 'All connected',
     'Turned left', 'Turned right', 'Turned up', 'Turned down', '3D connection made',
-    'Move undone', 'Move restored', 'Hint applied',
-    '3D connection made', 'Move undone', 'Move restored', 'Hint applied',
-  ], 'Every completed lesson and rotation direction gets one success message');
+    'Move undone', 'Move restored', 'Hint applied', 'All connected',
+  ], 'Free-play completion celebrates once without replaying lessons');
   await page.locator('#onboarding-next').click();
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');
   assert.equal(await page.locator('.site-header').isVisible(), true, 'Finishing returns to the normal home screen');
