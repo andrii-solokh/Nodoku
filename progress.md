@@ -1587,3 +1587,7 @@ TODO / Note
 ## 2026-09-12 — Statistics complexity icons
 - Replaced text difficulty labels in statistics with the same connected-dot complexity symbols used on the home page.
 - Kept difficulty names in accessible row labels and verified the correct filled-dot level for each difficulty.
+
+## 2026-09-12 — Compact sponsor plaques
+- Reduced sponsor plaque size on the landing screen and game canvas.
+- Verified 136px landing plaques and capped in-game plaques at 280 × 132px, with interactive sponsor controls intact.
