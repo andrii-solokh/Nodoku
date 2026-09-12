@@ -7,3 +7,6 @@ STRIPE_WEBHOOK_SECRET=""
 # One-time permanent ad removal, in USD cents. Empty disables new purchases.
 # Set only after choosing the price; existing verified receipts still work.
 REMOVE_ADS_AMOUNT=""
+# Optional PostHog product analytics. This public project key is delivered to
+# the browser through the same-origin /api/analytics-config endpoint.
+POSTHOG_PROJECT_API_KEY=""

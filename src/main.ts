@@ -13,6 +13,7 @@ import { AmbientAudio } from "./ambient";
 import moonlightUrl from "./assets/moonlight-scott-buckley.mp3?url";
 import { mountCompletionShare } from "./share";
 import { recordCompletion, restoreAttemptId, startCompletionTracking } from "./completions";
+import { captureAnalytics, startAnalytics } from "./analytics";
 
 const paths: Record<string, string> = {
   cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>',
@@ -81,6 +82,9 @@ let networkGroups: number[][] = [];
 let networkSignature = "";
 let highlightedGroup = 0;
 let nextGroupToShow = 0;
+let firstConnectionTracked = false;
+let viewRotationTracked = false;
+let gameStartedAt = 0;
 const gameAudio = new GameAudio();
 const ambientAudio = new AmbientAudio(moonlightUrl);
 try {
@@ -243,7 +247,9 @@ app.innerHTML = `
 `;
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
-const completionShare = mountCompletionShare(el("completion-share"));
+const completionShare = mountCompletionShare(el("completion-share"), channel =>
+  captureAnalytics("puzzle_shared", { channel, ...puzzleAnalyticsProperties() }),
+);
 app.querySelectorAll<HTMLButtonElement>(".game-toolbar button").forEach((button) => {
   button.title = button.getAttribute("aria-label") || button.textContent!.trim();
 });
@@ -259,6 +265,10 @@ try {
     onStrokeEdge: onStrokeEdge,
     onStrokeEnd: onStrokeEnd,
     onRotate: () => {
+      if (mode === "playing" && !viewRotationTracked) {
+        viewRotationTracked = true;
+        captureAnalytics("puzzle_rotated", puzzleAnalyticsProperties());
+      }
       if (mode === "onboarding" && onboardingStep === 2) {
         onboardingStep = 3;
         renderOnboarding();
@@ -490,6 +500,7 @@ function onDoubleTap(id: number) {
   el("toast").textContent = "";
   selectNode(null);
   if (result.changed) {
+    trackFirstConnection("double_tap");
     tone(result.removed ? "disconnect" : "connect", result.count,
       result.removed ? undefined : getConfig().demo.tempoBpm);
   }
@@ -533,8 +544,15 @@ function renderOnboarding() {
   const next = el<HTMLButtonElement>("onboarding-next");
   next.hidden = !copy.action;
   next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
+  captureAnalytics("onboarding_lesson_viewed", {
+    lesson: ["connection", "network", "rotation", "ready"][onboardingStep],
+    step: onboardingStep + 1,
+  });
 }
-function finishOnboarding() {
+function finishOnboarding(completed = false) {
+  captureAnalytics(completed ? "onboarding_completed" : "onboarding_skipped", {
+    last_step: onboardingStep + 1,
+  });
   onboardingCompleted = true;
   showOnboarding = false;
   onStrokeEnd(false);
@@ -559,6 +577,7 @@ function startOnboarding() {
   moveCanvas("onboarding-stage");
   scene.setPuzzle(puzzle);
   scene.setInteractive(true);
+  captureAnalytics("onboarding_started", { grid_size: 3, depth: 1 });
   renderOnboarding();
 }
 function showOnboarding3d() {
@@ -612,6 +631,7 @@ function onStrokeEdge(a: number, b: number): boolean {
     scene.refresh();
     return true;
   }
+  trackFirstConnection("drag");
   selectNode(b);
   tone(puzzle.edges.length > count ? "connect" : "disconnect");
   updateGame();
@@ -656,6 +676,20 @@ function updateGame(showCompletion = true) {
   if (!puzzle.solved) completionShown = false;
   if (!strokePuzzle) persist();
 }
+function puzzleAnalyticsProperties() {
+  const current = puzzle?.settings;
+  return current ? {
+    grid_size: current.size,
+    depth: current.depth,
+    perspective: current.depth === 1 ? "flat" : "3d",
+    difficulty: current.difficulty,
+  } : {};
+}
+function trackFirstConnection(input: "drag" | "double_tap" | "hint") {
+  if (mode !== "playing" || firstConnectionTracked) return;
+  firstConnectionTracked = true;
+  captureAnalytics("puzzle_first_connection", { input, ...puzzleAnalyticsProperties() });
+}
 function updateNetworkStatus() {
   networkGroups = mode === "playing" && puzzle?.disconnected ? puzzle.connectionGroups : [];
   const visible = networkGroups.length > 1;
@@ -686,6 +720,11 @@ function maybeComplete() {
   ) {
     completionShown = true;
     if (attemptId) recordCompletion(puzzle, attemptId);
+    captureAnalytics("puzzle_completion_viewed", {
+      ...puzzleAnalyticsProperties(),
+      connection_count: puzzle.edges.length,
+      elapsed_seconds: Math.max(0, Math.round((performance.now() - gameStartedAt) / 1000)),
+    });
     savedPuzzle = null;
     // The cadence continues the player's score, including its rests and held notes.
     tone("complete", 1, undefined, getConfig().demo.tempoBpm);
@@ -714,6 +753,9 @@ function startGame(resume = false) {
   selected = null;
   keyboardIndex = -1;
   completionShown = false;
+  firstConnectionTracked = resumedPuzzle ? puzzle.edges.length > 0 : false;
+  viewRotationTracked = false;
+  gameStartedAt = performance.now();
   mode = "playing";
   app.className = "playing";
   el("toast").textContent = "";
@@ -726,6 +768,11 @@ function startGame(resume = false) {
   scene.setInteractive(true);
   selectNode(puzzle.solved ? null : restoredSelection);
   updateGame();
+  captureAnalytics("puzzle_started", {
+    ...puzzleAnalyticsProperties(),
+    puzzle_type: "daily",
+    resumed: !!resumedPuzzle,
+  });
   if (!document.querySelector("dialog[open]"))
     app.querySelector("canvas")?.focus({ preventScroll: true });
 }
@@ -779,6 +826,11 @@ function hint() {
   if (result.edge) {
     scene.focusNode(result.edge[0]);
   }
+  trackFirstConnection("hint");
+  captureAnalytics("puzzle_hint_used", {
+    ...puzzleAnalyticsProperties(),
+    action: result.removed ? "removed" : "added",
+  });
   tone(result.removed ? "disconnect" : "connect");
   updateGame();
   toast(
@@ -812,10 +864,10 @@ function startFresh() {
 }
 el("start-button").addEventListener("click", startFresh);
 el("resume-button").addEventListener("click", () => startGame(true));
-el("onboarding-skip").addEventListener("click", finishOnboarding);
+el("onboarding-skip").addEventListener("click", () => finishOnboarding());
 el("onboarding-next").addEventListener("click", () => {
   if (onboardingStep === 1) showOnboarding3d();
-  else if (onboardingStep === 3) finishOnboarding();
+  else if (onboardingStep === 3) finishOnboarding(true);
 });
 el("home-button").addEventListener("click", () => {
   if (mode === "playing") goHome();
@@ -1100,6 +1152,7 @@ updateSound();
 updateMusic();
 if (document.hidden) ambientAudio.suspend();
 startCompletionTracking();
+startAnalytics();
 if (showOnboarding) startOnboarding();
 else if (resumeOnLoad) startGame(true);
 else updateOptions();

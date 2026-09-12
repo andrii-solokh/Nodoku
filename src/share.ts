@@ -1,6 +1,7 @@
 import type { PuzzleSettings } from "./puzzle";
 
 type ShareSettings = Pick<PuzzleSettings, "size" | "depth" | "difficulty">;
+export type ShareChannel = "x" | "instagram" | "tiktok" | "whatsapp" | "telegram" | "native" | "copy";
 
 const DIFFICULTY = { easy: "Gentle", medium: "Focused", hard: "Intricate" };
 // Brand silhouettes: https://github.com/simple-icons/simple-icons/tree/develop/icons
@@ -34,7 +35,7 @@ export function createCompletionShare(settings: ShareSettings, connections: numb
   return { title: "Every dot cleared · Nodoku", text, url, message: `${text}\n\n${url}` };
 }
 
-export function mountCompletionShare(host: HTMLElement): {
+export function mountCompletionShare(host: HTMLElement, onShare?: (channel: ShareChannel) => void): {
   update(settings: ShareSettings, connections: number): void;
 } {
   const id = `completion-share-${++shareId}`;
@@ -69,6 +70,9 @@ export function mountCompletionShare(host: HTMLElement): {
   const fallback = host.querySelector<HTMLElement>(".completion-share-fallback")!;
   const textarea = host.querySelector<HTMLTextAreaElement>(".completion-share-message")!;
   nativeButton.hidden = typeof navigator.share !== "function";
+  host.querySelectorAll<HTMLAnchorElement>("[data-network]").forEach(link =>
+    link.addEventListener("click", () => onShare?.(link.dataset.network as ShareChannel)),
+  );
 
   let payload: ReturnType<typeof createCompletionShare> | null = null;
   let version = 0;
@@ -105,7 +109,10 @@ export function mountCompletionShare(host: HTMLElement): {
     const current = payload;
     try {
       await navigator.share({ title: current.title, text: current.text, url: current.url });
-      if (actionVersion === version) status.textContent = "Thanks for sharing!";
+      if (actionVersion === version) {
+        status.textContent = "Thanks for sharing!";
+        onShare?.("native");
+      }
     } catch (error) {
       if (actionVersion !== version || (error instanceof Error && error.name === "AbortError")) return;
       status.textContent = "Sharing isn’t available here. Copy the message below.";
@@ -122,7 +129,10 @@ export function mountCompletionShare(host: HTMLElement): {
     try {
       if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
       await navigator.clipboard.writeText(current.message);
-      if (actionVersion === version) status.textContent = "Message copied. Share it wherever you like.";
+      if (actionVersion === version) {
+        status.textContent = "Message copied. Share it wherever you like.";
+        onShare?.("copy");
+      }
     } catch {
       if (actionVersion !== version) return;
       status.textContent = "Select and copy the message below.";

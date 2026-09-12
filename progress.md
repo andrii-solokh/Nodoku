@@ -1611,3 +1611,10 @@ TODO / Note
 - Added the double-tap shortcut to the connection-goal lesson: double-tap a node to connect every available neighbor.
 - Covered the instruction in the first-run onboarding browser test.
 - Verified with `npm test` (192 passing), `npm run build`, the onboarding browser flow, and the web-game interaction smoke test.
+
+## 2026-09-12 — PostHog player analytics
+- Added lazy PostHog browser initialization through a same-origin runtime configuration endpoint for US Cloud.
+- Added anonymous events for onboarding progress, puzzle starts, first connections, rotations, hints, completion views, and sharing.
+- Sent server-verified puzzle completions to PostHog, preserving the game's existing completion deduplication.
+- Configured the production Pages `POSTHOG_PROJECT_API_KEY` secret and documented local and production setup.
+- Verified with `npm test` (193 passing), `npm run build`, onboarding and sharing browser flows, and the web-game smoke test.

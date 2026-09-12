@@ -23,6 +23,8 @@ async function fixture({ nativeSupported = true, clipboardSupported = true, sett
   page.on('console', event => { if (event.type() === 'error') errors.push(event.text()); });
   await page.route('**/api/visitors', route => route.fulfill({ json: { count: 1, scope: 'local' } }));
   await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors: [] } }));
+  await page.route('**/api/analytics-config', route => route.fulfill({ json: { projectApiKey: null } }));
+  await page.route('**/api/completions', route => route.fulfill({ json: { recorded: true } }));
   await page.addInitScript(({ settings, edges, nativeSupported, clipboardSupported }) => {
     localStorage.setItem('nodoku.astra.v1', JSON.stringify({ screen: 'home', settings, game: { version: 1, settings, edges, history: [] } }));
     window.__sharing = { nativeCalls: [], copyCalls: [], nativeMode: 'success', copyMode: 'success', pending: null };

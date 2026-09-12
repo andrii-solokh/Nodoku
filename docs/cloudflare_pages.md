@@ -9,7 +9,7 @@ The production domain is **https://nodoku.solokh.com**. The Cloudflare Pages pro
 
 Run `npm ci` and `npm run build` locally to verify. The production bundle contains the application and locally hosted fonts; it does not use the old Godot WASM export or require cross-origin isolation headers.
 
-`wrangler.jsonc` defines `dist`, the Workers compatibility settings, the production `nodoku` database as `DB`, and `APP_ORIGIN=https://nodoku.solokh.com`. The production database was created and the complete `server/schema.sql` applied on 2026-09-11. Counters and statistics work without Stripe credentials. Leave payment secrets and `REMOVE_ADS_AMOUNT` unset until pricing and payment setup are complete.
+`wrangler.jsonc` defines `dist`, the Workers compatibility settings, the production `nodoku` database as `DB`, and `APP_ORIGIN=https://nodoku.solokh.com`. The production database was created and the complete `server/schema.sql` applied on 2026-09-11. Counters and statistics work without Stripe credentials. Leave payment secrets and `REMOVE_ADS_AMOUNT` unset until pricing and payment setup are complete. To enable PostHog, configure `POSTHOG_PROJECT_API_KEY` as a Pages secret; the app retrieves the public project key through its same-origin analytics configuration endpoint.
 
 To deploy a later build to this project's production branch:
 
