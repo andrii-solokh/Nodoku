@@ -13,7 +13,7 @@ import { AmbientAudio } from "./ambient";
 import moonlightUrl from "./assets/moonlight-scott-buckley.mp3?url";
 import { mountCompletionShare } from "./share";
 import { recordCompletion, restoreAttemptId, startCompletionTracking } from "./completions";
-import { captureAnalytics, startAnalytics } from "./analytics";
+import { captureAnalytics, startAnalytics, subscribeFeatureFlag } from "./analytics";
 
 const paths: Record<string, string> = {
   cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>',
@@ -1470,6 +1470,7 @@ updateSound();
 updateMusic();
 if (document.hidden) ambientAudio.suspend();
 startCompletionTracking();
+subscribeFeatureFlag("music-score", enabled => scene.setMusicScoreEnabled(enabled));
 startAnalytics();
 if (showOnboarding) startOnboarding();
 else if (resumeOnLoad) startGame(true);

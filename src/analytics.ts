@@ -7,6 +7,14 @@ let initialized = false;
 let starting: Promise<void> | null = null;
 let posthog: (typeof import("posthog-js"))["default"] | null = null;
 const queuedEvents: Array<{ event: string; properties: EventProperties }> = [];
+const featureFlagListeners = new Map<string, Set<(enabled: boolean) => void>>();
+
+function publishFeatureFlags(): void {
+  for (const [key, listeners] of featureFlagListeners) {
+    const enabled = posthog?.isFeatureEnabled(key, { send_event: false }) === true;
+    for (const listener of listeners) listener(enabled);
+  }
+}
 
 function validConfig(value: unknown): value is AnalyticsConfig {
   if (!value || typeof value !== "object") return false;
@@ -55,6 +63,8 @@ export function startAnalytics(): void {
       instance.register({ app: "nodoku" });
       instance.capture("$pageview");
       initialized = true;
+      instance.onFeatureFlags(() => publishFeatureFlags());
+      publishFeatureFlags();
       for (const queued of queuedEvents) send(queued.event, queued.properties);
       queuedEvents.length = 0;
       window.addEventListener("error", event => instance.captureException(event.error, { source: "window" }));
@@ -72,4 +82,17 @@ export function captureAnalytics(event: string, properties: EventProperties = {}
   }
   // Keep early interactions, but never retain a growing queue while offline.
   if (queuedEvents.length < 32) queuedEvents.push({ event, properties });
+}
+
+/** Observe a PostHog Boolean flag. Missing analytics or a missing flag stays safely off. */
+export function subscribeFeatureFlag(key: string, listener: (enabled: boolean) => void): () => void {
+  listener(false);
+  const listeners = featureFlagListeners.get(key) ?? new Set<(enabled: boolean) => void>();
+  listeners.add(listener);
+  featureFlagListeners.set(key, listeners);
+  if (initialized) listener(posthog?.isFeatureEnabled(key, { send_event: false }) === true);
+  return () => {
+    listeners.delete(listener);
+    if (!listeners.size) featureFlagListeners.delete(key);
+  };
 }
