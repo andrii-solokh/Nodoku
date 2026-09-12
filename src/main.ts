@@ -201,7 +201,11 @@ app.innerHTML = `
     <span class="onboarding-cue-node onboarding-cue-start"></span>
     <span class="onboarding-cue-node onboarding-cue-end"></span>
     <span class="onboarding-cue-hand"></span>
-    <span class="onboarding-cue-turn">${icon("orbit")}</span>
+    <span class="onboarding-cue-turn"><svg viewBox="0 0 220 64" fill="none" aria-hidden="true">
+      <path class="rotation-arrow-track" d="M18 48 Q110 2 202 48" />
+      <path class="rotation-arrow-motion" d="M18 48 Q110 2 202 48" />
+      <path class="rotation-arrow-head" d="M188 51 L202 48 L199 34" />
+    </svg></span>
   </div>
   <div class="onboarding-turn-controls" id="onboarding-turn-controls" role="group" aria-label="Turn the 3D puzzle" hidden>
     <span aria-hidden="true"></span>
@@ -752,10 +756,15 @@ function renderOnboardingCue() {
     || (gesture.kind === "turn" && !settings.rotationCue);
   if (cue.hidden) return;
 
-  const stage = el("onboarding-stage").getBoundingClientRect();
   if (gesture.kind === "turn") {
-    turn.style.left = `${stage.left + stage.width / 2}px`;
-    turn.style.top = `${stage.top + stage.height / 2}px`;
+    const nodes = puzzle!.nodes.map(node => scene.projectNode(node.id)).filter(node => node !== null);
+    if (!nodes.length) { cue.hidden = true; return; }
+    const left = Math.min(...nodes.map(node => node.x - node.radius));
+    const right = Math.max(...nodes.map(node => node.x + node.radius));
+    const top = Math.min(...nodes.map(node => node.y - node.radius));
+    turn.style.left = `${(left + right) / 2}px`;
+    turn.style.top = `${Math.max(80, top - 14)}px`;
+    turn.style.width = `${Math.min(220, (right - left) * .65)}px`;
     return;
   }
   const start = scene.projectNode(gesture.start!);
