@@ -20,7 +20,7 @@ npm run preview
 
 ## Tutorial links
 
-Open `/?onboarding=1&step=3` to jump directly to a lesson. Steps are numbered 1–10:
+Open `/?onboarding=1&step=3` to jump directly to a lesson. Steps are numbered 1–8:
 
 | Step | Lesson |
 | --- | --- |
@@ -31,13 +31,11 @@ Open `/?onboarding=1&step=3` to jump directly to a lesson. Steps are numbered 1�
 | 5 | Clear every dot |
 | 6 | Rotate the cube |
 | 7 | Make a 3D connection |
-| 8 | Undo |
-| 9 | Redo |
-| 10 | Hint, then finish the cube |
+| 8 | Finish the cube |
 
 For a specific rotation lesson, add `&direction=left`, `right`, `up`, or `down`, for example `/?onboarding=1&step=6&direction=up`. Add `&admin=1` to keep Studio available locally.
 
-Each direct link starts a fresh lesson with its prerequisite connections and undo/redo history prepared. The URL follows lesson progress without adding browser history entries; reload restarts that lesson. Exiting the tutorial removes its URL parameters. Invalid steps start at step 1.
+Each direct link starts a fresh lesson with its prerequisite connections prepared. The URL follows lesson progress without adding browser history entries; reload restarts that lesson. Exiting the tutorial removes its URL parameters. Invalid steps start at step 1.
 
 ## Play
 

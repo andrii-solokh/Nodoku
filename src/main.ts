@@ -14,7 +14,6 @@ import moonlightUrl from "./assets/moonlight-scott-buckley.mp3?url";
 import { mountCompletionShare } from "./share";
 import { recordCompletion, restoreAttemptId, startCompletionTracking } from "./completions";
 import { captureAnalytics, startAnalytics, subscribeFeatureFlag } from "./analytics";
-import { TutorialToolGuide } from "./tutorial-tool-guide";
 
 const paths: Record<string, string> = {
   cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>',
@@ -81,7 +80,6 @@ const tutorialKeys = { left: ["←", "A"], right: ["→", "D"], up: ["↑", "W"]
 const touchInput = window.matchMedia("(pointer: coarse)");
 let onboardingRotation = 0;
 let onboardingStep = 0;
-let onboardingToolsComplete = false;
 let onboardingPuzzleCompleted = false;
 let onboardingConnection: [number, number] | null = null;
 let onboardingCue: OnboardingCue = { kind: "none" };
@@ -204,9 +202,6 @@ app.innerHTML = `
   </div>
 </section>
 <section class="onboarding-main" aria-labelledby="onboarding-title">
-  <svg id="onboarding-tool-arrow" class="onboarding-tool-arrow" aria-hidden="true" focusable="false">
-    <g><path d="M-48-12 Q-28-24 0 0"/><path d="M-13-10 0 0-15 5"/></g>
-  </svg>
   <div id="onboarding-stage" class="stage onboarding-stage"></div>
   <div class="onboarding-cue" id="onboarding-cue" aria-hidden="true" hidden>
     <span class="onboarding-cue-line"></span>
@@ -230,19 +225,10 @@ app.innerHTML = `
     <button class="icon-button" type="button" data-onboarding-rotate="down" aria-label="Turn down">${icon("down")}</button>
     <span aria-hidden="true"></span>
   </div>
-  <aside class="game-toolbar onboarding-toolbar" id="onboarding-control-lesson" aria-label="Puzzle controls" hidden>
-    <div class="tools-group">
-      <button class="tool-button" type="button" id="onboarding-undo">${icon("undo")}Undo</button>
-      <button class="tool-button" type="button" id="onboarding-redo">${icon("redo")}Redo</button>
-      <button class="tool-button" type="button" id="onboarding-restart">${icon("restart")}Restart</button>
-      <button class="tool-button hint" type="button" id="onboarding-hint">${icon("hint")}Hint</button>
-    </div>
-  </aside>
   <section class="onboarding-copy" aria-live="polite">
-    <span class="onboarding-step" id="onboarding-step">1 of 10</span>
+    <span class="onboarding-step" id="onboarding-step">1 of 8</span>
     <h2 id="onboarding-title">Select two neighbors.</h2>
     <p id="onboarding-message">Select one node, then a neighboring node to connect them.</p>
-    <div class="onboarding-shortcut" id="onboarding-shortcut" role="group" aria-label="Keyboard shortcut" hidden></div>
     <div class="onboarding-shortcut" id="onboarding-rotation-keys" role="group" aria-label="Rotation keys" hidden></div>
     <button class="onboarding-next" id="onboarding-next" hidden>Show me 3D${icon("right")}</button>
   </section>
@@ -363,7 +349,6 @@ const demo = new HomeDemo(scene, kind => {
 }, () => soundEnabled && !demoSuspended() ? gameAudio.getCompletionDurationMs(demoSoundOptions("complete")) : 0);
 let activeMelody = getConfig().sound.connectionMelody;
 let tutorialSettings = getConfig().tutorial;
-const tutorialToolGuide = new TutorialToolGuide(document.querySelector<SVGSVGElement>("#onboarding-tool-arrow")!);
 const doubleTapStyle = document.createElement("style");
 document.head.appendChild(doubleTapStyle);
 subscribeConfig(config => {
@@ -396,7 +381,7 @@ subscribeConfig(config => {
     ${firstEnd}%, ${secondStart - .001}%, ${secondEnd}%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(var(--cue-ping-scale)); }
   }`;
   scene.setRemovalCue(mode === "onboarding" && !onboardingCelebrating && onboardingStep === 2 && tutorial.enabled && tutorial.removalCue ? onboardingConnection : null);
-  requestAnimationFrame(() => { renderOnboardingCue(); if (mode === "onboarding") { renderOnboardingTools(); renderRotationGuidance(); } });
+  requestAnimationFrame(() => { renderOnboardingCue(); if (mode === "onboarding") { renderRotationGuidance(); } });
   demo.setConfig(config);
   gameAudio.setConfig(config.sound);
   ambientAudio.setVolume(config.sound.ambientVolume);
@@ -504,7 +489,6 @@ function celebrateOnboarding(message: string, advance: () => void) {
   scene.setInteractive(false);
   scene.setRemovalCue(null);
   el("onboarding-cue").hidden = true;
-  renderOnboardingTools();
   renderRotationGuidance();
 }
 function tone(
@@ -898,37 +882,37 @@ function renderOnboarding() {
   app.classList.toggle("onboarding-rotation-lesson", onboardingStep === 5);
   const copy = [
     {
-      step: "1 of 10",
+      step: "1 of 8",
       title: "Select two neighbors.",
       message: "Select one node, then a neighboring node to connect them.",
       action: null,
     },
     {
-      step: "2 of 10",
+      step: "2 of 8",
       title: "Make one connection.",
       message: "Drag between the two bottom nodes to connect them.",
       action: null,
     },
     {
-      step: "3 of 10",
+      step: "3 of 8",
       title: "Remove the link.",
       message: "Drag across the same linked pair again to remove it.",
       action: null,
     },
     {
-      step: "4 of 10",
+      step: "4 of 8",
       title: "Double-tap a node.",
       message: "Tap twice quickly to connect all available neighbors. With a mouse, double-click.",
       action: null,
     },
     {
-      step: "5 of 10",
+      step: "5 of 8",
       title: "Clear every dot.",
       message: "Connect nodes until every dot is gone. Double-tap a cleared node to remove its links.",
       action: null,
     },
     {
-      step: "6 of 10",
+      step: "6 of 8",
       title: `Turn ${tutorialDirections[onboardingRotation]}.`,
       message: touchInput.matches
         ? `Drag to rotate, or tap the ${tutorialDirections[onboardingRotation]} arrow in the control panel.`
@@ -936,54 +920,33 @@ function renderOnboarding() {
       action: null,
     },
     {
-      step: "7 of 10",
+      step: "7 of 8",
       title: "Make a 3D connection.",
       message: "Drag from one node to a neighboring node. Turn the puzzle whenever you need another side.",
       action: null,
     },
     {
-      step: "8 of 10",
-      title: "Undo your move.",
-      message: "Press Undo to remove your last connection.",
-      action: null,
-    },
-    {
-      step: "9 of 10",
-      title: "Redo your move.",
-      message: "Press Redo to restore that connection.",
-      action: null,
-    },
-    {
-      step: "10 of 10",
-      title: onboardingPuzzleCompleted ? "All connected." : onboardingToolsComplete ? "You’re ready." : "Try a hint.",
+      step: "8 of 8",
+      title: onboardingPuzzleCompleted ? "All connected." : "Finish the cube.",
       message: onboardingPuzzleCompleted ? "You solved the cube. Ready for another puzzle?"
-        : onboardingToolsComplete ? "Finish connecting the cube. All gestures and tools are available."
-        : "Press Hint to get help with a connection.",
-      action: onboardingToolsComplete && onboardingPuzzleCompleted && puzzle?.solved ? "Finish tutorial" : null,
+        : "Connect the remaining nodes until every dot is gone and the whole cube is connected.",
+      action: onboardingPuzzleCompleted && puzzle?.solved ? "Finish tutorial" : null,
     },
   ][onboardingStep];
   el("onboarding-step").textContent = onboardingStep === 5
     ? `${copy.step} · Direction ${onboardingRotation + 1} of 4` : copy.step;
   el("onboarding-title").textContent = copy.title;
   el("onboarding-message").textContent = copy.message;
-  const shortcut = el("onboarding-shortcut");
-  shortcut.hidden = touchInput.matches || onboardingStep < 7 || onboardingToolsComplete;
-  const modifier = /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? "⌘" : "Ctrl";
-  const keys = onboardingStep === 7 ? [modifier, "Z"] : onboardingStep === 8 ? [modifier, "Shift", "Z"] : ["H"];
-  shortcut.innerHTML = keys.map(key => `<kbd${key === "⌘" ? ' aria-label="Command"' : ""}>${key}</kbd>`)
-    .join('<span aria-hidden="true">+</span>');
   const next = el<HTMLButtonElement>("onboarding-next");
   next.hidden = !copy.action;
   next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
   el("onboarding-turn-controls").hidden = !touchInput.matches || (onboardingStep !== 5 && !isOnboardingPractice());
-  el("onboarding-control-lesson").hidden = onboardingStep < 7;
-  renderOnboardingTools();
   renderRotationGuidance();
   onboardingCue = onboardingCueForStep();
   scene.setRemovalCue(!onboardingCelebrating && onboardingStep === 2 && tutorialSettings.enabled && tutorialSettings.removalCue ? onboardingConnection : null);
   requestAnimationFrame(renderOnboardingCue);
   captureAnalytics("onboarding_lesson_viewed", {
-    lesson: ["select_connection", "connection", "remove", "node_fill", "network", "rotation", "3d_connection", "undo", "redo", "hint"][onboardingStep],
+    lesson: ["select_connection", "connection", "remove", "node_fill", "network", "rotation", "3d_connection", "finish_cube"][onboardingStep],
     step: onboardingStep + 1,
   });
 }
@@ -1022,63 +985,12 @@ function completeOnboardingRotation(direction: TutorialDirection) {
 touchInput.addEventListener("change", () => {
   if (mode === "onboarding") renderOnboarding();
 });
-function renderOnboardingTools() {
-  const toolbar = el("onboarding-control-lesson");
-  toolbar.style.setProperty("--tool-cue-color", tutorialSettings.color);
-  const expected = onboardingToolsComplete ? null : ["undo", "redo", "hint"][onboardingStep - 7];
-  for (const tool of ["undo", "redo", "restart", "hint"] as const) {
-    const button = el<HTMLButtonElement>(`onboarding-${tool}`);
-    button.disabled = onboardingCelebrating || !puzzle || (tool === "undo" && !puzzle.canUndo)
-      || (tool === "redo" && !puzzle.canRedo) || (tool === "hint" && onboardingStep < 9);
-    button.classList.toggle("tutorial-tool-ping", !onboardingCelebrating && tutorialSettings.enabled && tutorialSettings.toolCue && tool === expected);
-  }
-  tutorialToolGuide.show(!onboardingCelebrating && tutorialSettings.enabled && tutorialSettings.toolCue && expected
-    ? el(`onboarding-${expected}`) : null,
-    touchInput.matches ? null : el("onboarding-shortcut"), tutorialSettings.color, tutorialSettings.gestureCycleMs);
-}
-function useOnboardingTool(tool: "undo" | "redo" | "hint" | "restart") {
-  if (mode !== "onboarding" || onboardingCelebrating || onboardingStep < 7 || !puzzle) return;
-  scene.cancelPendingTap();
-  onStrokeEnd(false);
-  if (tool === "hint" && onboardingStep < 9) return;
-  if (tool === "restart") {
-    puzzle.reset();
-    if (!isOnboardingPractice()) {
-      onboardingStep = 6;
-      onboardingToolsComplete = false;
-    }
-  } else {
-    const hintResult = tool === "hint" ? puzzle.hint() : null;
-    const changed = hintResult ? hintResult.changed : tool !== "hint" && puzzle[tool]();
-    if (!changed) return;
-    if (hintResult?.edge) scene.focusConnection(...hintResult.edge);
-    tone(tool === "undo" ? "disconnect" : "connect");
-    const expected = !onboardingToolsComplete && ["undo", "redo", "hint"][onboardingStep - 7] === tool;
-    if (expected) {
-      selectNode(null);
-      scene.refresh();
-      celebrateOnboarding({ undo: "Move undone", redo: "Move restored", hint: "Hint applied" }[tool], () => {
-        if (tool === "hint") onboardingToolsComplete = true;
-        else onboardingStep++;
-      });
-      return;
-    }
-  }
-  selectNode(null);
-  if (isOnboardingPractice()) {
-    refreshOnboardingPractice();
-    return;
-  }
-  scene.refresh();
-  renderOnboarding();
-}
 function isOnboardingPractice() {
-  return mode === "onboarding" && onboardingToolsComplete;
+  return mode === "onboarding" && onboardingStep === 7;
 }
 function refreshOnboardingPractice() {
   if (!isOnboardingPractice() || !puzzle || onboardingCelebrating) return;
   scene.refresh();
-  renderOnboardingTools();
   if (!puzzle.solved) {
     if (onboardingPuzzleCompleted) {
       onboardingPuzzleCompleted = false;
@@ -1092,7 +1004,6 @@ function refreshOnboardingPractice() {
   celebrateOnboarding("All connected", () => {});
 }
 function finishOnboarding(completed = false) {
-  tutorialToolGuide.show(null, null, tutorialSettings.color, tutorialSettings.gestureCycleMs);
   captureAnalytics(completed ? "onboarding_completed" : "onboarding_skipped", {
     last_step: onboardingStep + 1,
   });
@@ -1137,7 +1048,6 @@ function startOnboarding(step = 0, rotation = 0) {
   selected = null;
   onboardingStep = step;
   onboardingRotation = step === 5 ? rotation : 0;
-  onboardingToolsComplete = false;
   onboardingPuzzleCompleted = false;
   keyboardIndex = -1;
   onboardingConnection = null;
@@ -1147,9 +1057,8 @@ function startOnboarding(step = 0, rotation = 0) {
     puzzle.toggle(...onboardingConnection);
   } else if (step === 4) {
     puzzle.toggleNode(0);
-  } else if (step >= 7) {
+  } else if (step === 7) {
     puzzle.toggle(...puzzle.solution[0]);
-    if (step === 8) puzzle.undo();
   }
   mode = "onboarding";
   app.className = "onboarding";
@@ -1575,11 +1484,9 @@ function startFresh() {
 }
 el("start-button").addEventListener("click", startFresh);
 el("resume-button").addEventListener("click", () => startGame(true));
-for (const tool of ["undo", "redo", "restart", "hint"] as const)
-  el(`onboarding-${tool}`).addEventListener("click", () => useOnboardingTool(tool));
 el("onboarding-skip").addEventListener("click", () => finishOnboarding());
 el("onboarding-next").addEventListener("click", () => {
-  if (isOnboardingPractice() && onboardingStep === 9 && puzzle?.solved && !onboardingCelebrating)
+  if (isOnboardingPractice() && puzzle?.solved && !onboardingCelebrating)
     finishOnboarding(true);
 });
 document
@@ -1758,12 +1665,6 @@ document.addEventListener("keydown", (event) => {
     if (onboardingStep === 5 && direction && !event.ctrlKey && !event.metaKey) {
       event.preventDefault();
       if (!event.repeat) rotateOnboarding(direction);
-    } else if (onboardingStep >= 7 && (event.ctrlKey || event.metaKey) && key === "z") {
-      event.preventDefault();
-      if (!event.repeat) useOnboardingTool(event.shiftKey ? "redo" : "undo");
-    } else if (onboardingStep >= 7 && key === "h" && !event.ctrlKey && !event.metaKey) {
-      event.preventDefault();
-      if (!event.repeat) useOnboardingTool("hint");
     }
     return;
   }
@@ -1782,13 +1683,13 @@ document.addEventListener("keydown", (event) => {
     if (puzzle.settings.depth !== 1) scene.rotate(rotations[key]);
   } else if (key === "z" && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();
-    if (isOnboardingPractice()) useOnboardingTool(event.shiftKey ? "redo" : "undo");
-    else if (event.shiftKey) redo();
-    else undo();
+    if (mode === "playing") {
+      if (event.shiftKey) redo();
+      else undo();
+    }
   } else if (key === "h") {
     event.preventDefault();
-    if (isOnboardingPractice()) useOnboardingTool("hint");
-    else hint();
+    if (mode === "playing") hint();
   } else if (key === "r") scene.resetView();
   else if (key === "escape") {
     scene.cancelPendingTap();
@@ -1898,7 +1799,7 @@ if (showOnboarding) {
   const params = new URLSearchParams(location.search);
   const step = Number(params.get("step"));
   const rotation = tutorialDirections.indexOf(params.get("direction") as TutorialDirection);
-  startOnboarding(Number.isInteger(step) && step >= 1 && step <= 10 ? step - 1 : 0, Math.max(0, rotation));
+  startOnboarding(Number.isInteger(step) && step >= 1 && step <= 8 ? step - 1 : 0, Math.max(0, rotation));
 }
 else if (resumeOnLoad) startGame(true);
 else updateOptions();

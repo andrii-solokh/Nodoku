@@ -86,7 +86,6 @@
     "doubleTapPauseMs": 1944,
     "doubleTapEasing": "linear",
     "removalCue": true,
-    "toolCue": true,
     "rotationCue": true,
     "gestureCycleMs": 2400
   },

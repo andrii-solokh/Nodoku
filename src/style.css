@@ -1802,7 +1802,6 @@ a {
   .home-stage-wrap { height: clamp(130px, 26dvh, 185px); }
   .puzzle-options { gap: 6px; }
 }
-.onboarding-toolbar > div { pointer-events: auto; }
 @media (max-width: 760px) and (orientation: portrait) {
   .onboarding-practice .onboarding-copy {
     top: calc(100% - var(--onboarding-copy-space) - 28px);
@@ -1870,20 +1869,3 @@ a {
   font: 500 24px/1.2 Outfit, sans-serif;
 }
 .onboarding-shortcut > span { color: #887a96; font-size: 20px; }
-.onboarding-tool-arrow {
-  display: none;
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 4;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: .85;
-}
-.onboarding-tool-arrow g { transform-origin: 0 0; }
