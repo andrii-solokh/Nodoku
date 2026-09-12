@@ -367,6 +367,9 @@ subscribeConfig(config => {
     color: tutorial.color, "ring-width": `${tutorial.ringWidth}px`,
     "ring-scale": tutorial.ringScale, "ring-opacity": tutorial.ringOpacity,
     cycle: `${tutorial.gestureCycleMs}ms`,
+    "drag-color": tutorial.dragColor, "drag-width": `${tutorial.dragLineWidth}px`,
+    "drag-opacity": tutorial.dragLineOpacity, "drag-dot-size": `${tutorial.dragDotSize}px`,
+    "drag-dot-opacity": tutorial.dragDotOpacity, "drag-easing": tutorial.dragEasing,
   })) cues.style.setProperty(`--cue-${name}`, String(value));
   scene.setRemovalCue(mode === "onboarding" && onboardingStep === 1 && tutorial.enabled && tutorial.removalCue ? onboardingConnection : null);
   requestAnimationFrame(() => { renderOnboardingCue(); if (mode === "onboarding") { renderOnboardingTools(); renderRotationGuidance(); } });
@@ -797,7 +800,7 @@ function renderOnboardingCue() {
   const fromY = start.y + dy * start.radius;
   const length = Math.max(0, distance - start.radius - end.radius);
   line.style.left = `${fromX}px`;
-  line.style.top = `${fromY}px`;
+  line.style.top = `${fromY - settings.dragLineWidth / 2}px`;
   line.style.width = `${length}px`;
   line.style.transform = `rotate(${angle}deg)`;
   line.style.setProperty("--cue-label-angle", `${-angle}deg`);
