@@ -28,8 +28,10 @@ class Source extends AudioNodeMock {
 }
 class Context extends EventTarget {
   static instances: Context[] = [];
+  static resumeResult?: Promise<void>;
+  static initialState: "running" | "suspended" = "running";
   currentTime = 0;
-  state = "running";
+  state: "running" | "suspended" | "closed" = Context.initialState;
   sampleRate = 48000;
   destination = new AudioNodeMock();
   oscillators: Source[] = [];
@@ -51,7 +53,11 @@ class Context extends EventTarget {
     if (this.failDecode) throw new Error("Decoder unavailable");
     return this.decodeResult ?? Promise.resolve(this.decodedBuffer);
   }
-  resume() { this.state = "running"; this.dispatchEvent(new Event("statechange")); return Promise.resolve(); }
+  resume() {
+    const pending = Context.resumeResult;
+    if (pending) return pending.then(() => { this.state = "running"; this.dispatchEvent(new Event("statechange")); });
+    this.state = "running"; this.dispatchEvent(new Event("statechange")); return Promise.resolve();
+  }
   close() { this.state = "closed"; this.dispatchEvent(new Event("statechange")); return Promise.resolve(); }
   suspend() { this.state = "suspended"; this.dispatchEvent(new Event("statechange")); }
   advance(seconds: number) {
@@ -65,9 +71,11 @@ const config = {
   connectionMelody: "odeToJoy" as const, noteDurationMs: 320, melodyVolume: .7,
   completionSound: true, completionNoteIntervalMs: 240,
 };
-function setup(t: TestContext, rotationSampleUrl?: string) {
+function setup(t: TestContext, rotationSampleUrl?: string, initialState: "running" | "suspended" = "running") {
   const oldWindow = globalThis.window;
   Context.instances = [];
+  Context.resumeResult = undefined;
+  Context.initialState = initialState;
   Object.assign(globalThis, { window: { AudioContext: Context } });
   const audio = new GameAudio(rotationSampleUrl);
   audio.setConfig(config);
@@ -99,6 +107,20 @@ test("paced connections play the requested melody notes in order without interna
   const { audio, context } = setup(t);
   for (const index of [0, 1, 2, 3, 0]) { audio.play("connect", { melodyIndex: index }); context().advance(.5); }
   assert.deepEqual(fundamentals(context()).map(source => source.frequency.events[0].value), [64, 64, 65, 67, 64].map(midiToFrequency));
+});
+
+test("the first mobile connection plays after an asynchronous gesture resume", async t => {
+  const resume = deferred<void>();
+  const { audio, context } = setup(t, undefined, "suspended");
+  Context.resumeResult = resume.promise;
+  audio.play("connect", { melodyIndex: 0 });
+  assert.equal(context().oscillators.length, 0, "The note waits for the gesture-owned resume");
+  resume.resolve();
+  await flush();
+  assert.deepEqual(
+    fundamentals(context()).map(source => source.frequency.events[0].value),
+    [midiToFrequency(MELODIES.odeToJoy.notes[0])],
+  );
 });
 
 test("rapid separate connections and bulk fill keep consecutive notes with a bounded queue", t => {

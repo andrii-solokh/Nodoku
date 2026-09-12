@@ -906,18 +906,15 @@ el("music-toggle").addEventListener("click", event => {
   if (event.isTrusted && !document.hidden) ambientAudio.unlock();
   persist();
 });
-for (const event of ["pointerdown", "keydown"])
-  document.addEventListener(event, input => {
-    if (!input.isTrusted) return;
-    // A gesture may unlock audio, but must never cut off a note already playing.
-    gameAudio.unlock();
-    if (!document.hidden) ambientAudio.unlock();
-  }, { capture: true });
-// Touch and pen activation is available on release; clicks also cover
-// assistive controls that do not emit a pointerdown or keyboard event.
-document.addEventListener("click", input => {
-  if (input.isTrusted && !document.hidden) ambientAudio.unlock();
-}, { capture: true });
+const unlockAudioFromGesture = (input: Event) => {
+  if (!input.isTrusted || document.hidden) return;
+  // iOS may grant audio permission only on touch release, while other mobile
+  // browsers do so on pointerdown. Supporting both keeps SFX dependable.
+  gameAudio.unlock();
+  ambientAudio.unlock();
+};
+for (const event of ["pointerdown", "pointerup", "touchend", "keydown", "click"])
+  document.addEventListener(event, unlockAudioFromGesture, { capture: true });
 document.addEventListener("visibilitychange", () => {
   gameAudio.setEnabled(soundEnabled && !document.hidden);
   if (document.hidden) {

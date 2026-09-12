@@ -1643,3 +1643,9 @@ TODO / Note
 - Preserved an in-progress puzzle before opening the tutorial, so it remains available to continue afterward.
 - Made the completion action create a fresh puzzle, matching its “Solve another puzzle” label.
 - Verified with `npm run build`, `npm test` (193 passing), and `npm run test:onboarding`.
+
+## 2026-09-12 — Mobile sound-effect unlock
+- Fixed the mobile Web Audio race where the first connection could occur before `AudioContext.resume()` completed and was silently discarded.
+- A trusted pointer/touch release now also unlocks SFX, and the initial gesture warms iOS Web Audio with a silent source.
+- Retained only the immediate first sound until its gesture-owned resume completes; mute, suspension, and stop still discard it.
+- Verified `node --import tsx --test tests/sound.test.ts` (34 passing), `npm run build`, and the required web-game Playwright smoke run. Screenshot reviewed at `output/web-game/mobile-audio-unlock/shot-0.png`.
