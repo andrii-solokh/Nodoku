@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 import { handleAdminApi, readAdminToken, type AdminContext } from "../scripts/admin-api.ts";
-import { validateConfig, TUTORIAL_DEFAULTS } from "../src/config-schema.ts";
+import { validateConfig, TUTORIAL_DEFAULTS, SELECTION_DEFAULTS } from "../src/config-schema.ts";
 
 const baseline = validateConfig(JSON.parse(readFileSync(new URL("../config/game-config.json", import.meta.url), "utf8")));
 const origin = "http://localhost:5173";
@@ -715,5 +715,21 @@ test("drag trail tuning preserves zeros and rejects invalid values", () => {
   for (const [key, value] of Object.entries({ dragLineWidth: -1, dragLineOpacity: 2, dragDotSize: 25,
     dragDotOpacity: 0, dragColor: "purple", dragEasing: "fast" })) {
     assert.throws(() => validateConfig({ ...config, tutorial: { ...config.tutorial, [key]: value } }));
+  }
+});
+
+
+test("selection styling migrates old accents and validates tuning", () => {
+  const legacy = structuredClone(baseline);
+  delete legacy.selection;
+  legacy.scene.connectionColor = "#123456";
+  assert.deepEqual(validateConfig(legacy).selection, { ...SELECTION_DEFAULTS, ringColor: "#123456", guideColor: "#123456" });
+  legacy.selection = { ringEnabled: false, guidesEnabled: false, ringOpacity: .2 };
+  assert.equal(validateConfig(legacy).selection.ringEnabled, false);
+  assert.equal(validateConfig(legacy).selection.guidesEnabled, false);
+  assert.equal(validateConfig(legacy).selection.ringOpacity, .2);
+  for (const [key, value] of Object.entries({ ringEnabled: "yes", ringSize: .5, ringThickness: 0, ringOpacity: 2,
+    guideColor: "red", guideThickness: 5, guideOpacity: -.1 })) {
+    assert.throws(() => validateConfig({ ...baseline, selection: { ...SELECTION_DEFAULTS, [key]: value } }));
   }
 });

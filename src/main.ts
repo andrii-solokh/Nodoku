@@ -1694,6 +1694,7 @@ Object.assign(window, {
       view: scene.getViewState(),
       tutorialRotation: mode === "onboarding" && onboardingStep === 4 ? tutorialDirections[onboardingRotation] : null,
       removalCue: scene.getRemovalCueState(),
+      selectionVisuals: scene.getSelectionVisualState(),
       progress: displayed?.progress ?? 0,
       solved: displayed?.solved ?? false,
       disconnected: displayed?.disconnected ?? false,
@@ -1753,7 +1754,11 @@ document.addEventListener("close", (event) => {
     maybeComplete();
 }, true);
 if (new URLSearchParams(location.search).has("admin")) {
-  void import("./admin").then(({ mountAdmin }) => mountAdmin(startOnboarding)).catch(() => {
+  void import("./admin").then(({ mountAdmin }) => mountAdmin(startOnboarding, () => {
+    startOnboarding();
+    onboardingCue = { kind: "none" };
+    selectNode(4);
+  })).catch(() => {
     toast("The configurator could not load. Reload to try again.");
   });
 }
