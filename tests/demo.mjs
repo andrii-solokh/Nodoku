@@ -1,3 +1,4 @@
+import { followHint } from './helpers/follow-hint.mjs';
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
@@ -142,7 +143,7 @@ try {
   assert.equal((await state(page)).demo, null);
   await advance(page, 12000);
   assert.equal((await state(page)).edges.length, 0, "home scheduler cannot play the user's game");
-  await page.locator('#hint-button').click();
+  await followHint(page);
   const played = (await state(page)).edges;
   await page.locator('#home-button').click();
   await connection(page);

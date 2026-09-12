@@ -1,3 +1,4 @@
+import { followHint } from './helpers/follow-hint.mjs';
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
@@ -184,7 +185,7 @@ try {
   await page.keyboard.press("Control+Shift+z");
   assert.deepEqual((await state(page)).edges, keyboardEdge, "ignored shortcuts preserve redo history");
   await page.keyboard.press("Control+z");
-  await page.locator("#hint-button").click();
+  await followHint(page);
   await settle(page);
   assert.equal((await state(page)).edges.length, 1);
   const before = (await state(page)).nodes[0].screen;
@@ -250,7 +251,7 @@ try {
   await connect(page, pair(s));
   assert.equal((await state(page)).edges.length, 1);
   for (let n = 0; n < 40 && !(await state(page)).solved; n++) {
-    await page.locator("#hint-button").click();
+    await followHint(page);
     await settle(page);
   }
   s = await state(page);
@@ -331,11 +332,8 @@ try {
   assert.equal((await state(mobile)).edges.length, 1, "touch connects");
   await mobile.locator("#hint-button").tap();
   await settle(mobile);
-  assert.notEqual(
-    (await state(mobile)).edges.length,
-    1,
-    "mobile hint changes one edge",
-  );
+  assert.equal((await state(mobile)).edges.length, 1, "mobile hint leaves connections unchanged");
+  assert.ok((await state(mobile)).hint, "mobile hint highlights a suggested edge");
   for (let n = 0; n < 4; n++) await mobile.locator("#hint-button").tap();
   await mobile.locator("#view-button").tap();
   await settle(mobile);

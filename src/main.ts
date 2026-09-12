@@ -3,7 +3,7 @@ import "@fontsource/outfit/400.css";
 import "@fontsource/outfit/500.css";
 import "@fontsource/outfit/600.css";
 import "./style.css";
-import { Puzzle, dailyPuzzleSeed, edgeKey, type Difficulty, type PuzzleSettings } from "./puzzle";
+import { Puzzle, dailyPuzzleSeed, edgeKey, type Difficulty, type Edge, type PuzzleSettings } from "./puzzle";
 import { BoardScene } from "./scene";
 import { HomeDemo } from "./demo";
 import { mountSponsorship, setSponsorshipConfig } from "./sponsorship";
@@ -78,6 +78,7 @@ let attemptId: string | null = null;
 let resumeOnLoad = false;
 let puzzle: Puzzle | null = null;
 let selected: number | null = null;
+let hintedConnection: { edge: Edge; remove: boolean } | null = null;
 let mode: "home" | "playing" | "onboarding" = "home";
 const tutorialDirections = ["left", "right", "up", "down"] as const;
 type TutorialDirection = typeof tutorialDirections[number];
@@ -208,6 +209,9 @@ app.innerHTML = `
     <div role="status" aria-live="polite" aria-atomic="true"><strong id="network-status-title"></strong><p>All dots are cleared. Swap connections to join the groups.</p><span class="network-group-detail" id="network-group-detail"></span></div>
     <button id="network-group-button" type="button">Show group 1</button>
   </aside>
+  <div class="hint-cue" id="hint-cue" aria-hidden="true" hidden>
+    <span class="hint-cue-line"></span><span class="hint-cue-node"></span><span class="hint-cue-node"></span>
+  </div>
   <div class="game-toolbar">
     <div class="tools-group">
       <button class="tool-button" id="undo-button" aria-keyshortcuts="${modifierKey}+Z" disabled>${icon("undo")}Undo${toolShortcut(modifierLabel, "Z")}</button>
@@ -1257,6 +1261,8 @@ function onStrokeEnd(showCompletion = true) {
 }
 function updateGame(showCompletion = true) {
   if (!puzzle) return;
+  hintedConnection = null;
+  renderHintCue();
   scene.refresh();
   const percent = Math.round(puzzle.progress * 100);
   el("progress-value").textContent = `${percent}%`;
@@ -1483,32 +1489,45 @@ function redo() {
   tone(added ? "connect" : "disconnect", added || 1);
   updateGame();
 }
+function renderHintCue() {
+  const cue = el("hint-cue");
+  cue.hidden = mode !== "playing" || !hintedConnection || scene.isViewMoving;
+  if (cue.hidden || !hintedConnection) return;
+  const start = scene.projectNode(hintedConnection.edge[0]);
+  const end = scene.projectNode(hintedConnection.edge[1]);
+  if (!start || !end) { cue.hidden = true; return; }
+  const rings = cue.querySelectorAll<HTMLElement>(".hint-cue-node");
+  for (const [index, node] of [start, end].entries()) {
+    const radius = node.radius + 5;
+    rings[index].style.cssText = `left:${node.x - radius}px;top:${node.y - radius}px;width:${radius * 2}px;height:${radius * 2}px`;
+  }
+  const distance = Math.hypot(end.x - start.x, end.y - start.y);
+  const dx = (end.x - start.x) / (distance || 1);
+  const dy = (end.y - start.y) / (distance || 1);
+  const line = cue.querySelector<HTMLElement>(".hint-cue-line")!;
+  const inset = start.radius + 5;
+  line.style.cssText = `left:${start.x + dx * inset}px;top:${start.y + dy * inset - 1}px;width:${Math.max(0, distance - inset - end.radius - 5)}px;transform:rotate(${Math.atan2(dy, dx)}rad)`;
+}
 function hint() {
   scene.cancelPendingTap();
   onStrokeEnd();
   if (!puzzle || puzzle.solved) return;
   const result = puzzle.hint();
-  if (!result.changed) {
-    toast(result.reason || "Try removing a connection to make room.");
+  if (!result.edge) {
+    toast(result.reason || "No hint available.");
     return;
   }
   selectNode(null);
-  if (result.edge) {
-    scene.focusConnection(...result.edge);
-  }
-  trackFirstConnection("hint");
-  trackPuzzleAction("hint", "hint", 1, result.removed ? 0 : 1, result.removed ? 1 : 0);
+  hintedConnection = { edge: result.edge, remove: result.remove === true };
+  scene.focusConnection(...result.edge);
+  renderHintCue();
+  trackPuzzleAction("hint", "hint");
   captureAnalytics("puzzle_hint_used", {
     ...puzzleAnalyticsProperties(),
-    action: result.removed ? "removed" : "added",
+    action: "shown",
+    suggestion: result.remove ? "remove" : "connect",
   });
-  tone(result.removed ? "disconnect" : "connect");
-  updateGame();
-  toast(
-    result.removed
-      ? "One connection removed to open up a path."
-      : "A connection to help you along.",
-  );
+  toast(result.remove ? "Try removing this highlighted connection." : "Try connecting these highlighted nodes.");
 }
 let confirmAction: () => void = () => {};
 function confirm(
@@ -1798,6 +1817,7 @@ Object.assign(window, {
         "Node coordinates: x right, y up, z front. Screen coordinates are viewport pixels, origin top-left.",
       settings: displayed?.settings ?? settings,
       selected: mode === "home" ? null : selected,
+      hint: mode === "playing" ? hintedConnection : null,
       view: scene.getViewState(),
       tutorialSuccess: onboardingCelebrating ? el("completion-moment").querySelector("strong")!.textContent : null,
       tutorialRotation: mode === "onboarding" && onboardingStep === 5 ? tutorialDirections[onboardingRotation] : null,
@@ -1840,7 +1860,7 @@ Object.assign(window, {
     }
   },
 });
-scene.onRender = renderOnboardingCue;
+scene.onRender = () => { renderOnboardingCue(); renderHintCue(); };
 updateSound();
 updateMusic();
 if (document.hidden) ambientAudio.suspend();
