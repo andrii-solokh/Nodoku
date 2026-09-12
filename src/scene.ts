@@ -20,6 +20,7 @@ type GestureCallbacks = {
   onStrokeEdge?: (a: number, b: number) => boolean;
   onStrokeEnd?: () => void;
   onRotate?: () => void;
+  onRotationGesture?: (direction: TurnDirection) => void;
   onViewChange?: () => void;
 };
 
@@ -2170,25 +2171,18 @@ export class BoardScene {
       Math.max(Math.abs(dx), Math.abs(dy)) >= 30 &&
       Math.max(Math.abs(dx), Math.abs(dy)) >=
         Math.min(Math.abs(dx), Math.abs(dy)) * 1.35;
-    if (
-      directional &&
-      clearSwipe &&
-      Math.abs(start.dot(destination)) > 1 - 1e-8
-    ) {
-      const direction = this.isFlat
-        ? dx - dy >= 0
-          ? "left"
-          : "right"
-        : Math.abs(dx) >= Math.abs(dy)
-          ? dx > 0
-            ? "left"
-            : "right"
-          : dy > 0
-            ? "up"
-            : "down";
+    const direction: TurnDirection = this.isFlat
+      ? dx - dy >= 0 ? "left" : "right"
+      : Math.abs(dx) >= Math.abs(dy)
+        ? dx > 0 ? "left" : "right"
+        : dy > 0 ? "up" : "down";
+    if (directional && clearSwipe && Math.abs(start.dot(destination)) > 1 - 1e-8) {
       destination = quarterTurn(start, direction, this.isFlat);
     }
     this.animateTo(destination);
+    // Report a committed turn once, after release and after installing its snap target.
+    if (directional && clearSwipe && this.interactive && start.angleTo(destination) > 1e-6)
+      this.gestures.onRotationGesture?.(direction);
   }
 
   private installGestures(): void {

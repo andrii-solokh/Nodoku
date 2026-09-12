@@ -1855,3 +1855,8 @@ TODO / Note
 - Reused the level-completion checkmark/glow for each completed lesson and all four rotation checkpoints, with action-specific text and a 900ms acknowledgement before advancing. Real tap, drag, double-tap and toolbar/keyboard paths share guarded transitions; input pauses during success and skip/restart cancels pending callbacks.
 - Reduced motion keeps a static, readable success message. Existing player completion behavior remains intact. Tests cover the trail's reversed screen-space movement, exact success sequence, input lock and skipping during success.
 - Verified build, 199 unit tests, the full onboarding sequence (including exactly one message per lesson/checkpoint, reduced-motion visibility and skip cancellation), normal game completion, screenshots and the required web-game client.
+
+2026-09-12
+- Fixed swipe rotation not completing tutorial checkpoints: the scene now reports committed directional swipes on release, and onboarding shares the keyboard/control-panel completion handler. Reports exclude tiny, cancelled and multi-touch gestures and do not alter existing camera movement.
+- Rotation instructions now mention dragging alongside keyboard/control-panel alternatives. Added a swipe-mode onboarding regression exercising mouse and real touch gestures, rejected gestures, all four directions, and the existing success-message sequence.
+- Verified build, 199 unit tests, complete swipe-mode onboarding (desktop horizontal gestures and mobile vertical gestures, including cancelled/short/wrong-direction attempts), exact success sequence, screenshots and web-game client.

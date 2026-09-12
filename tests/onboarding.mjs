@@ -4,6 +4,7 @@ import { Puzzle } from '../src/puzzle.ts';
 
 const url = process.env.TEST_URL || 'http://127.0.0.1:4173';
 const browser = await chromium.launch();
+const swipeRotations = process.env.ONBOARDING_ROTATION_INPUT === 'swipe';
 const errors = [];
 const settleSuccess = page => page.waitForFunction(() => JSON.parse(window.render_game_to_text()).tutorialSuccess === null);
 const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text()));
@@ -12,6 +13,26 @@ async function drag(page, source, target) {
   await page.mouse.down();
   await page.mouse.move(target.screen.x, target.screen.y, { steps: 8 });
   await page.mouse.up();
+}
+async function swipeTurn(page, direction, { touch = false, distance = 90, cancel = false } = {}) {
+  const board = await state(page);
+  const node = board.nodes.find(node => node.screen?.pickable);
+  const x = node.screen.x, y = node.screen.y;
+  const dx = direction === 'left' ? distance : direction === 'right' ? -distance : 0;
+  const dy = direction === 'up' ? distance : direction === 'down' ? -distance : 0;
+  if (touch) {
+    const input = await page.context().newCDPSession(page);
+    await input.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for (let step = 1; step <= 6; step++)
+      await input.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx * step / 6, y: y + dy * step / 6 }] });
+    await input.send('Input.dispatchTouchEvent', { type: cancel ? 'touchCancel' : 'touchEnd', touchPoints: [] });
+    await input.detach();
+  } else {
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + dx, y + dy, { steps: 6 });
+    await page.mouse.up();
+  }
 }
 const adjacent = (a, b) =>
   Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.z - b.z) === 1;
@@ -210,7 +231,7 @@ try {
   transition = await state(page);
   assert.equal(transition.nodes.length, 26, 'The next lesson switches to a 3D board');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Turn left.');
-  assert.match(await page.locator('#onboarding-message').textContent(), /Press ← \/ A on your keyboard/);
+  assert.match(await page.locator('#onboarding-message').textContent(), /press ← \/ A on your keyboard/);
   assert.equal(await page.locator('#onboarding-turn-controls').isVisible(), true, 'The turn lesson exposes direction controls');
   assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-turn')), true, 'The turn lesson shows an animated turning cue on the board');
   assert.equal(await page.locator('.rotation-arrow-head').count(), 1, 'Rotation uses a directional arrow');
@@ -236,11 +257,25 @@ try {
   await page.keyboard.press('ArrowRight');
   await page.waitForTimeout(450);
   assert.equal((await state(page)).tutorialRotation, 'left');
-  await page.keyboard.press('ArrowLeft');
+  if (swipeRotations) {
+    await swipeTurn(page, 'left', { distance: 12 });
+    await page.evaluate(() => window.advanceTime(600));
+    assert.equal((await state(page)).tutorialSuccess, null, 'A tiny swipe does not complete rotation');
+    assert.equal((await state(page)).tutorialRotation, 'left');
+    await swipeTurn(page, 'left', { touch: true, cancel: true });
+    await page.evaluate(() => window.advanceTime(600));
+    assert.equal((await state(page)).tutorialSuccess, null, 'Cancelled touch rotation does not complete the step');
+    assert.equal((await state(page)).tutorialRotation, 'left');
+    await swipeTurn(page, 'right');
+    await page.evaluate(() => window.advanceTime(600));
+    assert.equal((await state(page)).tutorialRotation, 'left', 'Wrong-direction swipe does not advance');
+    await swipeTurn(page, 'left');
+  } else await page.keyboard.press('ArrowLeft');
   await settleSuccess(page);
   assert.equal((await state(page)).tutorialRotation, 'right');
   assert.match(await page.locator('#onboarding-step').textContent(), /Direction 2 of 4/);
-  await page.keyboard.press('d');
+  if (swipeRotations) await swipeTurn(page, 'right');
+  else await page.keyboard.press('d');
   await settleSuccess(page);
   assert.equal((await state(page)).tutorialRotation, 'up');
   assert.equal(await page.locator('.onboarding-cue-turn').getAttribute('data-direction'), 'up');
@@ -249,18 +284,20 @@ try {
   await device.send('Emulation.setTouchEmulationEnabled', { enabled: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(250);
-  assert.match(await page.locator('#onboarding-message').textContent(), /Tap the up arrow in the control panel/);
+  assert.match(await page.locator('#onboarding-message').textContent(), /tap the up arrow in the control panel/);
   assert.equal(await page.locator('#onboarding-rotation-keys').isHidden(), true);
   assert.equal(await page.locator('[data-onboarding-rotate="up"].tutorial-tool-ping').count(), 1);
   const upArrow = await arrow.boundingBox();
   assert.ok(upArrow.x >= 0 && upArrow.y >= 0 && upArrow.x + upArrow.width <= 390);
   await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-up-mobile.png' });
-  await page.locator('[data-onboarding-rotate="up"]').click();
+  if (swipeRotations) await swipeTurn(page, 'up', { touch: true });
+  else await page.locator('[data-onboarding-rotate="up"]').click();
   await settleSuccess(page);
   assert.equal((await state(page)).tutorialRotation, 'down');
   assert.equal(await page.locator('[data-onboarding-rotate="down"].tutorial-tool-ping').count(), 1);
   await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-down-mobile.png' });
-  await page.locator('[data-onboarding-rotate="down"]').click();
+  if (swipeRotations) await swipeTurn(page, 'down', { touch: true });
+  else await page.locator('[data-onboarding-rotate="down"]').click();
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '6 of 9');
   await device.send('Emulation.setTouchEmulationEnabled', { enabled: false });
   await device.detach();
