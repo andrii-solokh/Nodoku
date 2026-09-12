@@ -236,6 +236,7 @@ app.innerHTML = `
     <span class="onboarding-step" id="onboarding-step">1 of 9</span>
     <h2 id="onboarding-title">Make one connection.</h2>
     <p id="onboarding-message">Drag from one node to a neighboring node.</p>
+    <div class="onboarding-shortcut" id="onboarding-shortcut" role="group" aria-label="Keyboard shortcut" hidden></div>
     <div class="onboarding-rotation-keys" id="onboarding-rotation-keys" aria-label="Rotation keys" hidden></div>
     <button class="onboarding-next" id="onboarding-next" hidden>Show me 3D${icon("right")}</button>
   </section>
@@ -849,20 +850,20 @@ function renderOnboarding() {
     {
       step: "7 of 9",
       title: "Undo your move.",
-      message: "Press Undo to remove your last connection. On desktop: Ctrl / ⌘ + Z.",
+      message: "Press Undo to remove your last connection.",
       action: null,
     },
     {
       step: "8 of 9",
       title: "Redo your move.",
-      message: "Press Redo to restore that connection. On desktop: Ctrl / ⌘ + Shift + Z.",
+      message: "Press Redo to restore that connection.",
       action: null,
     },
     {
       step: "9 of 9",
       title: onboardingToolsComplete ? "You’re ready." : "Try a hint.",
       message: onboardingToolsComplete ? "You’ve learned the tools. Finish the tutorial to choose a puzzle."
-        : "Press Hint to get help with a connection. On desktop: H.",
+        : "Press Hint to get help with a connection.",
       action: onboardingToolsComplete ? "Finish tutorial" : null,
     },
   ][onboardingStep];
@@ -870,6 +871,12 @@ function renderOnboarding() {
     ? `${copy.step} · Direction ${onboardingRotation + 1} of 4` : copy.step;
   el("onboarding-title").textContent = copy.title;
   el("onboarding-message").textContent = copy.message;
+  const shortcut = el("onboarding-shortcut");
+  shortcut.hidden = touchInput.matches || onboardingStep < 6 || onboardingToolsComplete;
+  const modifier = /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? "⌘" : "Ctrl";
+  const keys = onboardingStep === 6 ? [modifier, "Z"] : onboardingStep === 7 ? [modifier, "Shift", "Z"] : ["H"];
+  shortcut.innerHTML = keys.map(key => `<kbd${key === "⌘" ? ' aria-label="Command"' : ""}>${key}</kbd>`)
+    .join('<span aria-hidden="true">+</span>');
   const next = el<HTMLButtonElement>("onboarding-next");
   next.hidden = !copy.action;
   next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
