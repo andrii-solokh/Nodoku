@@ -43,7 +43,7 @@ try {
       return current.tutorialSuccess === 'Connection made' ? current : null;
     });
     assert.equal((await connected.jsonValue()).edges.length, 1);
-    await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '2 of 10');
+    await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '2 of 8');
     assert.equal(await page.locator('.onboarding-cue.is-drag').count(), 1);
     await page.close();
   }

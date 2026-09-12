@@ -1939,3 +1939,7 @@ TODO / Note
 - Added a playful curved arrow to the Undo, Redo and Hint lessons. It swings toward the active tool, travels to the actual shortcut keycaps, sweeps beneath them, and returns. Touch layouts use a compact tool-only pointer; short desktop windows use a side swing to keep the arrow onscreen.
 - The guide follows tutorial cue color/cycle and the existing Tool pings toggle, repositions on resize/font readiness, ignores pointer input, and hides during success and after the tool lessons. Reduced motion uses a static pointer.
 - Build and `test:tutorial-tool-guide` passed for all three tools on desktop/mobile, viewport bounds, proximity to actual keycaps, button actions, success/exit cleanup, and reduced motion. Inspected screenshots and refined the route to avoid instruction text. The success assertion records visibility in the click handler to avoid racing the next lesson.
+
+2026-09-12
+- Removed Undo, Redo and Hint lessons, the onboarding tool toolbar, tool shortcuts, arrow guide and its Studio setting. The tutorial now has eight steps, ending with unrestricted gesture play to finish the cube; Finish tutorial remains gated on full completion. Normal game tools and tutorial rotation guidance remain.
+- Updated direct-step URLs, documentation and browser fixtures. Production build, full onboarding walkthrough, all eight navigation links, 199 unit tests and focused normal-game tool/keyboard checks passed. Ran the web-game client and inspected mobile practice/completion screenshots. Closed superseded arrow-animation PR #119 without merging.

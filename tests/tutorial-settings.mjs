@@ -22,7 +22,7 @@ try {
     const node = (await state()).nodes.find(n => n.id === id);
     await page.mouse.click(node.screen.x, node.screen.y);
   }
-  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '2 of 10');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '2 of 8');
   await page.locator('#admin-open').click();
   await control('color').fill('#cc4466');
   await control('ringWidth').fill('4');
@@ -68,7 +68,7 @@ try {
   await page.mouse.down();
   await page.mouse.move(nodes.find(n => n.id === ids[1]).screen.x, nodes.find(n => n.id === ids[1]).screen.y, { steps: 8 });
   await page.mouse.up();
-  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '3 of 10');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '3 of 8');
   const edges = (await state()).edges;
   assert.ok((await state()).removalCue);
   await page.locator('#admin-open').click();
@@ -86,7 +86,7 @@ try {
   await page.mouse.down();
   await page.mouse.move(nodes.find(n => n.id === ids[1]).screen.x, nodes.find(n => n.id === ids[1]).screen.y, { steps: 8 });
   await page.mouse.up();
-  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '4 of 10');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '4 of 8');
   await page.locator('#admin-open').click();
   await control('doubleTapCue').uncheck();
   assert.equal(await page.locator('#onboarding-cue').isVisible(), false);

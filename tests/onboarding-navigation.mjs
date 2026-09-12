@@ -17,9 +17,9 @@ try {
     await page.waitForFunction(() => typeof window.render_game_to_text === 'function' && JSON.parse(window.render_game_to_text()).mode === 'onboarding');
     await page.locator('#app-loader').waitFor({ state: 'hidden' });
   }
-  for (let step = 1; step <= 10; step++) {
+  for (let step = 1; step <= 8; step++) {
     await open(`step=${step}&ref=kept`);
-    assert.match(await page.locator('#onboarding-step').textContent(), new RegExp(`^${step} of 10`));
+    assert.match(await page.locator('#onboarding-step').textContent(), new RegExp(`^${step} of 8`));
     assert.equal(params(page).get('step'), String(step));
     assert.equal(params(page).get('ref'), 'kept');
     const current = await state(page);
@@ -34,16 +34,10 @@ try {
       await page.waitForURL(url => url.searchParams.get('step') === '4');
     }
     if (step === 5) assert.ok(current.edges.length > 0 && current.nodes.some(node => node.remaining > 0), 'Clear-dots lesson starts partially connected');
-    if (step === 8 || step === 9) {
-      const tool = step === 8 ? 'undo' : 'redo';
-      assert.equal(await page.locator(`#onboarding-${tool}`).isEnabled(), true);
-      await page.locator(`#onboarding-${tool}`).click();
-      await page.waitForURL(url => url.searchParams.get('step') === String(step + 1));
-      assert.equal((await state(page)).edges.length, step === 8 ? 0 : 1);
-    }
-    if (step === 10) {
-      await page.locator('#onboarding-hint').click();
-      await page.waitForFunction(() => document.querySelector('#onboarding-title').textContent === 'You’re ready.');
+    assert.equal(await page.locator('#onboarding-control-lesson, #onboarding-tool-arrow').count(), 0);
+    if (step === 8) {
+      assert.equal(await page.locator('#onboarding-title').textContent(), 'Finish the cube.');
+      assert.ok(current.edges.length > 0);
       assert.equal(await page.locator('#onboarding-next').isHidden(), true);
     }
   }
@@ -57,11 +51,11 @@ try {
   await page.waitForURL(url => url.searchParams.get('step') === '7');
   assert.equal(params(page).has('direction'), false);
   await page.reload();
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '7 of 10');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '7 of 8');
   await page.locator('#onboarding-skip').click();
   assert.equal(params(page).has('step'), false);
   assert.equal(params(page).has('onboarding'), false);
-  for (const value of ['0', '11', '-1', '2.5', 'nope']) {
+  for (const value of ['0', '9', '10', '11', '-1', '2.5', 'nope']) {
     await open(`step=${value}&direction=invalid`);
     assert.equal(params(page).get('step'), '1');
     assert.equal(params(page).has('direction'), false);
@@ -69,7 +63,7 @@ try {
   await open('step=6&direction=invalid');
   assert.equal(params(page).get('direction'), 'left');
   assert.deepEqual(errors, []);
-  console.log('All tutorial step links, prerequisites, progress URLs, reload, exit, and invalid parameters passed');
+  console.log('All eight tutorial step links, prerequisites, progress URLs, reload, exit, and invalid parameters passed');
 } finally {
   await browser.close();
 }
