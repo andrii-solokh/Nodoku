@@ -1682,3 +1682,8 @@ TODO / Note
 - Fixed the 3D tutorial so a drag that begins on a node still rotates the board; compact 3D boards no longer require finding empty space first.
 - Rewrote the connection lesson to state that a link clears a dot from both nodes and that double-tapping a node connects every available neighboring node at once.
 - Added regression coverage for turning the 3D tutorial from a visible node. Verified the iPhone tutorial reaches Done after that gesture, with build and onboarding tests passing.
+
+2026-09-12 update
+- Removed the onboarding “Show me 3D” shortcut. The 2D tutorial stays playable until its full network is solved, then automatically switches to the 3D rotation lesson with a “2D complete” congratulations message.
+- Extended the onboarding browser test to solve the deterministic tutorial through actual drag interactions before asserting the 3D transition, and captured `output/web-game/onboarding-auto-3d/solved-2d-3d.png` for visual review.
+- Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding`, and `npm run test` pass.

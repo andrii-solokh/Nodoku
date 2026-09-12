@@ -545,12 +545,12 @@ function renderOnboarding() {
       step: "2 of 3",
       title: "Clear every dot.",
       message: "Each link clears one dot from both nodes. Double-tap a node to connect every available neighboring node at once.",
-      action: "Show me 3D",
+      action: null,
     },
     {
       step: "3 of 3",
-      title: "There is another side.",
-      message: "In 3D, drag empty space to rotate the puzzle.",
+      title: "2D complete.",
+      message: "You cleared every dot. Now turn the 3D puzzle to see another side.",
       action: null,
     },
     {
@@ -691,6 +691,12 @@ function onStrokeEnd(showCompletion = true) {
       if (changed && onboardingStep === 0) {
         onboardingStep = 1;
         renderOnboarding();
+      }
+      if (active.solved && onboardingStep === 1) {
+        captureAnalytics("onboarding_2d_completed", {
+          connections: active.edges.length,
+        });
+        showOnboarding3d();
       }
       return;
     }
@@ -967,8 +973,7 @@ el("start-button").addEventListener("click", startFresh);
 el("resume-button").addEventListener("click", () => startGame(true));
 el("onboarding-skip").addEventListener("click", () => finishOnboarding());
 el("onboarding-next").addEventListener("click", () => {
-  if (onboardingStep === 1) showOnboarding3d();
-  else if (onboardingStep === 3) finishOnboarding(true);
+  if (onboardingStep === 3) finishOnboarding(true);
 });
 el("home-button").addEventListener("click", () => {
   if (mode === "playing") goHome();
