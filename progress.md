@@ -1714,3 +1714,8 @@ TODO / Note
 - The player game now shows an animated green check and “All connected” before the completion dialog. The solved 2D onboarding board gets the same beat before switching to 3D.
 - Added focused player and onboarding browser coverage and reviewed both visual captures.
 - Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding`, `TEST_URL=http://127.0.0.1:5173 npm run test:completion-moment`, `npm run test` (194 passing), and the required web-game client smoke run.
+
+2026-09-12 onboarding double-tap completion fix
+- Routed the onboarding solved-state check through both drag strokes and node double-taps, so clearing the final dots by double-tap now plays the completion moment and advances to the 3D lesson.
+- Updated the onboarding browser test to complete the flat board specifically with its final double-tap.
+- Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding`, `TEST_URL=http://127.0.0.1:5173 npm run test:completion-moment`, `npm run test` (194 passing), and the required web-game client smoke run.
