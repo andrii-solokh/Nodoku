@@ -33,6 +33,8 @@ try {
   const tutorial = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
   const mirror = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
   assert.equal(board.nodes.length, 9, 'The first lesson is a 3 by 3 board');
+  assert.equal(await page.locator('#onboarding-cue').isVisible(), true, 'The first lesson includes a visual gesture cue');
+  assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-drag')), true, 'The first cue demonstrates a drag between the highlighted nodes');
   const tutorialCenterY = board.nodes.reduce((sum, node) => sum + node.screen.y, 0) / board.nodes.length;
   assert.ok(Math.abs(tutorialCenterY - 425) < 8, 'The tutorial board is centered in the viewport, not only above the lesson copy');
   const [firstA, firstB] = tutorial.solution[0];
@@ -68,6 +70,7 @@ try {
   mirror.toggle(firstA, firstB);
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 7');
   assert.match(await page.locator('#onboarding-message').textContent(), /Double-tap a node/);
+  assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-double-tap')), true, 'The fill lesson demonstrates the double-tap gesture');
   const fillNode = mirror.nodes.find(node => node.required > 0);
   assert.ok(fillNode, 'The tutorial has a node to fill');
   const fillResult = mirror.toggleNode(fillNode.id);
@@ -124,6 +127,7 @@ try {
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Turn the puzzle.');
   assert.match(await page.locator('#onboarding-message').textContent(), /Swipe over the board, or use the direction controls/);
   assert.equal(await page.locator('#onboarding-turn-controls').isVisible(), true, 'The turn lesson exposes direction controls');
+  assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-turn')), true, 'The turn lesson shows an animated turning cue on the board');
   await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/solved-2d-3d.png' });
   await page.locator('[data-onboarding-rotate="right"]').click();
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '6 of 7');
@@ -170,6 +174,8 @@ try {
   });
   assert.ok(portraitLayout.scrollHeight <= portraitLayout.height + 1, 'portrait onboarding fits without vertical page scroll');
   assert.ok(portraitLayout.canvasBottom <= portraitLayout.copyTop, 'portrait lesson copy stays below the board');
+  const cueBounds = await portrait.locator('#onboarding-cue .onboarding-cue-start').boundingBox();
+  assert.ok(cueBounds && cueBounds.x >= 0 && cueBounds.x + cueBounds.width <= 390, 'the visual cue realigns with the board after resizing to mobile');
   await portrait.close();
 
   const skipped = await fixture();

@@ -195,6 +195,13 @@ app.innerHTML = `
 </section>
 <section class="onboarding-main" aria-labelledby="onboarding-title">
   <div id="onboarding-stage" class="stage onboarding-stage"></div>
+  <div class="onboarding-cue" id="onboarding-cue" aria-hidden="true" hidden>
+    <span class="onboarding-cue-line"></span>
+    <span class="onboarding-cue-node onboarding-cue-start"></span>
+    <span class="onboarding-cue-node onboarding-cue-end"></span>
+    <span class="onboarding-cue-hand"></span>
+    <span class="onboarding-cue-turn">${icon("orbit")}</span>
+  </div>
   <div class="onboarding-turn-controls" id="onboarding-turn-controls" role="group" aria-label="Turn the 3D puzzle" hidden>
     <span aria-hidden="true"></span>
     <button class="icon-button" type="button" data-onboarding-rotate="up" aria-label="Turn up">${icon("up")}</button>
@@ -663,6 +670,96 @@ function onDoubleTap(id: number) {
         "The neighboring nodes have no room for another connection.",
     );
 }
+type OnboardingCueKind = "drag" | "double-tap" | "turn" | "none";
+type OnboardingCue = {
+  kind: OnboardingCueKind;
+  start?: number;
+  end?: number;
+};
+
+function firstAvailableConnection(): [number, number] | null {
+  if (!puzzle) return null;
+  const connected = new Set(puzzle.edges.map(([a, b]) => edgeKey(a, b)));
+  for (const source of puzzle.nodes) {
+    if (puzzle.remaining(source.id) === 0) continue;
+    const target = puzzle.neighbors(source.id).find(id =>
+      puzzle!.remaining(id) > 0 && !connected.has(edgeKey(source.id, id)),
+    );
+    if (target !== undefined) return [source.id, target];
+  }
+  return null;
+}
+
+function onboardingCueForStep(): OnboardingCue {
+  if (!puzzle) return { kind: "none" };
+  if (onboardingStep === 0) {
+    const [start, end] = puzzle.solution[0] ?? [];
+    return Number.isInteger(start) && Number.isInteger(end)
+      ? { kind: "drag", start, end }
+      : { kind: "none" };
+  }
+  if (onboardingStep === 1 && onboardingConnection)
+    return { kind: "drag", start: onboardingConnection[0], end: onboardingConnection[1] };
+  if (onboardingStep === 2 || onboardingStep === 3) {
+    const [start, end] = firstAvailableConnection() ?? [];
+    return Number.isInteger(start) && Number.isInteger(end)
+      ? { kind: "double-tap", start, end }
+      : { kind: "none" };
+  }
+  if (onboardingStep === 4) return { kind: "turn" };
+  if (onboardingStep === 5) {
+    const screen = scene.getScreenNodes().filter(node => node.pickable);
+    for (const source of screen) {
+      const target = screen.find(node => puzzle!.neighbors(source.id).includes(node.id));
+      if (target) return { kind: "drag", start: source.id, end: target.id };
+    }
+  }
+  return { kind: "none" };
+}
+
+function renderOnboardingCue() {
+  const cue = el<HTMLElement>("onboarding-cue");
+  const line = cue.querySelector<HTMLElement>(".onboarding-cue-line")!;
+  const hand = cue.querySelector<HTMLElement>(".onboarding-cue-hand")!;
+  const startRing = cue.querySelector<HTMLElement>(".onboarding-cue-start")!;
+  const endRing = cue.querySelector<HTMLElement>(".onboarding-cue-end")!;
+  const turn = cue.querySelector<HTMLElement>(".onboarding-cue-turn")!;
+  const gesture = onboardingCueForStep();
+  cue.className = `onboarding-cue is-${gesture.kind}`;
+  cue.hidden = gesture.kind === "none";
+  if (gesture.kind === "none") return;
+
+  const stage = el("onboarding-stage").getBoundingClientRect();
+  if (gesture.kind === "turn") {
+    turn.style.left = `${stage.left + stage.width / 2}px`;
+    turn.style.top = `${stage.top + stage.height / 2}px`;
+    return;
+  }
+  const nodes = new Map(scene.getScreenNodes().map(node => [node.id, node]));
+  const start = nodes.get(gesture.start!);
+  const end = nodes.get(gesture.end!);
+  if (!start || !end) {
+    cue.hidden = true;
+    return;
+  }
+  const distance = Math.hypot(end.x - start.x, end.y - start.y);
+  const angle = Math.atan2(end.y - start.y, end.x - start.x) * 180 / Math.PI;
+  const ringSize = Math.max(38, start.radius * 2 + 18);
+  for (const [ring, node] of [[startRing, start], [endRing, end]] as const) {
+    ring.style.left = `${node.x}px`;
+    ring.style.top = `${node.y}px`;
+    ring.style.width = ring.style.height = `${ringSize}px`;
+  }
+  line.style.left = `${start.x}px`;
+  line.style.top = `${start.y}px`;
+  line.style.width = `${distance}px`;
+  line.style.transform = `rotate(${angle}deg)`;
+  hand.style.left = `${start.x}px`;
+  hand.style.top = `${start.y}px`;
+  hand.style.setProperty("--cue-dx", `${end.x - start.x}px`);
+  hand.style.setProperty("--cue-dy", `${end.y - start.y}px`);
+}
+
 function renderOnboarding() {
   const copy = [
     {
@@ -717,6 +814,7 @@ function renderOnboarding() {
   el("onboarding-turn-controls").hidden = onboardingStep !== 4;
   el("onboarding-control-lesson").hidden = onboardingStep !== 6;
   app.classList.toggle("onboarding-controls-active", onboardingStep === 6);
+  requestAnimationFrame(renderOnboardingCue);
   captureAnalytics("onboarding_lesson_viewed", {
     lesson: ["connection", "remove", "node_fill", "network", "rotation", "3d_connection", "controls"][onboardingStep],
     step: onboardingStep + 1,
@@ -1409,8 +1507,13 @@ document.addEventListener("keydown", (event) => {
     onNode(puzzle.nodes[keyboardIndex].id);
   }
 });
-window.addEventListener("resize", () => scene.resize());
-document.addEventListener("fullscreenchange", () => scene.resize());
+function resizeScene() {
+  scene.resize();
+  if (mode === "onboarding")
+    requestAnimationFrame(() => requestAnimationFrame(renderOnboardingCue));
+}
+window.addEventListener("resize", resizeScene);
+document.addEventListener("fullscreenchange", resizeScene);
 window.addEventListener("pagehide", () => {
   ambientAudio.suspend();
   onStrokeEnd();

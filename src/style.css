@@ -471,6 +471,119 @@ a {
   transform: translateY(var(--onboarding-board-offset));
 }
 .onboarding-stage canvas { border-radius: 0; }
+.onboarding-cue {
+  position: fixed;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+}
+.onboarding-cue-line {
+  position: absolute;
+  height: 3px;
+  border-radius: 999px;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, #8870c6, #b7a6e0);
+  box-shadow: 0 0 0 5px #8a72c21c, 0 2px 8px #5e4c8d33;
+  animation: onboarding-cue-line 1.6s ease-in-out infinite;
+}
+.onboarding-cue-line::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  border-top: 3px solid #9b85d1;
+  border-right: 3px solid #9b85d1;
+  transform: translateY(-50%) rotate(45deg);
+}
+.onboarding-cue-node {
+  position: absolute;
+  display: block;
+  border: 2px solid #8069bc;
+  border-radius: 50%;
+  background: #f9f7ff29;
+  box-shadow: 0 0 0 5px #8a72c21a;
+  transform: translate(-50%, -50%);
+  animation: onboarding-cue-ring 1.6s ease-in-out infinite;
+}
+.onboarding-cue-end { animation-delay: .25s; }
+.onboarding-cue-hand {
+  position: absolute;
+  display: block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #8069bc;
+  box-shadow: 0 3px 12px #4b3b7738;
+  transform: translate(-50%, -50%);
+  animation: onboarding-cue-drag 1.6s cubic-bezier(.45, 0, .25, 1) infinite;
+}
+.onboarding-cue-hand::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: #fff;
+}
+.onboarding-cue-turn {
+  position: absolute;
+  display: none;
+  width: 50px;
+  height: 50px;
+  padding: 12px;
+  border: 2px solid #8870c6;
+  border-radius: 50%;
+  color: #725cac;
+  background: #f8f6fdde;
+  box-shadow: 0 8px 28px #4f3c7721;
+  transform: translate(-50%, -50%);
+  animation: onboarding-cue-turn 2s ease-in-out infinite;
+}
+.onboarding-cue-turn svg { width: 100%; height: 100%; }
+.onboarding-cue.is-double-tap .onboarding-cue-line { opacity: .55; }
+.onboarding-cue.is-double-tap .onboarding-cue-hand {
+  animation: onboarding-cue-double-tap 1.45s ease-in-out infinite;
+}
+.onboarding-cue.is-double-tap .onboarding-cue-start {
+  animation: onboarding-cue-double-ring 1.45s ease-in-out infinite;
+}
+.onboarding-cue.is-turn .onboarding-cue-line,
+.onboarding-cue.is-turn .onboarding-cue-node,
+.onboarding-cue.is-turn .onboarding-cue-hand { display: none; }
+.onboarding-cue.is-turn .onboarding-cue-turn { display: block; }
+@keyframes onboarding-cue-line {
+  0%, 15% { clip-path: inset(0 100% 0 0); opacity: 0; }
+  30%, 70% { clip-path: inset(0 0 0 0); opacity: 1; }
+  88%, 100% { clip-path: inset(0 0 0 100%); opacity: 0; }
+}
+@keyframes onboarding-cue-ring {
+  0%, 100% { opacity: .55; transform: translate(-50%, -50%) scale(.92); }
+  45% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+}
+@keyframes onboarding-cue-drag {
+  0%, 12% { opacity: 0; transform: translate(-50%, -50%); }
+  22%, 62% { opacity: 1; transform: translate(calc(-50% + var(--cue-dx)), calc(-50% + var(--cue-dy))); }
+  82%, 100% { opacity: 0; transform: translate(calc(-50% + var(--cue-dx)), calc(-50% + var(--cue-dy))); }
+}
+@keyframes onboarding-cue-double-tap {
+  0%, 100% { opacity: .25; transform: translate(-50%, -50%) scale(.75); }
+  20%, 52% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  32%, 64% { opacity: .45; transform: translate(-50%, -50%) scale(.78); }
+}
+@keyframes onboarding-cue-double-ring {
+  0%, 100% { opacity: .4; transform: translate(-50%, -50%) scale(.9); }
+  20%, 52% { opacity: 1; transform: translate(-50%, -50%) scale(1.22); }
+  32%, 64% { opacity: .5; transform: translate(-50%, -50%) scale(.96); }
+}
+@keyframes onboarding-cue-turn {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-15deg) scale(.94); }
+  50% { transform: translate(-50%, -50%) rotate(15deg) scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-cue *, .onboarding-cue-turn { animation: none; }
+}
 .onboarding-turn-controls {
   position: absolute;
   z-index: 2;
