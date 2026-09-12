@@ -1918,3 +1918,7 @@ TODO / Note
 2026-09-12
 - Enlarged mobile puzzle setup controls while retaining one-screen setup: perspective options have 44px minimum targets, grid/difficulty buttons are 60×48px, and icons/type/spacing are larger. Removed short-screen rules that previously shrank targets below 32px; the preview uses the remaining space.
 - Build and focused browser checks passed at 390×844, 320×568, 430×932 and 740×390. Verified all visible options meet 44px minimum targets, no horizontal overflow, the portrait Start action remains onscreen, and perspective/grid/difficulty selections update correctly. Inspected 390px and 320px screenshots.
+
+2026-09-12
+- Fixed portrait mobile tutorial rotation controls overlapping the lesson caption. Anchored the panel above the bottom safe area; tall phones place the caption above it, while phones up to 800px tall place the caption to its left. The scene sizing and position stay independent of the caption.
+- Build and rotation-layout assertions passed at 390×844, 390×667, and 320×568; inspected screenshots at all three sizes. Added these checks to the onboarding walkthrough and made its transient selection-success assertion atomic. The full walkthrough later failed on the free-play repeated double-tap assertion; it is not reported as fully passing.

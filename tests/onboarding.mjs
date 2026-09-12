@@ -96,8 +96,11 @@ try {
   await page.waitForFunction(() => document.querySelector('#onboarding-cue').dataset.selected === 'true');
   await page.screenshot({ path: 'output/web-game/onboarding-cues/select-second.png' });
   await page.mouse.click(b.screen.x, b.screen.y);
-  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).tutorialSuccess === 'Connection made');
-  assert.equal((await state(page)).edges.length, 1, 'Selecting two neighbors makes a real connection');
+  const connectedState = await page.waitForFunction(() => {
+    const current = JSON.parse(window.render_game_to_text());
+    return current.tutorialSuccess === 'Connection made' ? current : false;
+  });
+  assert.equal((await connectedState.jsonValue()).edges.length, 1, 'Selecting two neighbors makes a real connection');
   await settleSuccess(page);
   assert.equal(await page.locator('#onboarding-step').textContent(), '2 of 10');
   assert.deepEqual(await page.locator('#onboarding-stage').boundingBox(), initialStageBounds, 'The selection-to-drag transition keeps the board stationary');
@@ -333,6 +336,17 @@ try {
   assert.ok(downArrow.x + downArrow.width / 2 > downBoardRight, 'The turn-down arrow sits to the right of the puzzle');
   assert.ok(downArrow.x + downArrow.width <= 390, 'The turn-down arrow stays inside the mobile viewport');
   await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-down-mobile.png' });
+  for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }, { width: 320, height: 568 }]) {
+    await page.setViewportSize(viewport);
+    const copy = await page.locator('.onboarding-copy').boundingBox();
+    const controls = await page.locator('#onboarding-turn-controls').boundingBox();
+    assert.ok(copy.y + copy.height <= controls.y - 8 || copy.x + copy.width <= controls.x - 8,
+      'Mobile rotation instructions have a clear gap from the control panel');
+    assert.ok(controls.y + controls.height <= viewport.height - 10, 'Rotation controls stay above the screen edge');
+    assert.ok(copy.x >= 0 && copy.y >= 0 && copy.y + copy.height <= viewport.height, 'Rotation instructions stay on screen');
+    await page.screenshot({ path: `output/web-game/onboarding-cues/rotation-layout-${viewport.width}-${viewport.height}.png` });
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   if (swipeRotations) await swipeTurn(page, 'down', { touch: true });
   else await page.locator('[data-onboarding-rotate="down"]').click();
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '7 of 10');

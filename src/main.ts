@@ -887,6 +887,7 @@ function renderOnboardingCue() {
 
 function renderOnboarding() {
   app.classList.toggle("onboarding-practice", isOnboardingPractice());
+  app.classList.toggle("onboarding-rotation-lesson", onboardingStep === 5);
   const copy = [
     {
       step: "1 of 10",
