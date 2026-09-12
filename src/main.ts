@@ -76,6 +76,7 @@ let selected: number | null = null;
 let mode: "home" | "playing" | "onboarding" = "home";
 const tutorialDirections = ["left", "right", "up", "down"] as const;
 type TutorialDirection = typeof tutorialDirections[number];
+const pressedRotationKeys = new Set<string>();
 const tutorialKeys = { left: ["←", "A"], right: ["→", "D"], up: ["↑", "W"], down: ["↓", "S"] };
 const touchInput = window.matchMedia("(pointer: coarse)");
 let onboardingRotation = 0;
@@ -968,8 +969,9 @@ function renderRotationGuidance() {
   const direction = tutorialDirections[onboardingRotation];
   keys.setAttribute("aria-label", `Turn ${direction} keyboard shortcuts`);
   keys.innerHTML = tutorialKeys[direction].map((key, index) =>
-    `<kbd${index === 0 ? ` aria-label="Arrow ${direction}"` : ""}>${key}</kbd>`,
+    `<kbd data-key="${index === 0 ? `arrow${direction}` : key.toLowerCase()}"${index === 0 ? ` aria-label="Arrow ${direction}"` : ""}>${key}</kbd>`,
   ).join('<span>or</span>');
+  updateRotationKeyFeedback();
   const controls = el("onboarding-turn-controls");
   controls.style.setProperty("--tool-cue-color", tutorialSettings.color);
   controls.querySelectorAll<HTMLButtonElement>("[data-onboarding-rotate]").forEach(button => {
@@ -977,6 +979,15 @@ function renderRotationGuidance() {
     button.classList.toggle("tutorial-tool-ping", !onboardingCelebrating && onboardingStep === 5 && tutorialSettings.enabled
       && tutorialSettings.rotationCue && button.dataset.onboardingRotate === tutorialDirections[onboardingRotation]);
   });
+}
+function updateRotationKeyFeedback() {
+  el("onboarding-rotation-keys").querySelectorAll<HTMLElement>("kbd[data-key]").forEach(key => {
+    key.classList.toggle("is-pressed", pressedRotationKeys.has(key.dataset.key!));
+  });
+}
+function clearRotationKeyFeedback() {
+  pressedRotationKeys.clear();
+  updateRotationKeyFeedback();
 }
 function rotateOnboarding(direction: TutorialDirection) {
   if (mode !== "onboarding" || onboardingCelebrating || (onboardingStep !== 5 && !isOnboardingPractice()) || scene.isViewMoving) return;
@@ -1676,6 +1687,10 @@ document.addEventListener("keydown", (event) => {
     event.target.closest("button, summary")
   )
     return;
+  if (mode === "onboarding" && onboardingStep === 5) {
+    pressedRotationKeys.add(key);
+    updateRotationKeyFeedback();
+  }
   if (mode === "onboarding" && onboardingCelebrating) return;
   if (mode === "onboarding" && !isOnboardingPractice()) {
     const direction = ({ arrowleft: "left", a: "left", arrowright: "right", d: "right",
@@ -1735,6 +1750,14 @@ document.addEventListener("keydown", (event) => {
     if (isOnboardingPractice()) onOnboardingTap(puzzle.nodes[keyboardIndex].id);
     else onNode(puzzle.nodes[keyboardIndex].id);
   }
+});
+document.addEventListener("keyup", event => {
+  pressedRotationKeys.delete(event.key.toLowerCase());
+  updateRotationKeyFeedback();
+});
+window.addEventListener("blur", clearRotationKeyFeedback);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) clearRotationKeyFeedback();
 });
 function resizeScene() {
   scene.resize();
