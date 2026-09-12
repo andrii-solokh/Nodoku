@@ -356,6 +356,8 @@ const demo = new HomeDemo(scene, kind => {
 }, () => soundEnabled && !demoSuspended() ? gameAudio.getCompletionDurationMs(demoSoundOptions("complete")) : 0);
 let activeMelody = getConfig().sound.connectionMelody;
 let tutorialSettings = getConfig().tutorial;
+const doubleTapStyle = document.createElement("style");
+document.head.appendChild(doubleTapStyle);
 subscribeConfig(config => {
   scene.setConfig(config);
   const cues = el<HTMLElement>("onboarding-cue");
@@ -371,6 +373,20 @@ subscribeConfig(config => {
     "drag-opacity": tutorial.dragLineOpacity, "drag-dot-size": `${tutorial.dragDotSize}px`,
     "drag-dot-opacity": tutorial.dragDotOpacity, "drag-easing": tutorial.dragEasing,
   })) cues.style.setProperty(`--cue-${name}`, String(value));
+  const cycle = tutorial.doubleTapPulseMs * 2 + tutorial.doubleTapGapMs + tutorial.doubleTapPauseMs;
+  const firstEnd = tutorial.doubleTapPulseMs / cycle * 100;
+  const secondStart = (tutorial.doubleTapPulseMs + tutorial.doubleTapGapMs) / cycle * 100;
+  const secondEnd = (tutorial.doubleTapPulseMs * 2 + tutorial.doubleTapGapMs) / cycle * 100;
+  for (const [name, value] of Object.entries({
+    color: tutorial.doubleTapColor, width: `${tutorial.doubleTapWidth}px`,
+    scale: tutorial.doubleTapScale, opacity: tutorial.doubleTapOpacity,
+    cycle: `${cycle}ms`, easing: tutorial.doubleTapEasing,
+  })) cues.style.setProperty(`--cue-ping-${name}`, String(value));
+  // Keep two distinct pings with independently tunable pulse, gap and rest times.
+  doubleTapStyle.textContent = `@keyframes onboarding-cue-double-ping {
+    0%, ${secondStart}% { opacity: var(--cue-ping-opacity); transform: translate(-50%, -50%) scale(1); }
+    ${firstEnd}%, ${secondStart - .001}%, ${secondEnd}%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(var(--cue-ping-scale)); }
+  }`;
   scene.setRemovalCue(mode === "onboarding" && onboardingStep === 1 && tutorial.enabled && tutorial.removalCue ? onboardingConnection : null);
   requestAnimationFrame(() => { renderOnboardingCue(); if (mode === "onboarding") { renderOnboardingTools(); renderRotationGuidance(); } });
   demo.setConfig(config);
@@ -1758,6 +1774,10 @@ if (new URLSearchParams(location.search).has("admin")) {
     startOnboarding();
     onboardingCue = { kind: "none" };
     selectNode(4);
+  }, () => {
+    startOnboarding();
+    onboardingStep = 2;
+    renderOnboarding();
   })).catch(() => {
     toast("The configurator could not load. Reload to try again.");
   });

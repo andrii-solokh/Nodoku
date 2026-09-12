@@ -688,7 +688,7 @@ test("tutorial settings migrate missing fields and validate explicit tuning", ()
   delete legacy.tutorial;
   assert.deepEqual(validateConfig(legacy).tutorial, TUTORIAL_DEFAULTS);
   legacy.tutorial = { enabled: false, ringOpacity: .25, gestureCycleMs: 6000 };
-  assert.deepEqual(validateConfig(legacy).tutorial, { ...TUTORIAL_DEFAULTS, ...legacy.tutorial });
+  assert.deepEqual(validateConfig(legacy).tutorial, { ...TUTORIAL_DEFAULTS, doubleTapOpacity: .25, ...legacy.tutorial });
   for (const [key, value] of Object.entries({ enabled: "false", color: "purple", ringWidth: 0, ringScale: 2,
     ringOpacity: 1.1, gestureCycleMs: 0, unknown: true })) {
     assert.throws(() => validateConfig({ ...baseline, tutorial: { ...baseline.tutorial, [key]: value } }));
@@ -698,7 +698,7 @@ test("tutorial settings migrate missing fields and validate explicit tuning", ()
 test("tutorial visual tuning survives saving and reloading", async t => {
   const { call } = fixture(t);
   const snapshot = await (await call()).json();
-  snapshot.config.tutorial = { ...snapshot.config.tutorial, color: "#123456", focusCircles: false, gestureCycleMs: 4000 };
+  snapshot.config.tutorial = { ...snapshot.config.tutorial, color: "#123456", focusCircles: false, gestureCycleMs: 4000, doubleTapColor: "#aabbcc", doubleTapPulseMs: 600, doubleTapGapMs: 400, doubleTapPauseMs: 6000, doubleTapEasing: "ease-out" };
   const saved = await call("PUT", snapshot);
   assert.equal(saved.status, 200);
   assert.deepEqual((await (await call()).json()).config.tutorial, snapshot.config.tutorial);
@@ -731,5 +731,24 @@ test("selection styling migrates old accents and validates tuning", () => {
   for (const [key, value] of Object.entries({ ringEnabled: "yes", ringSize: .5, ringThickness: 0, ringOpacity: 2,
     guideColor: "red", guideThickness: 5, guideOpacity: -.1 })) {
     assert.throws(() => validateConfig({ ...baseline, selection: { ...SELECTION_DEFAULTS, [key]: value } }));
+  }
+});
+
+
+test("double-tap tuning migrates the shared ring style and validates independent controls", () => {
+  const legacy = structuredClone(baseline);
+  for (const key of Object.keys(legacy.tutorial)) if (key.startsWith("doubleTap") && key !== "doubleTapCue") delete legacy.tutorial[key];
+  Object.assign(legacy.tutorial, { color: "#123456", ringWidth: 5, ringScale: 1.2, ringOpacity: .4 });
+  const migrated = validateConfig(legacy);
+  assert.equal(migrated.tutorial.doubleTapColor, "#123456");
+  assert.equal(migrated.tutorial.doubleTapWidth, 5);
+  assert.equal(migrated.tutorial.doubleTapScale, 1.2);
+  assert.equal(migrated.tutorial.doubleTapOpacity, .4);
+  migrated.tutorial.doubleTapWidth = 2;
+  assert.equal(validateConfig(migrated).tutorial.doubleTapWidth, 2);
+  for (const [key, value] of Object.entries({ doubleTapColor: "red", doubleTapWidth: 0,
+    doubleTapScale: 2, doubleTapOpacity: 2, doubleTapPulseMs: 0, doubleTapGapMs: 0,
+    doubleTapPauseMs: 0, doubleTapEasing: "unknown" })) {
+    assert.throws(() => validateConfig({ ...baseline, tutorial: { ...baseline.tutorial, [key]: value } }));
   }
 });

@@ -1844,3 +1844,8 @@ TODO / Note
 - Added Studio → Selected node with Preview selection and live ring visibility/color/size/thickness/opacity plus available-guide visibility/color/thickness/opacity. Shared scene settings apply in gameplay and tutorial; preview selects a real practice node without changing puzzle edges.
 - Dimension changes replace/dispose ring geometry; styling preserves floating attachment. Legacy config retains the original appearance and saved connection accent. Owner JSON tuning remains uncommitted and untouched.
 - Build, 198 unit tests, selected-node Studio/browser tests (including reset and normal gameplay), full onboarding regression, desktop/mobile screenshots and required web-game client passed. Local preview restarted on 4173 for the new config schema.
+
+2026-09-12
+- Added independent Studio tuning for double-tap ping color, thickness, expansion, opacity, easing, pulse duration, gap between pings and pause between pairs. Preview double tap opens the lesson directly. Old files inherit their saved ring appearance; owner JSON remains untouched.
+- Two-pulse keyframes derive from the three timing controls. Reduced-motion CSS now overrides the more specific double-tap selector and leaves a static ring.
+- Build, 199 unit tests, API save/load, live style/timing/reset, actual double-tap lesson advancement, reduced-motion and mobile alignment checks passed. Required web-game client exercised. Browser timing tests discard deliberately seeked animations before testing reduced motion.

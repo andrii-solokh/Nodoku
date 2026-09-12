@@ -5,7 +5,7 @@ import { CONFIG_RULES, validateConfig } from "./config-schema";
 const TOKEN_KEY = "nodoku.admin-session.v1";
 type Snapshot = { config: GameConfig; revision: string };
 
-export async function mountAdmin(previewTutorial: () => void, previewSelection: () => void): Promise<void> {
+export async function mountAdmin(previewTutorial: () => void, previewSelection: () => void, previewDoubleTap: () => void): Promise<void> {
   let token = "";
   const url = new URL(location.href);
   const fragment = new URLSearchParams(url.hash.slice(1));
@@ -108,6 +108,14 @@ export async function mountAdmin(previewTutorial: () => void, previewSelection: 
         section.appendChild(preview);
       }
       for (const key of keys) {
+        if (group === "tutorial" && key === "doubleTapCue") {
+          const preview = document.createElement("button");
+          preview.type = "button";
+          preview.className = "admin-preview";
+          preview.textContent = "Preview double tap";
+          preview.addEventListener("click", previewDoubleTap);
+          section.appendChild(preview);
+        }
         const rule = CONFIG_RULES[group][key];
         const row = document.createElement("div");
         row.className = `admin-control admin-${rule.kind}`;
