@@ -1725,3 +1725,9 @@ TODO / Note
 - Exposed live note state through `render_game_to_text` and expanded the dot-animation browser coverage to verify launch, mid-flight, cleanup, and motion-policy behavior. The fixture now removes the production loading splash because it intentionally freezes requestAnimationFrame for deterministic animation stepping.
 - Reviewed both Flat and 3D game captures: `output/web-game/dot-animations/glide-mid.png` and `output/web-game/music-notes/notes-3d.png` show the notes clearly rising from a new connection.
 - Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:dot-animations`, `npm run test` (194 passing), `git diff --check`, and the required web-game Playwright client smoke run.
+
+2026-09-12 fixed puzzle framing
+- Removed puzzle zoom from the renderer and inputs. Wheel/trackpad, pinch, and +/- no longer alter camera distance on either desktop or mobile; the board is always fitted to its available space.
+- Removed zoom persistence while accepting old saved views that contain it, so returning players keep their orientation but resume at the stable fit distance.
+- Updated camera, persistence, and touch regression coverage. The focused mobile pinch check confirms both camera distance and direction are unchanged.
+- Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:camera`, `TEST_URL=http://127.0.0.1:5175 npm run test:persistence`, `npm run test` (194 passing), visual review of `output/web-game/perspective/mobile-390.png`, and the required Playwright client run. `test:gestures` still has an unrelated pre-existing blocked-node double-tap timing failure before reaching its new pinch assertion.

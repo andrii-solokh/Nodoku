@@ -58,64 +58,56 @@ async function emptyBoardPoint(page, s, board) {
   }
   throw new Error("No empty board point available for a rotation gesture");
 }
-async function checkConstantRotationDistance(page, label) {
+async function checkFixedRotationDistance(page, label) {
   const board = await page.locator("#game-stage canvas").boundingBox();
-  const normalDistance = (await state(page)).view.distance;
+  const distance = (await state(page)).view.distance;
+  const sameDistance = (actual, context) =>
+    assert.ok(Math.abs(actual - distance) < 1e-8, `${context}: puzzle framing stays fixed (${distance} -> ${actual})`);
+  await page.locator("#game-stage canvas").focus();
+  for (let press = 0; press < 4; press++) await page.keyboard.press("+");
+  for (let press = 0; press < 4; press++) await page.keyboard.press("-");
+  await page.mouse.wheel(0, -2000);
+  sameDistance((await state(page)).view.distance, `${label}, keyboard and wheel`);
   const animated = await page.evaluate(
     () => !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
-  for (const zoomed of [false, true]) {
-    if (zoomed) {
-      await page.locator("#game-stage canvas").focus();
-      for (let press = 0; press < 16; press++) await page.keyboard.press("+");
-    }
-    const distance = (await state(page)).view.distance;
-    const context = `${label}, ${zoomed ? "user zoom" : "default zoom"}`;
-    if (zoomed)
-      assert.ok(distance <= normalDistance, `${context}: zoom never moves the camera farther away`);
-    const check = (s) => {
-      if (!zoomed)
-        assert.ok(
-          Math.abs(s.view.distance - distance) < 1e-8,
-          `${context}: rotation preserves default camera distance (${distance} -> ${s.view.distance})`,
-        );
-      checkFit(s, board, context);
-    };
-    check(await state(page));
-    // Sample free rotation while the pointer remains down, before face snapping.
-    await page.mouse.move(board.x + 8, board.y + 8);
-    await page.mouse.down();
-    for (const amount of [0.2, 0.35, 0.5]) {
-      await page.mouse.move(
-        board.x + board.width * amount,
-        board.y + 8 + board.height * amount * 0.3,
-      );
-      const dragging = await state(page);
-      assert.equal(dragging.view.snapped, false, `${context}: sample is mid-drag`);
-      check(dragging);
-    }
-    await page.mouse.up();
-    await settle(page);
-    check(await state(page));
-    // Dispatch and advance in one browser task to sample an animated quarter turn.
-    const turning = await page.evaluate(() => {
-      document.querySelector('[data-rotate="right"]').click();
-      window.advanceTime(90);
-      return JSON.parse(window.render_game_to_text());
-    });
-    if (animated) {
-      assert.equal(turning.view.animating, true, `${context}: quarter turn is in progress`);
-      assert.equal(turning.view.snapped, false, `${context}: quarter-turn sample is between faces`);
-    }
-    check(turning);
-    await settle(page);
-    const turned = await state(page);
-    checkFace(turned);
-    check(turned);
+  const check = (s, context) => {
+    sameDistance(s.view.distance, `${label}, ${context}`);
+    checkFit(s, board, `${label}, ${context}`);
+  };
+  check(await state(page), "initial");
+  // Sample free rotation while the pointer remains down, before face snapping.
+  await page.mouse.move(board.x + 8, board.y + 8);
+  await page.mouse.down();
+  for (const amount of [0.2, 0.35, 0.5]) {
+    await page.mouse.move(
+      board.x + board.width * amount,
+      board.y + 8 + board.height * amount * 0.3,
+    );
+    const dragging = await state(page);
+    assert.equal(dragging.view.snapped, false, `${label}: sample is mid-drag`);
+    check(dragging, "free rotation");
   }
-  await page.locator("#view-button").click();
+  await page.mouse.up();
   await settle(page);
+  check(await state(page), "settled rotation");
+  // Dispatch and advance in one browser task to sample an animated quarter turn.
+  const turning = await page.evaluate(() => {
+    document.querySelector('[data-rotate="right"]').click();
+    window.advanceTime(90);
+    return JSON.parse(window.render_game_to_text());
+  });
+  if (animated) {
+    assert.equal(turning.view.animating, true, `${label}: quarter turn is in progress`);
+    assert.equal(turning.view.snapped, false, `${label}: quarter-turn sample is between faces`);
+  }
+  check(turning, "quarter turn");
+  await settle(page);
+  const turned = await state(page);
+  checkFace(turned);
+  check(turned, "finished quarter turn");
 }
+
 const newPage = async (options) => {
   const page = await browser.newPage(options);
   page.on("pageerror", (e) => errors.push(e.message));
@@ -270,7 +262,7 @@ try {
   await desktopCube.locator('[data-size="5"]').click();
   await desktopCube.locator("#start-button").click();
   await settle(desktopCube);
-  await checkConstantRotationDistance(desktopCube, "5 cube desktop");
+  await checkFixedRotationDistance(desktopCube, "5 cube desktop");
   await desktopCube.close();
   // Fit checks include largest cube and the narrow/short mobile layouts.
   for (const viewport of [
@@ -288,7 +280,7 @@ try {
     await mobile.locator("#start-button").tap();
     s = await state(mobile);
     checkFace(s);
-    await checkConstantRotationDistance(mobile, `5 cube mobile ${viewport.width}x${viewport.height}`);
+    await checkFixedRotationDistance(mobile, `5 cube mobile ${viewport.width}x${viewport.height}`);
     await mobile.locator('[data-rotate="up"]').tap();
     s = await state(mobile);
     checkFace(s);
@@ -301,7 +293,7 @@ try {
   }
   assert.equal(errors.length, 0, errors.join("\n"));
   console.log(
-    "Passed: perspective near/far scale, six square faces, 90° steps, rapid turns, free drag/snap, safe maximum zoom through turns, mid-turn desktop/mobile fit, picking, hints, reset, flat mode, reduced motion.",
+    "Passed: perspective near/far scale, six square faces, 90° steps, rapid turns, fixed camera framing across keyboard/wheel/rotation, desktop/mobile fit, picking, hints, reset, flat mode, reduced motion.",
   );
 } finally {
   await fs.writeFile(`${out}/errors.json`, JSON.stringify(errors, null, 2));

@@ -214,7 +214,6 @@ export class BoardScene {
   private previousSelection: number | null = null;
   private orientation = new THREE.Quaternion();
   private preview = false;
-  private zoomLevel = 1;
   private fitDistance = 8;
   private boardRadius = 2;
   private billboardMatrix = new THREE.Matrix4();
@@ -232,7 +231,6 @@ export class BoardScene {
   private pointers = new Map<number, { x: number; y: number }>();
   private gestureStart = { x: 0, y: 0 };
   private gestureOrientation = new THREE.Quaternion();
-  private gestureZoom = 1;
   private gestureNode: number | null = null;
   private gestureFace: PickFace | undefined;
   private strokeNode: number | null = null;
@@ -242,7 +240,6 @@ export class BoardScene {
   private moved = false;
   private rotated = false;
   private pinchGesture = false;
-  private pinchDistance = 0;
   private listeners = new AbortController();
 
   constructor(
@@ -270,7 +267,7 @@ export class BoardScene {
     canvas.setAttribute("role", "application");
     canvas.setAttribute(
       "aria-label",
-      "Three-dimensional puzzle board. Tap spheres or drag between neighbors to connect them. Drag empty space to rotate, or scroll to zoom.",
+      "Three-dimensional puzzle board. Tap spheres or drag between neighbors to connect them. Drag empty space to rotate.",
     );
     canvas.style.cssText =
       "display:block;width:100%;height:100%;touch-action:none;";
@@ -510,7 +507,6 @@ export class BoardScene {
       Math.max(
         ...[...this.positions.values()].map((position) => position.length()),
       ) + this.nodeRadius + this.config.nodeFloatAmplitude;
-    this.zoomLevel = 1;
     this.updateCamera();
     this.fitCamera();
     if (morph) {
@@ -1305,12 +1301,6 @@ export class BoardScene {
     ).sort((left, right) => Math.abs(from.dot(right.quaternion)) - Math.abs(from.dot(left.quaternion)));
     if (!faces.length) return;
     const face = faces[0].quaternion;
-    // A visitor may have zoomed into the preview. Restore whole-board framing
-    // only when that zoom would hide the explicitly requested connection.
-    if (!this.connectionVisible(a, b, face) && this.zoomLevel > 1) {
-      this.zoomLevel = 1;
-      this.updateCamera();
-    }
     const oblique = [-PREVIEW_TILT.yaw, PREVIEW_TILT.yaw].map(yaw => face.clone().multiply(
       new THREE.Quaternion().setFromEuler(new THREE.Euler(PREVIEW_TILT.pitch, yaw, 0, "YXZ")),
     )).sort((left, right) => Math.abs(from.dot(right)) - Math.abs(from.dot(left)));
@@ -1352,45 +1342,22 @@ export class BoardScene {
     this.interactionRevision++;
     const target = this.restingOrientation();
     const rotationChanged = (this.motion?.target ?? this.orientation).angleTo(target) > 1e-6;
-    const zoomChanged = this.zoomLevel !== 1;
-    this.zoomLevel = 1;
     this.animateTo(target, true);
-    if (zoomChanged && !rotationChanged) this.gestures.onViewChange?.();
+    if (!rotationChanged) this.render();
   }
 
-  zoom(delta: number): void {
-    // The landing board is an animated demonstration, not a player camera.
-    // Keep its framing fixed while allowing its rotation gesture to remain
-    // available for exploring the cube.
-    if (this.preview || this.shapeTransition) return;
-    if (!Number.isFinite(delta)) return;
-    if (delta !== 0) this.interactionRevision++;
-    this.cancelTap();
-    const previousZoom = this.zoomLevel;
-    this.zoomLevel = THREE.MathUtils.clamp(
-      this.zoomLevel * Math.exp(delta),
-      0.65,
-      this.maximumZoom(this.orientation),
-    );
-    this.updateCamera();
-    this.render();
-    // A pinch changes zoom on every pointer move; save it once on release.
-    if (this.zoomLevel !== previousZoom && !this.pointers.size)
-      this.gestures.onViewChange?.();
-  }
-
-  serializeView(): { version: 1; orientation: [number, number, number, number]; zoom: number } {
+  serializeView(): { version: 1; orientation: [number, number, number, number] } {
     // Store the intended face when a turn has started but has not finished.
     const orientation = this.motion?.target ?? this.orientation;
-    return { version: 1, orientation: [orientation.x, orientation.y, orientation.z, orientation.w], zoom: this.zoomLevel };
+    return { version: 1, orientation: [orientation.x, orientation.y, orientation.z, orientation.w] };
   }
 
   restoreView(value: unknown): boolean {
     if (!this.puzzle || !value || typeof value !== "object") return false;
-    const view = value as { version?: unknown; orientation?: unknown; zoom?: unknown };
+    // Legacy saves can contain a zoom field; fixed framing deliberately ignores it.
+    const view = value as { version?: unknown; orientation?: unknown };
     if (view.version !== 1 || !Array.isArray(view.orientation) || view.orientation.length !== 4 ||
-      !view.orientation.every(component => typeof component === "number" && Number.isFinite(component)) ||
-      typeof view.zoom !== "number" || !Number.isFinite(view.zoom)) return false;
+      !view.orientation.every(component => typeof component === "number" && Number.isFinite(component))) return false;
     const [x, y, z, w] = view.orientation as number[];
     const length = Math.hypot(x, y, z, w);
     if (!Number.isFinite(length) || length < 1e-6 || length > 1e6) return false;
@@ -1400,7 +1367,6 @@ export class BoardScene {
     if (this.isFlat) orientation.identity();
     this.cancelMotion();
     this.orientation.copy(orientation);
-    this.zoomLevel = THREE.MathUtils.clamp(view.zoom, 0.65, this.maximumZoom(orientation));
     this.updateCamera();
     this.render();
     return true;
@@ -1491,7 +1457,7 @@ export class BoardScene {
     if (this.shapeTransition) {
       const distance = Math.max(
         this.minimumDistance(this.shapeTransition.toOrientation),
-        this.fitDistance / this.zoomLevel,
+        this.fitDistance,
       );
       // Haze distances are measured from the camera. Resize moves the fitted
       // destination camera, so its fog endpoints must move by the same amount.
@@ -1510,7 +1476,7 @@ export class BoardScene {
     const margin = this.nodeRadius + 0.09 + this.config.nodeFloatAmplitude;
     let distance = 1;
     // Include a sphere-sized box around every node, not only its center.
-    // This also keeps the entire puzzle in frame at maximum zoom and mid-turn.
+    // This keeps the entire puzzle in frame through every turn and mid-transition.
     for (const position of this.positions.values()) {
       const local = position.clone().applyQuaternion(inverse);
       distance = Math.max(
@@ -1522,28 +1488,10 @@ export class BoardScene {
     return distance * 1.025;
   }
 
-  /**
-   * Zoom is expressed relative to the whole-board fit distance. The closest
-   * safe distance changes with the current perspective, aspect ratio, node
-   * size and floating amplitude, so a fixed multiplier can crop a large cube.
-   */
-  private maximumZoom(orientation: THREE.Quaternion): number {
-    if (!this.puzzle || !Number.isFinite(this.fitDistance) || this.fitDistance <= 0)
-      return 1.8;
-    return THREE.MathUtils.clamp(
-      this.fitDistance / this.minimumDistance(orientation),
-      0.65,
-      1.8,
-    );
-  }
-
   private updateCamera(): void {
     const distance = this.shapeTransition
       ? THREE.MathUtils.lerp(this.shapeTransition.fromDistance, this.shapeTransition.toDistance, this.shapeProgress())
-      : Math.max(
-      this.minimumDistance(this.orientation),
-      this.fitDistance / this.zoomLevel,
-    );
+      : Math.max(this.minimumDistance(this.orientation), this.fitDistance);
     this.camera.position.set(0, 0, distance).applyQuaternion(this.orientation);
     this.camera.quaternion.copy(this.orientation);
     this.camera.up.set(0, 1, 0).applyQuaternion(this.orientation);
@@ -1578,7 +1526,7 @@ export class BoardScene {
       return;
     }
     // Preserve the front face, then fade the rear nodes and their pips into
-    // the lavender studio. Measure board depth so zoom and size do not change
+    // the lavender studio. Measure board depth so size changes do not change
     // the strength, and rotating smoothly brings the next face into clarity.
     fog.near = nearest + Math.min(0.2, depthSpan * 0.08);
     fog.far = fog.near + (nearest + depthSpan * 1.4 + this.nodeRadius - fog.near) / this.config.fogStrength;
@@ -1586,7 +1534,7 @@ export class BoardScene {
 
   private updateStudio(): void {
     // Keep the studio upright to the player while the puzzle presents each face.
-    // Only orientation follows the camera: zoom never moves the floor or lights.
+    // Only orientation follows the camera; the studio keeps a stable composition.
     this.studio.quaternion.copy(this.orientation);
     if (this.shapeTransition) {
       this.floor.position.y = THREE.MathUtils.lerp(this.shapeTransition.fromFloor, this.shapeTransition.toFloor, this.shapeProgress());
@@ -2095,7 +2043,6 @@ export class BoardScene {
         if (this.pointers.size === 1) {
           this.gestureStart = { x: event.clientX, y: event.clientY };
           this.gestureOrientation.copy(this.motion?.target ?? this.orientation);
-          this.gestureZoom = this.zoomLevel;
           this.gestureFace = this.frontFace();
           this.gestureNode = this.preview
             ? null
@@ -2111,8 +2058,6 @@ export class BoardScene {
           this.endStroke();
           this.moved = true;
           this.pinchGesture = true;
-          const [a, b] = [...this.pointers.values()];
-          this.pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
         }
         canvas.style.cursor =
           this.gestureNode === null ? "grabbing" : "crosshair";
@@ -2133,14 +2078,8 @@ export class BoardScene {
         }
         const next = { x: event.clientX, y: event.clientY };
         this.pointers.set(event.pointerId, next);
-        if (this.pointers.size >= 2) {
-          const [a, b] = [...this.pointers.values()];
-          const distance = Math.hypot(a.x - b.x, a.y - b.y);
-          if (this.pinchDistance > 0 && distance > 0)
-            this.zoom(Math.log(distance / this.pinchDistance));
-          this.pinchDistance = distance;
-          return;
-        }
+        // Multi-touch is kept neutral: it cannot rotate, connect, or change framing.
+        if (this.pointers.size >= 2) return;
         if (this.pinchGesture) return;
         if (
           !this.moved &&
@@ -2215,8 +2154,7 @@ export class BoardScene {
           end,
           event.type === "pointerup" && !this.pinchGesture,
         );
-      if (this.rotated || this.zoomLevel !== this.gestureZoom)
-        this.gestures.onViewChange?.();
+      if (this.rotated) this.gestures.onViewChange?.();
       if (event.type !== "pointerup") this.cancelTap();
       if (
         !this.moved &&
@@ -2235,15 +2173,6 @@ export class BoardScene {
     canvas.addEventListener("pointerup", finish, options);
     canvas.addEventListener("pointercancel", finish, options);
     canvas.addEventListener("lostpointercapture", finish, options);
-    canvas.addEventListener(
-      "wheel",
-      (event) => {
-        if (!this.interactive) return;
-        event.preventDefault();
-        this.zoom(-event.deltaY * (event.deltaMode === 1 ? 0.025 : 0.0015));
-      },
-      { ...options, passive: false },
-    );
   }
 
   private clearGuides(): void {
