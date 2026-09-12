@@ -1801,3 +1801,8 @@ TODO / Note
 2026-09-12
 - Restored persistent, close-fitting focus circles on both endpoints for onboarding drag lessons, retaining live sphere tracking and the minimal traveling glint. Double-tap remains a double ping on one sphere.
 - Build and desktop/mobile visual checks completed; existing full onboarding regression and web-game client exercised.
+
+2026-09-12
+- Added a distinct removal demonstration: trace the existing connection, fade its rendered rod out, display a small minus mark, then restore it for the next loop. Focus circles remain attached to both endpoints; the puzzle data is never modified by the preview.
+- Preview material is isolated and disposed on lesson change, puzzle replacement, and scene disposal; reduced-motion keeps a static removal mark.
+- Validated build, full onboarding flow, unchanged edges throughout preview, removal/skip cleanup, desktop/mobile visuals, vertical mark orientation, and web-game Playwright client.

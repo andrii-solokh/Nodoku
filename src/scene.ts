@@ -94,6 +94,7 @@ export class BoardScene {
   private rods = new THREE.Group();
   private rodMeshes = new Map<string, Rod>();
   private connectionGrowth = new Map<string, Growth>();
+  private removalCue: { key: string; elapsed: number; material: THREE.MeshPhysicalMaterial } | null = null;
   private config: SceneConfig = {
     rotationMs: 320, connectionMs: 420, connectionEasing: "easeOut",
     dragMaxLength: 1.15, dragThickness: 1.15, dragMinThickness: .3, dragTipSize: .05,
@@ -370,6 +371,7 @@ export class BoardScene {
   }
 
   setPuzzle(puzzle: Puzzle, preview = false, animateShape = false): void {
+    this.setRemovalCue(null);
     this.gumPulses.clear();
     this.updateGumNodes();
     this.gumDegrees.clear();
@@ -721,7 +723,7 @@ export class BoardScene {
       || !!this.dragMagnet && Math.abs(this.dragMagnet.strength - this.dragMagnet.target) > 1e-4);
   }
 
-  get hasAnimations(): boolean { return this.dragAnimating || this.gumPulses.size > 0 || this.motion !== null || this.connectionGrowth.size > 0 || this.activeDotNodes.size > 0 || this.noteParticles.length > 0 || this.shapeTransition !== null; }
+  get hasAnimations(): boolean { return (!!this.removalCue && !this.reducedMotion) || this.dragAnimating || this.gumPulses.size > 0 || this.motion !== null || this.connectionGrowth.size > 0 || this.activeDotNodes.size > 0 || this.noteParticles.length > 0 || this.shapeTransition !== null; }
 
   get hasAmbientMotion(): boolean {
     return !this.disposed && !this.reducedMotion && !document.hidden && this.config.nodeFloatAmplitude > 0 && this.nodeMeshes.size > 0;
@@ -895,6 +897,42 @@ export class BoardScene {
       })),
       rods,
     };
+  }
+
+  setRemovalCue(edge: [number, number] | null): void {
+    const key = edge ? [...edge].sort((a, b) => a - b).join(":") : null;
+    if (key === this.removalCue?.key) return;
+    if (this.removalCue) {
+      const rod = this.rodMeshes.get(this.removalCue.key);
+      if (rod) { rod.mesh.material = this.rodMaterial; rod.mesh.castShadow = true; }
+      this.removalCue.material.dispose();
+      this.removalCue = null;
+    }
+    if (key && this.rodMeshes.has(key)) {
+      const material = this.rodMaterial.clone();
+      material.transparent = true;
+      material.depthWrite = false;
+      this.gumMaterials.apply(material, "rod");
+      this.removalCue = { key, elapsed: 0, material };
+      this.ensureAnimationFrame();
+    }
+  }
+
+  getRemovalCueState() {
+    const cue = this.removalCue;
+    return cue ? { edge: cue.key, elapsed: cue.elapsed, opacity: cue.material.opacity } : null;
+  }
+
+  private renderRemovalCue(): void {
+    const cue = this.removalCue;
+    const rod = cue && this.rodMeshes.get(cue.key);
+    if (!cue || !rod) return;
+    const t = this.reducedMotion ? 0 : cue.elapsed;
+    // Trace the existing link first, then demonstrate its disappearance and reset.
+    cue.material.opacity = t < 1560 ? 1 : t < 1800 ? 1 - (t - 1560) / 240
+      : t < 2160 ? 0 : (t - 2160) / 240;
+    rod.mesh.material = cue.material;
+    rod.mesh.castShadow = false;
   }
 
   getConnectionAnimationState(): { edge: [number, number]; progress: number; durationMs: number; easing: SceneConfig["connectionEasing"] }[] {
@@ -1722,6 +1760,7 @@ export class BoardScene {
       if (pulse.elapsed >= pulse.duration) this.gumPulses.delete(id);
     }
     this.advanceShape(elapsed);
+    if (this.removalCue && !this.reducedMotion) this.removalCue.elapsed = (this.removalCue.elapsed + elapsed) % 2400;
     this.render(elapsed);
     if (!this.wantsFrames) this.stopAnimationFrame();
   }
@@ -2290,11 +2329,13 @@ export class BoardScene {
     this.updateGumNodes();
     this.advanceDrag(elapsed);
     this.renderDragStrand();
+    this.renderRemovalCue();
     this.renderer.render(this.scene, this.camera);
     this.onRender?.();
   }
 
   dispose(): void {
+    this.setRemovalCue(null);
     this.cancelTap();
     this.endStroke();
     this.disposed = true;
