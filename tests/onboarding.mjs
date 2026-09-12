@@ -37,6 +37,17 @@ try {
   const a = board.nodes.find(node => node.id === firstA);
   const b = board.nodes.find(node => node.id === firstB);
   assert.ok(a && b, 'The tutorial solution has visible endpoints');
+  const tapLesson = await fixture();
+  const tapBoard = await state(tapLesson);
+  const tapA = tapBoard.nodes.find(node => node.id === firstA);
+  const tapB = tapBoard.nodes.find(node => node.id === firstB);
+  assert.ok(tapA && tapB, 'The tap lesson has visible endpoints');
+  await tapLesson.mouse.click(tapA.screen.x, tapA.screen.y);
+  await tapLesson.waitForFunction(nodeId => JSON.parse(window.render_game_to_text()).selected === nodeId, firstA);
+  await tapLesson.mouse.click(tapB.screen.x, tapB.screen.y);
+  await tapLesson.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 7');
+  assert.equal((await state(tapLesson)).edges.length, 1, 'Selecting neighboring tutorial nodes makes the guided connection');
+  await tapLesson.close();
   await page.mouse.move(a.screen.x, a.screen.y);
   await page.mouse.down();
   // A small drag begins the tutorial stroke without reaching a neighbour.
