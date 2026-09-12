@@ -28,7 +28,7 @@ async function fixture(openOnboarding = true) {
 try {
   const page = await fixture();
   assert.equal(await page.locator('.site-header').isVisible(), false, 'Onboarding hides the normal header');
-  assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 6');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 7');
   const board = await state(page);
   const tutorial = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
   const mirror = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
@@ -48,12 +48,12 @@ try {
   await page.mouse.move(b.screen.x, b.screen.y, { steps: 8 });
   await page.mouse.up();
   mirror.toggle(firstA, firstB);
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 6');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 7');
   assert.match(await page.locator('#onboarding-message').textContent(), /same linked pair again to remove it/);
   assert.equal(await page.locator('#onboarding-next').isHidden(), true, 'The tutorial cannot jump to 3D before the 2D board is solved');
   await drag(page, a, b);
   mirror.toggle(firstA, firstB);
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 6');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 7');
   assert.match(await page.locator('#onboarding-message').textContent(), /Double-tap a node/);
   const fillNode = mirror.nodes.find(node => node.required > 0);
   assert.ok(fillNode, 'The tutorial has a node to fill');
@@ -62,7 +62,7 @@ try {
   const fillScreenNode = (await state(page)).nodes.find(node => node.id === fillNode.id);
   assert.ok(fillScreenNode, 'The node to fill is visible');
   await page.mouse.dblclick(fillScreenNode.screen.x, fillScreenNode.screen.y, { delay: 40 });
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '4 of 6');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '4 of 7');
   assert.match(await page.locator('#onboarding-message').textContent(), /until every dot is gone/);
   const secondFillNode = mirror.nodes.find(node => node.id !== fillNode.id && mirror.remaining(node.id) > 0);
   assert.ok(secondFillNode, 'The remaining tutorial board has another node to fill');
@@ -99,14 +99,14 @@ try {
   }
   assert.equal(await page.locator('#completion-moment').isVisible(), true, 'The solved 2D lesson gets a completion beat before changing scenes');
   await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/2d-completion-moment.png' });
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '5 of 6');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '5 of 7');
   assert.equal((await state(page)).nodes.length, 26, 'The next lesson switches to a 3D board');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Turn the puzzle.');
   assert.match(await page.locator('#onboarding-message').textContent(), /Swipe over the board, or use the direction controls/);
   assert.equal(await page.locator('#onboarding-turn-controls').isVisible(), true, 'The turn lesson exposes direction controls');
   await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/solved-2d-3d.png' });
   await page.locator('[data-onboarding-rotate="right"]').click();
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '6 of 6');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '6 of 7');
   assert.equal(await page.locator('#onboarding-turn-controls').isHidden(), true, 'The connection lesson replaces turn controls');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Make a 3D connection.');
   const threeD = await state(page);
@@ -116,7 +116,14 @@ try {
   const target = source && threeD.nodes.find(node => node.screen?.pickable && adjacent(source, node));
   assert.ok(source && target, 'The 3D lesson has visible neighboring endpoints');
   await drag(page, source, target);
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === 'Done');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '7 of 7');
+  assert.equal(await page.locator('#onboarding-title').textContent(), 'Use your tools.');
+  assert.equal(await page.locator('#onboarding-control-lesson').isVisible(), true, 'The final lesson shows Undo, Redo, and Hint controls');
+  assert.equal(await page.locator('.onboarding-desktop-shortcuts').isVisible(), true, 'Desktop shows the matching keyboard shortcuts');
+  await page.screenshot({ path: 'output/web-game/onboarding-controls/desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(await page.locator('.onboarding-mobile-controls').isVisible(), true, 'Mobile explains where the controls live');
+  await page.screenshot({ path: 'output/web-game/onboarding-controls/mobile.png' });
   await page.locator('#onboarding-next').click();
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');
   assert.equal(await page.locator('.site-header').isVisible(), true, 'Finishing returns to the normal home screen');

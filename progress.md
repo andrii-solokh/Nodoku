@@ -1743,3 +1743,9 @@ TODO / Note
 - Kept the rotation lesson free of node selection so swipes remain dedicated to turning the 3D board.
 - Added browser coverage that holds a guided drag on a node and verifies both the selected state and rendered ring.
 - Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, `npm run test` (194 passing), and a visual screenshot at `output/web-game/onboarding-selection/selection-ring.png`.
+
+## 2026-09-12 — Onboarding controls lesson
+- Added a seventh tutorial lesson after the first 3D connection to introduce Undo, Redo, and Hint.
+- The lesson shows the three familiar controls, desktop keyboard shortcuts (`Ctrl/⌘ Z`, `Ctrl/⌘ Shift Z`, and `H`), and the lower-left mobile control location.
+- Added desktop and portrait-browser coverage, with screenshots in `output/web-game/onboarding-controls/`.
+- Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, and `npm run test` (194 passing).

@@ -1659,3 +1659,79 @@ a {
   .difficulty-button { height: 29px; }
   .start-button { padding: 9px 14px; }
 }
+.onboarding-control-lesson {
+  position: absolute;
+  z-index: 2;
+  left: max(24px, env(safe-area-inset-left));
+  bottom: max(232px, calc(192px + env(safe-area-inset-bottom)));
+  width: min(500px, calc(100% - 48px));
+  color: #756a87;
+  pointer-events: none;
+}
+.onboarding-tool-buttons {
+  display: inline-flex;
+  gap: 5px;
+  padding: 5px;
+  border-radius: 16px;
+  background: #e6e2eeeb;
+  box-shadow: 0 10px 26px #44386614;
+  backdrop-filter: blur(12px);
+}
+.onboarding-tool-buttons span {
+  display: inline-flex;
+  min-width: 76px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 11px;
+  color: #685d7a;
+  font-size: 13px;
+  font-weight: 500;
+}
+.onboarding-tool-buttons span:last-child { color: #685596; background: #f9f8fc; }
+.onboarding-tool-buttons svg { width: 17px; height: 17px; }
+.onboarding-tool-buttons b { font: inherit; }
+.onboarding-desktop-shortcuts,
+.onboarding-mobile-controls {
+  margin: 9px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.onboarding-desktop-shortcuts kbd {
+  display: inline-grid;
+  min-width: 18px;
+  height: 19px;
+  padding: 0 4px;
+  place-items: center;
+  border: 1px solid #d6cfe4;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: #fbfaff;
+  color: #625672;
+  font: 500 10px/1 var(--font);
+}
+.onboarding-desktop-shortcuts > span { padding: 0 2px; }
+.onboarding-mobile-controls { display: none; }
+@media (max-width: 760px) and (orientation: portrait) {
+  .onboarding-control-lesson {
+    left: max(12px, env(safe-area-inset-left));
+    bottom: max(226px, calc(190px + env(safe-area-inset-bottom)));
+    width: auto;
+  }
+  .onboarding-tool-buttons { display: grid; grid-template-columns: repeat(2, 42px); }
+  .onboarding-tool-buttons span {
+    min-width: 42px;
+    width: 42px;
+    height: 42px;
+    font-size: 0;
+  }
+  .onboarding-tool-buttons span:last-child { grid-column: 1; }
+  .onboarding-tool-buttons svg { width: 19px; height: 19px; }
+  .onboarding-desktop-shortcuts { display: none; }
+  .onboarding-mobile-controls {
+    display: block;
+    width: 150px;
+    margin-left: 3px;
+  }
+}

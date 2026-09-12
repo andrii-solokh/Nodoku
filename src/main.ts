@@ -206,6 +206,15 @@ app.innerHTML = `
     <button class="icon-button" type="button" data-onboarding-rotate="down" aria-label="Turn down">${icon("down")}</button>
     <span aria-hidden="true"></span>
   </div>
+  <aside class="onboarding-control-lesson" id="onboarding-control-lesson" aria-label="Puzzle controls" hidden>
+    <div class="onboarding-tool-buttons" aria-hidden="true">
+      <span>${icon("undo")}<b>Undo</b></span>
+      <span>${icon("redo")}<b>Redo</b></span>
+      <span>${icon("hint")}<b>Hint</b></span>
+    </div>
+    <p class="onboarding-desktop-shortcuts">Desktop: <kbd>Ctrl / ⌘</kbd> <span>+</span> <kbd>Z</kbd> to undo, <kbd>Ctrl / ⌘</kbd> <span>+</span> <kbd>Shift</kbd> <span>+</span> <kbd>Z</kbd> to redo, and <kbd>H</kbd> for a hint.</p>
+    <p class="onboarding-mobile-controls">On mobile, these controls stay at the lower-left of the puzzle.</p>
+  </aside>
   <section class="onboarding-copy" aria-live="polite">
     <span class="onboarding-step" id="onboarding-step">1 of 3</span>
     <h2 id="onboarding-title">Make one connection.</h2>
@@ -599,45 +608,45 @@ function onDoubleTap(id: number) {
 function renderOnboarding() {
   const copy = [
     {
-      step: "1 of 6",
+      step: "1 of 7",
       title: "Make one connection.",
       message: "Drag from one node to a neighboring node.",
       action: null,
     },
     {
-      step: "2 of 6",
+      step: "2 of 7",
       title: "Remove that connection.",
       message: "Drag across the same linked pair again to remove it.",
       action: null,
     },
     {
-      step: "3 of 6",
+      step: "3 of 7",
       title: "Fill a node.",
       message: "Double-tap a node to connect every available neighboring node at once.",
       action: null,
     },
     {
-      step: "4 of 6",
+      step: "4 of 7",
       title: "Clear every dot.",
       message: "Keep connecting neighboring nodes until every dot is gone.",
       action: null,
     },
     {
-      step: "5 of 6",
+      step: "5 of 7",
       title: "Turn the puzzle.",
       message: "Swipe over the board, or use the direction controls, to look around.",
       action: null,
     },
     {
-      step: "6 of 6",
+      step: "6 of 7",
       title: "Make a 3D connection.",
       message: "Drag from one node to a neighboring node. Turn the puzzle whenever you need another side.",
       action: null,
     },
     {
-      step: "Done",
-      title: "You’re ready.",
-      message: "Turn the puzzle, follow the dots, and bring it all together.",
+      step: "7 of 7",
+      title: "Use your tools.",
+      message: "Undo a move, redo it, or ask for a hint whenever you need one.",
       action: "Start connecting",
     },
   ][onboardingStep];
@@ -648,8 +657,9 @@ function renderOnboarding() {
   next.hidden = !copy.action;
   next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
   el("onboarding-turn-controls").hidden = onboardingStep !== 4;
+  el("onboarding-control-lesson").hidden = onboardingStep !== 6;
   captureAnalytics("onboarding_lesson_viewed", {
-    lesson: ["connection", "remove", "node_fill", "network", "rotation", "3d_connection", "ready"][onboardingStep],
+    lesson: ["connection", "remove", "node_fill", "network", "rotation", "3d_connection", "controls"][onboardingStep],
     step: onboardingStep + 1,
   });
 }
