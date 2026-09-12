@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
+import { Puzzle } from '../src/puzzle.ts';
 
 const url = process.env.TEST_URL || 'http://127.0.0.1:4173';
 const browser = await chromium.launch();
 const errors = [];
 const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text()));
-const adjacent = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.z - b.z) === 1;
 async function fixture(openOnboarding = true) {
   const page = await browser.newPage({ viewport: { width: 1200, height: 850 } });
   page.on('pageerror', error => errors.push(error.message));
@@ -22,9 +22,12 @@ try {
   assert.equal(await page.locator('.site-header').isVisible(), false, 'Onboarding hides the normal header');
   assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 3');
   const board = await state(page);
+  const tutorial = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
   assert.equal(board.nodes.length, 9, 'The first lesson is a 3 by 3 board');
-  const a = board.nodes.find(node => board.nodes.some(other => adjacent(node, other)));
-  const b = board.nodes.find(node => adjacent(a, node));
+  const [firstA, firstB] = tutorial.solution[0];
+  const a = board.nodes.find(node => node.id === firstA);
+  const b = board.nodes.find(node => node.id === firstB);
+  assert.ok(a && b, 'The tutorial solution has visible endpoints');
   await page.mouse.move(a.screen.x, a.screen.y);
   await page.mouse.down();
   await page.mouse.move(b.screen.x, b.screen.y, { steps: 8 });
@@ -32,23 +35,23 @@ try {
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 3');
   assert.match(await page.locator('#onboarding-message').textContent(), /Each link clears one dot from both nodes/);
   assert.match(await page.locator('#onboarding-message').textContent(), /Double-tap a node to connect every available neighboring node at once/);
-  const afterFirst = await state(page);
-  const connected = new Set(afterFirst.edges.map(edge => [...edge].sort((a, b) => a - b).join(':')));
-  const source = afterFirst.nodes.find(node => node.remaining > 0 && afterFirst.nodes.some(other =>
-    other.remaining > 0 && adjacent(node, other) && !connected.has([node.id, other.id].sort((a, b) => a - b).join(':')),
-  ));
-  const target = afterFirst.nodes.find(other => source && other.remaining > 0 && adjacent(source, other)
-    && !connected.has([source.id, other.id].sort((a, b) => a - b).join(':')));
-  assert.ok(source && target, 'the goal lesson keeps another legal connection available');
-  await page.mouse.move(source.screen.x, source.screen.y);
-  await page.mouse.down();
-  await page.mouse.move(target.screen.x, target.screen.y, { steps: 8 });
-  await page.mouse.up();
-  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).edges.length === 2);
-  assert.equal(await page.locator('#onboarding-step').textContent(), '2 of 3', 'the goal copy stays visible while the board remains playable');
-  await page.locator('#onboarding-next').click();
+  assert.equal(await page.locator('#onboarding-next').isHidden(), true, 'The tutorial cannot jump to 3D before the 2D board is solved');
+  for (const [sourceId, targetId] of tutorial.solution.slice(1)) {
+    const current = await state(page);
+    const source = current.nodes.find(node => node.id === sourceId);
+    const target = current.nodes.find(node => node.id === targetId);
+    assert.ok(source && target, 'Each solution connection has visible endpoints');
+    await page.mouse.move(source.screen.x, source.screen.y);
+    await page.mouse.down();
+    await page.mouse.move(target.screen.x, target.screen.y, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForTimeout(20);
+  }
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 3');
   assert.equal((await state(page)).nodes.length, 26, 'The next lesson switches to a 3D board');
+  assert.equal(await page.locator('#onboarding-title').textContent(), '2D complete.');
+  assert.match(await page.locator('#onboarding-message').textContent(), /You cleared every dot/);
+  await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/solved-2d-3d.png' });
   const rotationNode = (await state(page)).nodes.find(node => node.screen?.pickable);
   assert.ok(rotationNode, 'The 3D lesson has a visible node to turn from');
   await page.mouse.move(rotationNode.screen.x, rotationNode.screen.y);
