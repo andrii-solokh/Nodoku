@@ -64,6 +64,20 @@ try {
   await page.mouse.dblclick(secondFillScreenNode.screen.x, secondFillScreenNode.screen.y, { delay: 40 });
   await page.waitForFunction(expectedEdges => JSON.parse(window.render_game_to_text()).edges.length === expectedEdges, mirror.edges.length);
   while (!mirror.solved) {
+    const finishingFill = mirror.nodes.find(node => {
+      if (mirror.remaining(node.id) <= 0) return false;
+      const trial = Puzzle.restore(mirror.serialize());
+      return trial?.toggleNode(node.id).changed && trial.solved;
+    });
+    if (finishingFill) {
+      const screenNode = (await state(page)).nodes.find(node => node.id === finishingFill.id);
+      assert.ok(screenNode?.screen, 'The finishing double-tap node is visible');
+      const result = mirror.toggleNode(finishingFill.id);
+      assert.equal(result.changed, true, 'The final node fill changes the tutorial board');
+      assert.equal(mirror.solved, true, 'The chosen node fill completes the tutorial board');
+      await page.mouse.dblclick(screenNode.screen.x, screenNode.screen.y, { delay: 40 });
+      break;
+    }
     const hint = mirror.hint();
     assert.equal(hint.changed, true, 'The tutorial board remains solvable after filling a node');
     assert.ok(hint.edge, 'Every tutorial hint supplies a connection');

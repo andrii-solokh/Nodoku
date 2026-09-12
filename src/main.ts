@@ -562,7 +562,7 @@ function onDoubleTap(id: number) {
     if (onboardingStep === 2 && result.removed) return;
     if (onboardingStep === 2) onboardingStep = 3;
     scene.refresh();
-    renderOnboarding();
+    if (!completeOnboarding2dIfSolved()) renderOnboarding();
     return;
   }
   if (mode !== "playing") return;
@@ -693,6 +693,24 @@ function showOnboarding3d() {
   scene.setInteractive(true);
   renderOnboarding();
 }
+function completeOnboarding2dIfSolved() {
+  const active = puzzle;
+  if (
+    mode !== "onboarding" ||
+    onboardingStep !== 3 ||
+    !active?.solved
+  )
+    return false;
+  captureAnalytics("onboarding_2d_completed", {
+    connections: active.edges.length,
+  });
+  scene.setInteractive(false);
+  playCompletionMoment(() => {
+    if (mode === "onboarding" && onboardingStep === 3 && puzzle === active)
+      showOnboarding3d();
+  });
+  return true;
+}
 function onStrokeStart(id: number) {
   if (!puzzle || document.querySelector("dialog[open]"))
     return;
@@ -795,16 +813,7 @@ function onStrokeEnd(showCompletion = true) {
         onboardingStep = 2;
         renderOnboarding();
       }
-      if (active.solved && onboardingStep === 3) {
-        captureAnalytics("onboarding_2d_completed", {
-          connections: active.edges.length,
-        });
-        scene.setInteractive(false);
-        playCompletionMoment(() => {
-          if (mode === "onboarding" && onboardingStep === 3 && puzzle === active)
-            showOnboarding3d();
-        });
-      }
+      completeOnboarding2dIfSolved();
       if (changed && onboardingStep === 5) {
         onboardingStep = 6;
         renderOnboarding();
