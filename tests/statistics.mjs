@@ -129,6 +129,14 @@ try {
   assert.equal(await dialog.locator('#statistics-sizes .statistics-ranking-bar').count(), 3);
   assert.equal(await dialog.locator('#statistics-difficulties .statistics-ranking-bar').count(), 3);
   assert.equal(await dialog.locator('#statistics-difficulties .statistics-complexity-icon').count(), 3, 'Difficulty rankings use the home-page complexity symbols');
+  for (const ranking of ['#statistics-sizes', '#statistics-difficulties']) {
+    const offsets = await dialog.locator(`${ranking} li`).evaluateAll(rows => rows.map(row => {
+      const bar = row.querySelector('.statistics-ranking-bar').getBoundingClientRect();
+      const label = row.querySelector('.statistics-ranking-label').getBoundingClientRect();
+      return Math.abs((bar.left + bar.width / 2) - (label.left + label.width / 2));
+    }));
+    assert.ok(offsets.every(offset => offset <= 1), `${ranking} labels stay centered beneath their bars`);
+  }
   await view.page.evaluate(() => window.dispatchEvent(new CustomEvent('nodoku:sponsorship-config', { detail: { enabled: false } })));
   assert.equal(await dialog.locator('#statistics-report').isVisible(), false, 'Hiding sponsor placements also hides private sponsor reports');
   await view.page.evaluate(() => window.dispatchEvent(new CustomEvent('nodoku:sponsorship-config', { detail: { enabled: true } })));
