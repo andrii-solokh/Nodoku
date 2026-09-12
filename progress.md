@@ -1596,3 +1596,8 @@ TODO / Note
 - Reduced the crawlable guide to the core rule, a short 3D explanation, and three essential FAQ answers.
 - Kept the visible FAQ and JSON-LD FAQ aligned.
 - Verified with the production build, full unit suite, and browser interaction capture.
+
+## 2026-09-12 — Node-connecting loader
+- Renamed the loading caption to “Connecting the nodes.”
+- Reworked the logo animation so its links draw in sequence and the final node sends a restrained completion pulse.
+- Preserved a complete static mark for reduced-motion preferences.
