@@ -1806,3 +1806,8 @@ TODO / Note
 - Added a distinct removal demonstration: trace the existing connection, fade its rendered rod out, display a small minus mark, then restore it for the next loop. Focus circles remain attached to both endpoints; the puzzle data is never modified by the preview.
 - Preview material is isolated and disposed on lesson change, puzzle replacement, and scene disposal; reduced-motion keeps a static removal mark.
 - Validated build, full onboarding flow, unchanged edges throughout preview, removal/skip cleanup, desktop/mobile visuals, vertical mark orientation, and web-game Playwright client.
+
+2026-09-12
+- Made double-tap explicit in the step 3 heading and described two quick taps / desktop double-click beside the ping cue.
+- Kept the gesture in step 4 instructions, including double-tapping a cleared node to remove its links; added the shortcut to the help text.
+- Build, full onboarding regression, web-game client, and desktop/mobile copy layout checked.
