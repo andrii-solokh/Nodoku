@@ -14,6 +14,7 @@ import moonlightUrl from "./assets/moonlight-scott-buckley.mp3?url";
 import { mountCompletionShare } from "./share";
 import { recordCompletion, restoreAttemptId, startCompletionTracking } from "./completions";
 import { captureAnalytics, startAnalytics, subscribeFeatureFlag } from "./analytics";
+import { TutorialToolGuide } from "./tutorial-tool-guide";
 
 const paths: Record<string, string> = {
   cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>',
@@ -203,6 +204,9 @@ app.innerHTML = `
   </div>
 </section>
 <section class="onboarding-main" aria-labelledby="onboarding-title">
+  <svg id="onboarding-tool-arrow" class="onboarding-tool-arrow" aria-hidden="true" focusable="false">
+    <g><path d="M-48-12 Q-28-24 0 0"/><path d="M-13-10 0 0-15 5"/></g>
+  </svg>
   <div id="onboarding-stage" class="stage onboarding-stage"></div>
   <div class="onboarding-cue" id="onboarding-cue" aria-hidden="true" hidden>
     <span class="onboarding-cue-line"></span>
@@ -359,6 +363,7 @@ const demo = new HomeDemo(scene, kind => {
 }, () => soundEnabled && !demoSuspended() ? gameAudio.getCompletionDurationMs(demoSoundOptions("complete")) : 0);
 let activeMelody = getConfig().sound.connectionMelody;
 let tutorialSettings = getConfig().tutorial;
+const tutorialToolGuide = new TutorialToolGuide(document.querySelector<SVGSVGElement>("#onboarding-tool-arrow")!);
 const doubleTapStyle = document.createElement("style");
 document.head.appendChild(doubleTapStyle);
 subscribeConfig(config => {
@@ -1027,6 +1032,9 @@ function renderOnboardingTools() {
       || (tool === "redo" && !puzzle.canRedo) || (tool === "hint" && onboardingStep < 9);
     button.classList.toggle("tutorial-tool-ping", !onboardingCelebrating && tutorialSettings.enabled && tutorialSettings.toolCue && tool === expected);
   }
+  tutorialToolGuide.show(!onboardingCelebrating && tutorialSettings.enabled && tutorialSettings.toolCue && expected
+    ? el(`onboarding-${expected}`) : null,
+    touchInput.matches ? null : el("onboarding-shortcut"), tutorialSettings.color, tutorialSettings.gestureCycleMs);
 }
 function useOnboardingTool(tool: "undo" | "redo" | "hint" | "restart") {
   if (mode !== "onboarding" || onboardingCelebrating || onboardingStep < 7 || !puzzle) return;
@@ -1084,6 +1092,7 @@ function refreshOnboardingPractice() {
   celebrateOnboarding("All connected", () => {});
 }
 function finishOnboarding(completed = false) {
+  tutorialToolGuide.show(null, null, tutorialSettings.color, tutorialSettings.gestureCycleMs);
   captureAnalytics(completed ? "onboarding_completed" : "onboarding_skipped", {
     last_step: onboardingStep + 1,
   });

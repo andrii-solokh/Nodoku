@@ -1934,3 +1934,8 @@ TODO / Note
 2026-09-12
 - Added direct onboarding links with `?onboarding=1&step=1` through `step=10`, plus `direction=left|right|up|down` for step 6. Direct entries prepare the correct flat/cube puzzle and prerequisite connections/history for removal, clearing, Undo and Redo. Tutorial progress replaces the URL; exit removes tutorial parameters while preserving other query values.
 - Documented lesson numbers in README and added `npm run test:onboarding-navigation`. Build and navigation browser checks passed for all ten lessons, tool actions, four rotation directions, reload, exit, parameter preservation and invalid values. Inspected the direct rotation screenshot.
+
+2026-09-12
+- Added a playful curved arrow to the Undo, Redo and Hint lessons. It swings toward the active tool, travels to the actual shortcut keycaps, sweeps beneath them, and returns. Touch layouts use a compact tool-only pointer; short desktop windows use a side swing to keep the arrow onscreen.
+- The guide follows tutorial cue color/cycle and the existing Tool pings toggle, repositions on resize/font readiness, ignores pointer input, and hides during success and after the tool lessons. Reduced motion uses a static pointer.
+- Build and `test:tutorial-tool-guide` passed for all three tools on desktop/mobile, viewport bounds, proximity to actual keycaps, button actions, success/exit cleanup, and reduced motion. Inspected screenshots and refined the route to avoid instruction text. The success assertion records visibility in the click handler to avoid racing the next lesson.
