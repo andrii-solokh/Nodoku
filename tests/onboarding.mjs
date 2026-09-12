@@ -144,11 +144,14 @@ try {
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Use your tools.');
   assert.match(await page.locator('#onboarding-next').textContent(), /Finish tutorial/, 'The final action closes the tutorial instead of starting a game');
   assert.equal(await page.locator('#onboarding-control-lesson').isVisible(), true, 'The final lesson shows the game toolbar');
+  assert.equal(await page.locator('#onboarding-control-lesson').evaluate(node => node.classList.contains('game-toolbar')), true, 'The tutorial uses the game toolbar component instead of a separate layout');
   assert.equal(await page.locator('#onboarding-control-lesson .tools-group .tool-button').count(), 4, 'The tutorial uses every normal-game tool');
-  assert.equal(await page.locator('.onboarding-desktop-shortcuts').isVisible(), true, 'Desktop shows the matching keyboard shortcuts');
+  assert.equal(await page.locator('#onboarding-control-lesson .tool-button').nth(0).isDisabled(), true, 'The tutorial preserves the fresh-game undo state');
+  assert.equal(await page.locator('#onboarding-control-lesson .tool-button').nth(1).isDisabled(), true, 'The tutorial preserves the fresh-game redo state');
+  assert.equal(await page.locator('.onboarding-desktop-shortcuts').count(), 0, 'The tutorial does not add a separate controls layout beneath the shared toolbar');
   await page.screenshot({ path: 'output/web-game/onboarding-controls/desktop.png' });
   await page.setViewportSize({ width: 390, height: 844 });
-  assert.equal(await page.locator('.onboarding-mobile-controls').isHidden(), true, 'Mobile keeps the matching toolbar clear of redundant copy');
+  assert.equal(await page.locator('#onboarding-control-lesson .tools-group').evaluate(node => getComputedStyle(node).gridTemplateColumns), '42px 42px', 'Mobile uses the same compact two-by-two game toolbar');
   await page.screenshot({ path: 'output/web-game/onboarding-controls/mobile.png' });
   await page.locator('#onboarding-next').click();
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');

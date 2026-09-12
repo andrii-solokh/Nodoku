@@ -1788,3 +1788,7 @@ TODO / Note
 2026-09-12
 - Added live visual gesture cues to all interactive onboarding lessons: animated drag path, double-tap pulse, and turn prompt; cue targets use the active puzzle's visible nodes and realign after viewport changes.
 - Validated build, onboarding flow, and the web-game Playwright client; visually inspected desktop and mobile cues.
+
+2026-09-12
+- Replaced the tutorial-only controls replica with the shared game-toolbar component. It now uses the same responsive positioning, button treatment, and fresh-game disabled undo/redo state; removed redundant tutorial shortcut text.
+- Validated build, full onboarding flow, and visual desktop/mobile output.
