@@ -94,6 +94,7 @@ export class BoardScene {
   private rods = new THREE.Group();
   private rodMeshes = new Map<string, Rod>();
   private connectionGrowth = new Map<string, Growth>();
+  private cueCycleMs = 2400;
   private removalCue: { key: string; elapsed: number; material: THREE.MeshPhysicalMaterial } | null = null;
   private config: SceneConfig = {
     rotationMs: 320, connectionMs: 420, connectionEasing: "easeOut",
@@ -630,6 +631,8 @@ export class BoardScene {
 
   setConfig(config: GameConfig): void {
     this.config = { ...config.scene };
+    this.cueCycleMs = config.tutorial.gestureCycleMs;
+    if (this.removalCue) this.removalCue.elapsed %= this.cueCycleMs;
     this.updateGumMaterials();
     if (!this.gumMotionEnabled) this.gumPulses.clear();
     this.white.color.set(this.config.nodeColor);
@@ -927,7 +930,7 @@ export class BoardScene {
     const cue = this.removalCue;
     const rod = cue && this.rodMeshes.get(cue.key);
     if (!cue || !rod) return;
-    const t = this.reducedMotion ? 0 : cue.elapsed;
+    const t = this.reducedMotion ? 0 : cue.elapsed * 2400 / this.cueCycleMs;
     // Trace the existing link first, then demonstrate its disappearance and reset.
     cue.material.opacity = t < 1560 ? 1 : t < 1800 ? 1 - (t - 1560) / 240
       : t < 2160 ? 0 : (t - 2160) / 240;
@@ -1760,7 +1763,7 @@ export class BoardScene {
       if (pulse.elapsed >= pulse.duration) this.gumPulses.delete(id);
     }
     this.advanceShape(elapsed);
-    if (this.removalCue && !this.reducedMotion) this.removalCue.elapsed = (this.removalCue.elapsed + elapsed) % 2400;
+    if (this.removalCue && !this.reducedMotion) this.removalCue.elapsed = (this.removalCue.elapsed + elapsed) % this.cueCycleMs;
     this.render(elapsed);
     if (!this.wantsFrames) this.stopAnimationFrame();
   }

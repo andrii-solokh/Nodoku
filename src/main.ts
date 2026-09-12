@@ -347,8 +347,21 @@ const demo = new HomeDemo(scene, kind => {
   }
 }, () => soundEnabled && !demoSuspended() ? gameAudio.getCompletionDurationMs(demoSoundOptions("complete")) : 0);
 let activeMelody = getConfig().sound.connectionMelody;
+let tutorialSettings = getConfig().tutorial;
 subscribeConfig(config => {
   scene.setConfig(config);
+  const cues = el<HTMLElement>("onboarding-cue");
+  const tutorial = tutorialSettings = config.tutorial;
+  cues.dataset.focus = String(tutorial.focusCircles);
+  cues.dataset.drag = String(tutorial.dragCue);
+  cues.dataset.removal = String(tutorial.removalCue);
+  for (const [name, value] of Object.entries({
+    color: tutorial.color, "ring-width": `${tutorial.ringWidth}px`,
+    "ring-scale": tutorial.ringScale, "ring-opacity": tutorial.ringOpacity,
+    cycle: `${tutorial.gestureCycleMs}ms`,
+  })) cues.style.setProperty(`--cue-${name}`, String(value));
+  scene.setRemovalCue(mode === "onboarding" && onboardingStep === 1 && tutorial.enabled && tutorial.removalCue ? onboardingConnection : null);
+  requestAnimationFrame(renderOnboardingCue);
   demo.setConfig(config);
   gameAudio.setConfig(config.sound);
   ambientAudio.setVolume(config.sound.ambientVolume);
@@ -724,7 +737,8 @@ function renderOnboardingCue() {
   const startRing = cue.querySelector<HTMLElement>(".onboarding-cue-start")!;
   const endRing = cue.querySelector<HTMLElement>(".onboarding-cue-end")!;
   const turn = cue.querySelector<HTMLElement>(".onboarding-cue-turn")!;
-  if (puzzle?.solved || scene.isViewMoving) {
+  const settings = tutorialSettings;
+  if (!settings.enabled || puzzle?.solved || scene.isViewMoving) {
     cue.hidden = true;
     return;
   }
@@ -734,8 +748,9 @@ function renderOnboardingCue() {
     onboardingCue = onboardingCueForStep();
   const gesture = onboardingCue;
   cue.className = `onboarding-cue is-${gesture.kind}`;
-  cue.hidden = gesture.kind === "none";
-  if (gesture.kind === "none") return;
+  cue.hidden = gesture.kind === "none" || (gesture.kind === "double-tap" && !settings.doubleTapCue)
+    || (gesture.kind === "turn" && !settings.rotationCue);
+  if (cue.hidden) return;
 
   const stage = el("onboarding-stage").getBoundingClientRect();
   if (gesture.kind === "turn") {
@@ -828,7 +843,7 @@ function renderOnboarding() {
   el("onboarding-control-lesson").hidden = onboardingStep !== 6;
   app.classList.toggle("onboarding-controls-active", onboardingStep === 6);
   onboardingCue = onboardingCueForStep();
-  scene.setRemovalCue(onboardingStep === 1 ? onboardingConnection : null);
+  scene.setRemovalCue(onboardingStep === 1 && tutorialSettings.enabled && tutorialSettings.removalCue ? onboardingConnection : null);
   requestAnimationFrame(renderOnboardingCue);
   captureAnalytics("onboarding_lesson_viewed", {
     lesson: ["connection", "remove", "node_fill", "network", "rotation", "3d_connection", "controls"][onboardingStep],
@@ -1611,7 +1626,7 @@ document.addEventListener("close", (event) => {
     maybeComplete();
 }, true);
 if (new URLSearchParams(location.search).has("admin")) {
-  void import("./admin").then(({ mountAdmin }) => mountAdmin()).catch(() => {
+  void import("./admin").then(({ mountAdmin }) => mountAdmin(startOnboarding)).catch(() => {
     toast("The configurator could not load. Reload to try again.");
   });
 }

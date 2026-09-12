@@ -1811,3 +1811,8 @@ TODO / Note
 - Made double-tap explicit in the step 3 heading and described two quick taps / desktop double-click beside the ping cue.
 - Kept the gesture in step 4 instructions, including double-tapping a cleared node to remove its links; added the shortcut to the help text.
 - Build, full onboarding regression, web-game client, and desktop/mobile copy layout checked.
+
+2026-09-12
+- Added Studio → Tutorial visuals: global and individual cue toggles, color, ring thickness/size/opacity, and drag/removal cycle timing. Quick double-ping cadence remains independent.
+- Preview tutorial starts the real onboarding with live settings; Studio can reopen without the normal header. Existing save/reset/reload/export support includes the new section with legacy defaults and strict validation.
+- Verified 196 unit tests, full onboarding regression, tutorial-settings browser coverage, desktop/mobile screenshots, and the required web-game client. Admin browser testing uses a newly started preview on 4190 so the server loads the current schema.

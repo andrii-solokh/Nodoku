@@ -481,22 +481,22 @@ a {
   position: absolute;
   height: 1px;
   transform-origin: 0 50%;
-  background: #8870bd;
+  background: var(--cue-color, #8870bd);
   opacity: .3;
 }
 .onboarding-cue-node {
   position: absolute;
   display: none;
-  border: 1.5px solid #8870bd;
+  border: var(--cue-ring-width, 2px) solid var(--cue-color, #8870bd);
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
 .onboarding-cue.is-drag .onboarding-cue-node,
 .onboarding-cue.is-remove .onboarding-cue-node {
   display: block;
-  border-width: 2px;
-  opacity: .8;
-  transform: translate(-50%, -50%) scale(1.08);
+  border-width: var(--cue-ring-width, 2px);
+  opacity: var(--cue-ring-opacity, .8);
+  transform: translate(-50%, -50%) scale(var(--cue-ring-scale, 1.08));
 }
 .onboarding-cue.is-remove .onboarding-cue-line { background: none; opacity: 1; }
 .onboarding-cue.is-remove .onboarding-cue-line::after {
@@ -510,10 +510,10 @@ a {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #8870bd;
+  background: var(--cue-color, #8870bd);
   color: white;
   font: 500 16px/1 var(--font);
-  animation: onboarding-cue-remove 2.4s linear infinite;
+  animation: onboarding-cue-remove var(--cue-cycle, 2400ms) linear infinite;
 }
 @keyframes onboarding-cue-remove {
   0%, 60% { opacity: 0; }
@@ -525,9 +525,9 @@ a {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #8870bd;
+  background: var(--cue-color, #8870bd);
   transform: translate(-50%, -50%);
-  animation: onboarding-cue-drag 2.4s ease-in-out infinite;
+  animation: onboarding-cue-drag var(--cue-cycle, 2400ms) ease-in-out infinite;
 }
 .onboarding-cue-turn {
   position: absolute;
@@ -535,9 +535,9 @@ a {
   width: 50px;
   height: 50px;
   padding: 12px;
-  border: 2px solid #8870c6;
+  border: 2px solid var(--cue-color, #8870c6);
   border-radius: 50%;
-  color: #725cac;
+  color: var(--cue-color, #725cac);
   background: #f8f6fdde;
   box-shadow: 0 8px 28px #4f3c7721;
   transform: translate(-50%, -50%);
@@ -562,9 +562,9 @@ a {
   75%, 100% { opacity: 0; transform: translate(calc(-50% + var(--cue-dx)), calc(-50% + var(--cue-dy))); }
 }
 @keyframes onboarding-cue-double-ping {
-  0%, 10% { opacity: .7; transform: translate(-50%, -50%) scale(1); }
-  9%, 19% { opacity: 0; transform: translate(-50%, -50%) scale(1.08); }
-  20%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.08); }
+  0%, 10% { opacity: var(--cue-ring-opacity, .7); transform: translate(-50%, -50%) scale(1); }
+  9%, 19% { opacity: 0; transform: translate(-50%, -50%) scale(var(--cue-ring-scale, 1.08)); }
+  20%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(var(--cue-ring-scale, 1.08)); }
 }
 @keyframes onboarding-cue-turn {
   0%, 100% { transform: translate(-50%, -50%) rotate(-15deg) scale(.94); }
@@ -573,6 +573,12 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .onboarding-cue *, .onboarding-cue-turn { animation: none; }
 }
+/* Independent switches keep focus rings available without the moving demonstrations. */
+.onboarding-cue[data-focus="false"].is-drag .onboarding-cue-node,
+.onboarding-cue[data-focus="false"].is-remove .onboarding-cue-node,
+.onboarding-cue[data-drag="false"] .onboarding-cue-hand,
+.onboarding-cue[data-drag="false"].is-drag .onboarding-cue-line,
+.onboarding-cue[data-removal="false"].is-remove .onboarding-cue-line { display: none; }
 .onboarding-turn-controls {
   position: absolute;
   z-index: 2;
