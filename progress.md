@@ -1952,3 +1952,7 @@ TODO / Note
 - Changed scored connection fills from replacement to an ordered phrase: subsequent fills and single connections append at the existing tempo while the board responds immediately. Reuses an active voice to preserve earlier batches, retains silent score beats after oscillator cleanup, and hands completion over after all queued notes.
 - Clears pending audio on puzzle changes/restart as well as existing mute/suspension/configuration cleanup; tutorial free-play fills use the same scoring. Removal retains its immediate falling effect and cancels the fill queue.
 - Build and 202 unit tests passed. Native Web Audio double-click checks verified immediate links, queued follow-up fills/single moves, unchanged first phrase, and mute/restart cancellation; completion browser checks passed. Ran the web-game client and inspected its screenshot and the filled-board capture. Kept tempo steady; no automatic acceleration.
+
+2026-09-12
+- Investigated completion audio overlapping the home demo. Current origin/main already calls GameAudio.stop() when returning home (introduced in #122); verified the deployed production asset matches this build.
+- Added a native Web Audio return-home regression with a long completion phrase queued. Captures audio time inside the actual Return home click, verifies every future completion source is stopped, and checks the home demo's first onset occurs after the cancellation fade. Browser check passed and return-home screenshot inspected. No production code change was needed; existing open tabs may require a refresh.

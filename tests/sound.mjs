@@ -11,6 +11,7 @@ const rotationRequests = [];
 const rotationSmoke = process.argv.includes('--rotation-smoke');
 const completionSmoke = process.argv.includes('--completion-smoke');
 const doubleTapSmoke = process.argv.includes('--double-tap-smoke');
+const homeSmoke = process.argv.includes('--home-smoke');
 const settings = { size: 4, depth: 1, difficulty: 'easy', seed: 123 };
 const state = async page => JSON.parse(await page.evaluate(() => window.render_game_to_text()));
 const sounds = page => page.evaluate(() => window.__audio.starts);
@@ -234,8 +235,46 @@ async function doubleTapRhythm() {
   await assertFutureCanceled(page, [...queuedFill, ...next], () => restart(page), 'Restart');
   await page.close();
 }
+async function completionReturnHome() {
+  const solved = new Puzzle(settings);
+  const last = solved.solution.at(-1);
+  const page = await fixture(solved.solution.slice(0, -1));
+  await enable(page);
+  const current = await state(page);
+  const before = await sounds(page);
+  await pairClick(page, ...last.map(id => current.nodes.find(node => node.id === id)));
+  await page.locator('#completion-dialog').waitFor({ state: 'visible' });
+  const completion = (await sounds(page)).slice(before.length);
+  await page.locator('#completion-home').evaluate(button => {
+    button.addEventListener('click', () => {
+      window.__homeAudioSnapshot = {
+        now: window.__audio.context.currentTime,
+        stops: window.__audio.stops.length,
+        starts: window.__audio.starts.length,
+      };
+    }, { capture: true, once: true });
+  });
+  await page.locator('#completion-home').click();
+  const snapshot = await page.evaluate(() => window.__homeAudioSnapshot);
+  const future = completion.filter(note => note.when > snapshot.now + .5);
+  assert.ok(future.length > 2, 'Return home happens with a long completion phrase still queued');
+  assert.equal((await state(page)).mode, 'home');
+  const stops = (await page.evaluate(before => window.__audio.stops.slice(before), snapshot.stops))
+    .filter(stop => completion.some(note => note.sourceId === stop.sourceId));
+  for (const note of future)
+    assert.ok(stops.some(stop => stop.sourceId === note.sourceId && stop.when < note.when && stop.when - stop.now <= .01), 'Return home cancels each queued completion source');
+  await page.waitForFunction(count => window.__audio.starts.length > count, snapshot.starts);
+  const demoNotes = (await sounds(page)).slice(snapshot.starts);
+  assert.ok(demoNotes.length > 0, 'Home demo starts its own melody');
+  const lastStop = Math.max(...stops.map(stop => stop.when));
+  assert.ok(demoNotes.every(note => note.when >= lastStop), 'The completion fade ends before the first home-demo note');
+  await page.screenshot({ path: 'output/web-game/double-tap-rhythm/return-home.png' });
+  await page.close();
+}
 try {
-  if (doubleTapSmoke) {
+  if (homeSmoke) {
+    await completionReturnHome();
+  } else if (doubleTapSmoke) {
     await doubleTapRhythm();
   } else if (completionSmoke) {
     // The near-complete fixture below covers only the continuation contract.
@@ -392,7 +431,7 @@ try {
   await fast.close();
   }
 
-  if (!doubleTapSmoke) {
+  if (!doubleTapSmoke && !homeSmoke) {
   const solved = new Puzzle(settings);
   const last = solved.solution.at(-1);
   const completing = await fixture(solved.solution.slice(0, -1));
@@ -451,7 +490,9 @@ try {
   }
   assert.deepEqual(rotationRequests, [], 'No rotation-pop recording is fetched');
   assert.deepEqual(errors, []);
-  console.log(doubleTapSmoke
+  console.log(homeSmoke
+    ? 'Passed: returning home cancels the unfinished completion phrase before the home demo starts its own melody.'
+    : doubleTapSmoke
     ? 'Passed: native double-click fills update four links immediately, follow dotted score timing at the saved melody index, persist the full count, queue subsequent fills and manual moves, cancel future sources on mute/restart, keep selection responsive, and retain the falling removal effect.'
     : completionSmoke
     ? 'Passed: continuation through the next phrase ending, configured spacing, exact-cadence silence with its last-note tail preserved, no replay or player-index consumption, and mute cancellation.'
