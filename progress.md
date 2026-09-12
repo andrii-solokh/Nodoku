@@ -1926,3 +1926,7 @@ TODO / Note
 2026-09-12
 - Hid the rotation controller for desktop mouse input in both onboarding and normal play, preserving it for touch input. Rotation lessons now show only the current direction's arrow key or WASD alternative, using the shared Undo/Redo keycap styling and a shorter instruction.
 - Build and focused onboarding-through-rotation walkthrough passed: checked all four desktop key pairs, touch/desktop switching, mobile controller layout at three sizes, controller visibility in normal play, keyboard rotation, and no page errors. Inspected desktop up/down screenshots. Updated onboarding regression expectations for the new guidance.
+
+2026-09-12
+- Moved the onboarding drag demonstration to the two bottom nodes, separate from the top pair used by the selection lesson. Updated the instruction to name the bottom pair; removal continues to reverse the connection the player just dragged.
+- Production build and focused selection → bottom-pair drag → removal walkthrough passed. Verified guide circles match the bottom spheres, the pair differs from the selection example, and removal advances correctly; inspected the drag screenshot.

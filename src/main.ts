@@ -765,7 +765,9 @@ function firstAvailableConnection(): [number, number] | null {
 function onboardingCueForStep(): OnboardingCue {
   if (!puzzle) return { kind: "none" };
   if (onboardingStep === 0 || onboardingStep === 1) {
-    const example = puzzle.solution[0] ?? [];
+    const example = onboardingStep === 1
+      ? puzzle.nodes.filter(node => node.y === 0 && node.z === 0).map(node => node.id)
+      : puzzle.solution[0] ?? [];
     const [start, end] = onboardingStep === 0 && selected !== null
       ? [selected, example.includes(selected) ? example.find(id => id !== selected)
         : puzzle.neighbors(selected).find(id => puzzle!.remaining(id) > 0)]
@@ -898,7 +900,7 @@ function renderOnboarding() {
     {
       step: "2 of 10",
       title: "Make one connection.",
-      message: "Drag from one node to a neighboring node.",
+      message: "Drag between the two bottom nodes to connect them.",
       action: null,
     },
     {
