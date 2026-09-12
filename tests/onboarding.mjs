@@ -5,6 +5,7 @@ import { Puzzle } from '../src/puzzle.ts';
 const url = process.env.TEST_URL || 'http://127.0.0.1:4173';
 const browser = await chromium.launch();
 const errors = [];
+const settleSuccess = page => page.waitForFunction(() => JSON.parse(window.render_game_to_text()).tutorialSuccess === null);
 const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text()));
 async function drag(page, source, target) {
   await page.mouse.move(source.screen.x, source.screen.y);
@@ -21,6 +22,18 @@ async function fixture(openOnboarding = true) {
   await page.route('**/api/presence', route => route.fulfill({ json: { online: 1, scope: 'local' } }));
   await page.route('**/api/statistics?**', route => route.fulfill({ json: { period: 'all', scope: 'local', trackingSince: null, totals: { visitors: 1, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
   await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors: [] } }));
+  await page.addInitScript(() => {
+    window.tutorialSuccessMessages = [];
+    document.addEventListener('DOMContentLoaded', () => {
+      const moment = document.querySelector('#completion-moment');
+      let visible = false;
+      if (!moment) return;
+      new MutationObserver(() => {
+        if (!moment.hidden && !visible) window.tutorialSuccessMessages.push(moment.querySelector('strong').textContent);
+        visible = !moment.hidden;
+      }).observe(moment, { attributes: true, childList: true, subtree: true });
+    });
+  });
   await page.goto(openOnboarding ? `${url}?onboarding=1` : url);
   await page.waitForFunction(expected => JSON.parse(window.render_game_to_text()).mode === expected, openOnboarding ? 'onboarding' : 'home');
   return page;
@@ -63,9 +76,29 @@ try {
   await page.mouse.move(b.screen.x, b.screen.y, { steps: 8 });
   await page.mouse.up();
   mirror.toggle(firstA, firstB);
+  assert.equal((await state(page)).tutorialSuccess, 'Connection made');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 9', 'The next instruction waits for the success beat');
+  await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('#completion-moment')).opacity) > .9);
+  await page.screenshot({ path: 'output/web-game/onboarding-cues/connection-success.png' });
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 9');
   assert.match(await page.locator('#onboarding-message').textContent(), /same linked pair again to remove it/);
   await page.waitForFunction(() => document.querySelector('#onboarding-cue')?.classList.contains('is-remove'));
+  const trail = await page.locator('.onboarding-cue-hand').evaluate(async hand => {
+    const animation = hand.getAnimations()[0];
+    animation.pause();
+    await animation.ready;
+    const cycle = animation.effect.getTiming().duration;
+    const position = fraction => {
+      animation.currentTime = cycle * fraction;
+      const box = hand.getBoundingClientRect();
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    };
+    const from = position(.2), to = position(.65);
+    animation.play();
+    return { from, to };
+  });
+  assert.ok((trail.to.x - trail.from.x) * (b.screen.x - a.screen.x)
+    + (trail.to.y - trail.from.y) * (b.screen.y - a.screen.y) < 0, 'Removal trail travels opposite the original connection');
   const removal = await page.evaluate(() => {
     const initial = JSON.parse(window.render_game_to_text());
     window.advanceTime((1900 - initial.removalCue.elapsed + 2400) % 2400);
@@ -204,11 +237,11 @@ try {
   await page.waitForTimeout(450);
   assert.equal((await state(page)).tutorialRotation, 'left');
   await page.keyboard.press('ArrowLeft');
-  await page.waitForTimeout(450);
+  await settleSuccess(page);
   assert.equal((await state(page)).tutorialRotation, 'right');
   assert.match(await page.locator('#onboarding-step').textContent(), /Direction 2 of 4/);
   await page.keyboard.press('d');
-  await page.waitForTimeout(450);
+  await settleSuccess(page);
   assert.equal((await state(page)).tutorialRotation, 'up');
   assert.equal(await page.locator('.onboarding-cue-turn').getAttribute('data-direction'), 'up');
   await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-up-desktop.png' });
@@ -223,7 +256,7 @@ try {
   assert.ok(upArrow.x >= 0 && upArrow.y >= 0 && upArrow.x + upArrow.width <= 390);
   await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-up-mobile.png' });
   await page.locator('[data-onboarding-rotate="up"]').click();
-  await page.waitForTimeout(450);
+  await settleSuccess(page);
   assert.equal((await state(page)).tutorialRotation, 'down');
   assert.equal(await page.locator('[data-onboarding-rotate="down"].tutorial-tool-ping').count(), 1);
   await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-down-mobile.png' });
@@ -270,6 +303,7 @@ try {
 
   const beforeUndo = (await state(page)).edges;
   await page.locator('#onboarding-undo').click();
+  await settleSuccess(page);
   assert.equal(await page.locator('#onboarding-step').textContent(), '8 of 9');
   assert.deepEqual(await page.locator('#onboarding-shortcut kbd').allTextContents(), [modifier, 'Shift', 'Z']);
   assert.ok((await state(page)).edges.length < beforeUndo.length, 'Undo removes the real connection');
@@ -278,6 +312,7 @@ try {
   assert.equal(await page.locator('#onboarding-undo.tutorial-tool-ping').count(), 0);
   await page.screenshot({ path: 'output/web-game/onboarding-controls/redo-mobile.png' });
   await page.keyboard.press('Control+Shift+z');
+  await settleSuccess(page);
   assert.equal(await page.locator('#onboarding-step').textContent(), '9 of 9');
   assert.deepEqual((await state(page)).edges, beforeUndo, 'Redo restores the same connection');
   assert.equal(await page.locator('#onboarding-hint.tutorial-tool-ping').count(), 1);
@@ -285,6 +320,7 @@ try {
   assert.equal(await page.locator('#onboarding-next').isHidden(), true);
   await page.screenshot({ path: 'output/web-game/onboarding-controls/hint-mobile.png' });
   await page.locator('#onboarding-hint').click();
+  await settleSuccess(page);
   assert.notDeepEqual((await state(page)).edges, beforeUndo, 'Hint changes the real puzzle');
   assert.equal(await page.locator('.tutorial-tool-ping').count(), 0);
   assert.equal(await page.locator('#onboarding-shortcut').isHidden(), true);
@@ -299,13 +335,23 @@ try {
   const practiceA = practice.find(n => n.screen?.pickable && practice.some(b => b.screen?.pickable && adjacent(n,b)));
   const practiceB = practice.find(n => n.screen?.pickable && adjacent(practiceA,n));
   await drag(page, practiceA, practiceB);
+  await settleSuccess(page);
   await page.keyboard.press('Control+z');
+  await settleSuccess(page);
   assert.equal(await page.locator('#onboarding-step').textContent(), '8 of 9');
   assert.deepEqual(await page.locator('#onboarding-shortcut kbd').allTextContents(), [modifier, 'Shift', 'Z']);
   await page.locator('#onboarding-redo').click();
+  await settleSuccess(page);
   assert.equal(await page.locator('#onboarding-step').textContent(), '9 of 9');
   await page.keyboard.press('h');
+  await settleSuccess(page);
   assert.equal(await page.locator('#onboarding-title').textContent(), 'You’re ready.');
+  assert.deepEqual(await page.evaluate(() => window.tutorialSuccessMessages), [
+    'Connection made', 'Connection removed', 'Neighbors connected', 'All connected',
+    'Turned left', 'Turned right', 'Turned up', 'Turned down', '3D connection made',
+    'Move undone', 'Move restored', 'Hint applied',
+    '3D connection made', 'Move undone', 'Move restored', 'Hint applied',
+  ], 'Every completed lesson and rotation direction gets one success message');
   await page.locator('#onboarding-next').click();
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');
   assert.equal(await page.locator('.site-header').isVisible(), true, 'Finishing returns to the normal home screen');
@@ -339,6 +385,25 @@ try {
   await skipped.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');
   assert.equal(await skipped.evaluate(() => JSON.parse(localStorage.getItem('nodoku.astra.v1')).onboardingCompleted), true, 'Skipping is stored');
   await skipped.close();
+
+  const reduced = await fixture();
+  await reduced.emulateMedia({ reducedMotion: 'reduce' });
+  const reducedBoard = await state(reduced);
+  const reducedA = reducedBoard.nodes.find(n => n.id === firstA);
+  const reducedB = reducedBoard.nodes.find(n => n.id === firstB);
+  await reduced.mouse.click(reducedA.screen.x, reducedA.screen.y);
+  await reduced.mouse.click(reducedB.screen.x, reducedB.screen.y);
+  await reduced.waitForFunction(() => JSON.parse(window.render_game_to_text()).tutorialSuccess === 'Connection made');
+  await reduced.waitForFunction(() => getComputedStyle(document.querySelector('#completion-moment')).opacity === '1');
+  assert.equal(await reduced.locator('#completion-moment').evaluate(node => node.getAnimations().length), 0, 'Reduced-motion success stays visible without animation');
+  const lockedEdges = (await state(reduced)).edges;
+  await reduced.mouse.dblclick(reducedA.screen.x, reducedA.screen.y, { delay: 40 });
+  assert.deepEqual((await state(reduced)).edges, lockedEdges, 'Input cannot alter the puzzle during success');
+  await reduced.locator('#onboarding-skip').click();
+  await reduced.waitForTimeout(1000);
+  assert.equal((await state(reduced)).mode, 'home', 'Skipping cancels pending tutorial advancement');
+  assert.equal(await reduced.locator('#completion-moment').isHidden(), true);
+  await reduced.close();
 
   const howToPlay = await fixture(false);
   await howToPlay.locator('#help-button').click();

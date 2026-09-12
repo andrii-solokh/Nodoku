@@ -1849,3 +1849,9 @@ TODO / Note
 - Added independent Studio tuning for double-tap ping color, thickness, expansion, opacity, easing, pulse duration, gap between pings and pause between pairs. Preview double tap opens the lesson directly. Old files inherit their saved ring appearance; owner JSON remains untouched.
 - Two-pulse keyframes derive from the three timing controls. Reduced-motion CSS now overrides the more specific double-tap selector and leaves a static ring.
 - Build, 199 unit tests, API save/load, live style/timing/reset, actual double-tap lesson advancement, reduced-motion and mobile alignment checks passed. Required web-game client exercised. Browser timing tests discard deliberately seeked animations before testing reduced motion.
+
+2026-09-12
+- Reversed the removal tutorial's moving dot from the connection endpoint back toward its source while keeping ring positions, line styling, timing and removal fade unchanged.
+- Reused the level-completion checkmark/glow for each completed lesson and all four rotation checkpoints, with action-specific text and a 900ms acknowledgement before advancing. Real tap, drag, double-tap and toolbar/keyboard paths share guarded transitions; input pauses during success and skip/restart cancels pending callbacks.
+- Reduced motion keeps a static, readable success message. Existing player completion behavior remains intact. Tests cover the trail's reversed screen-space movement, exact success sequence, input lock and skipping during success.
+- Verified build, 199 unit tests, the full onboarding sequence (including exactly one message per lesson/checkpoint, reduced-motion visibility and skip cancellation), normal game completion, screenshots and the required web-game client.
