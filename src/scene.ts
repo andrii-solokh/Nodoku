@@ -13,7 +13,7 @@ import {
 } from "./orientation";
 
 type GestureCallbacks = {
-  onDoubleTap?: (id: number) => void;
+  onDoubleTap?: (id: number, input?: "double_tap" | "modifier_click") => void;
   onTapSettled?: () => void;
   // Returning false hands this drag back to camera rotation instead of drawing.
   onStrokeStart?: (id: number) => boolean | void;
@@ -2327,13 +2327,24 @@ export class BoardScene {
         !this.preview
       ) {
         const id = this.hit(end.x, end.y);
-        if (id !== null) this.tapNode(id, end.x, end.y);
+        if (id !== null) {
+          if (event.pointerType === "mouse" && (event.ctrlKey || event.metaKey) && this.gestures.onDoubleTap) {
+            this.cancelTap();
+            this.gestures.onDoubleTap(id, "modifier_click");
+          } else this.tapNode(id, end.x, end.y);
+        }
         else {
           this.cancelTap();
           this.onBackground?.();
         }
       }
     };
+    // Keep macOS Control-click on puzzle nodes from opening a native menu.
+    // Ordinary right-clicks retain their browser behavior.
+    canvas.addEventListener("contextmenu", event => {
+      if (event.ctrlKey && this.interactive && !this.preview
+        && this.hit(event.clientX, event.clientY) !== null) event.preventDefault();
+    }, options);
     canvas.addEventListener("pointerup", finish, options);
     canvas.addEventListener("pointercancel", finish, options);
     canvas.addEventListener("lostpointercapture", finish, options);
