@@ -111,6 +111,7 @@ export class BoardScene {
   private pipMeshes = new Map<number, PipMeshes>();
   private musicNotes = new THREE.Group();
   private musicScore = new THREE.Group();
+  private musicScoreEnabled = false;
   private musicScoreLines = new THREE.LineSegments();
   private musicScoreLineMaterial = new THREE.LineBasicMaterial({ color: 0x302b48, transparent: true, opacity: .24, depthTest: false });
   private musicNoteMaterial = new THREE.MeshBasicMaterial({ color: 0x302b48, depthTest: false });
@@ -850,9 +851,16 @@ export class BoardScene {
 
   getMusicScoreState() {
     return {
-      visible: this.musicScore.visible, staffLines: 5,
+      enabled: this.musicScoreEnabled, visible: this.musicScore.visible, staffLines: 5,
       notes: [...this.scoreNotes].map(([slot, note]) => ({ slot, position: note.position.toArray() })),
     };
+  }
+
+  setMusicScoreEnabled(enabled: boolean): void {
+    if (this.musicScoreEnabled === enabled) return;
+    this.musicScoreEnabled = enabled;
+    if (!enabled) this.clearMusicNotes();
+    this.render();
   }
 
   setHighlightedGroup(ids: number[] | null): void {
@@ -1098,6 +1106,7 @@ export class BoardScene {
   }
 
   private releaseMusicNotes(nodeId: number, dots: readonly { id: number; x: number; y: number }[]): void {
+    if (!this.musicScoreEnabled) return;
     const node = this.nodeMeshes.get(nodeId);
     if (!node || dots.length === 0) return;
     this.musicScore.visible = true;
@@ -1702,7 +1711,7 @@ export class BoardScene {
       this.syncDots(id);
       if (!animation.active) this.activeDotNodes.delete(id);
     }
-    this.advanceMusicNotes(elapsed);
+    if (this.musicScoreEnabled) this.advanceMusicNotes(elapsed);
     for (const [id, pulse] of this.gumPulses) {
       pulse.elapsed += elapsed;
       if (pulse.elapsed >= pulse.duration) this.gumPulses.delete(id);

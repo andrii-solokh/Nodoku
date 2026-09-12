@@ -114,14 +114,14 @@ try {
     assert.equal(started.style, style);
     assert.equal(started.durationMs, 800);
     assert.equal(started.progress, 0);
-    assert.ok(s.musicNotes.length >= 2, 'each cleared pip becomes a visible black dot');
-    assert.ok(s.musicNotes.every(note => note.kind === "dot" && note.progress === 0), 'particles launch from their cleared dots before reaching the score');
-    assert.equal(s.musicScore.visible, true, 'a music staff appears above the board');
+    assert.equal(s.musicNotes.length, 0, 'the experimental music-note particles stay off without their feature flag');
+    assert.equal(s.musicScore.enabled, false, 'the music-score feature flag defaults off');
+    assert.equal(s.musicScore.visible, false, 'the score stays hidden while the flag is off');
     await advance(page, 400);
     s = await state(page);
     const mid = nodeDots(s, id);
     assert.ok(mid.active && mid.progress > 0 && mid.progress < 1);
-    assert.ok(s.musicNotes.length >= 2 && s.musicNotes.every(note => note.progress > 0 && note.progress < 1), 'black dots fly toward the score while the dot transition plays');
+    assert.equal(s.musicNotes.length, 0, 'dot transitions do not start experimental score particles while disabled');
     assert.notDeepEqual(canonical(mid), canonical(nodeDots(initial, id)), 'dots move/fade while redistributing');
     const initialDots = nodeDots(initial, id).dots;
     assert.ok(mid.dots.some(dot => {
@@ -135,8 +135,8 @@ try {
     await advance(page, 400);
     s = await state(page);
     settled(s);
-    assert.equal(s.musicNotes.length, 0, 'released dots clean up after their flight');
-    assert.ok(s.musicScore.notes.length >= 2, 'released dots land as notation on the score');
+    assert.equal(s.musicNotes.length, 0, 'no score particles remain while the feature is disabled');
+    assert.equal(s.musicScore.notes.length, 0, 'no notation lands while the feature is disabled');
     finalStyles.push(canonical(nodeDots(s, id)));
     assert.equal(nodeDots(s, id).count, endpoints[0].remaining - 1);
     if (style === 'glide') {
@@ -228,5 +228,5 @@ try {
   assert.ok(await admin.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'mobile editor has no horizontal overflow');
   await admin.close();
   assert.deepEqual(errors, []);
-  console.log('Passed: immediate model updates, score-bound musical-dot particles, four dot styles and canonical settling, count decrease/increase, interruption continuity, final zero dots, initial/reload no entrance, reduced motion/zero duration, mocked admin live preview/export/save/reset/reload, mobile editor. No page errors.');
+  console.log('Passed: immediate model updates, feature-flagged music-score visuals, four dot styles and canonical settling, count decrease/increase, interruption continuity, final zero dots, initial/reload no entrance, reduced motion/zero duration, mocked admin live preview/export/save/reset/reload, mobile editor. No page errors.');
 } finally { await browser.close(); }

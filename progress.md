@@ -1755,3 +1755,9 @@ TODO / Note
 - Preserved the separate double-tap-only node-fill lesson and selection-ring feedback.
 - Added browser coverage for the two-tap guided connection.
 - Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, and `npm run test` (194 passing).
+
+## 2026-09-12 — Feature-flagged music score
+- Put the experimental cleared-dot-to-music-staff animation behind the PostHog Boolean feature flag `music-score`.
+- It defaults off for every player, including when analytics or PostHog flags are unavailable; toggling the flag on restores the existing animation without deployment.
+- Verified the default game render contains no staff or note particles after a connection.
+- Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:dot-animations`, and `npm run test` (194 passing).
