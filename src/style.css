@@ -804,6 +804,27 @@ a {
   font-size: 13px;
   white-space: nowrap;
 }
+.tool-shortcut { display: none; }
+@media (pointer: fine) and (min-width: 761px) and (min-aspect-ratio: 1001/1000) {
+  .tool-shortcut {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: auto;
+    padding-left: 12px;
+  }
+  .tool-shortcut kbd {
+    min-width: 20px;
+    padding: 3px 5px;
+    border: 1px solid #cfc6df;
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: #faf8ff99;
+    color: inherit;
+    text-align: center;
+    font: 500 11px/1.2 Outfit, sans-serif;
+  }
+}
 .tool-button:hover {
   background: #e4e0ed;
 }

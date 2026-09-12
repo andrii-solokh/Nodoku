@@ -54,6 +54,11 @@ const labels: Record<Difficulty, string> = {
   medium: "Focused",
   hard: "Intricate",
 };
+const macKeyboard = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+const modifierLabel = macKeyboard ? "⌘" : "Ctrl";
+const modifierKey = macKeyboard ? "Meta" : "Control";
+const toolShortcut = (...keys: string[]) =>
+  `<span class="tool-shortcut" aria-hidden="true">${keys.map(key => `<kbd>${key}</kbd>`).join("")}</span>`;
 const storageKey = "nodoku.astra.v1";
 let settings: PuzzleSettings = {
   size: 3,
@@ -198,7 +203,12 @@ app.innerHTML = `
     <button id="network-group-button" type="button">Show group 1</button>
   </aside>
   <div class="game-toolbar">
-    <div class="tools-group"><button class="tool-button" id="undo-button" disabled>${icon("undo")}Undo</button><button class="tool-button" id="redo-button" disabled>${icon("redo")}Redo</button><button class="tool-button" id="restart-button">${icon("restart")}Restart</button><button class="tool-button hint" id="hint-button">${icon("hint")}Hint</button></div>
+    <div class="tools-group">
+      <button class="tool-button" id="undo-button" aria-keyshortcuts="${modifierKey}+Z" disabled>${icon("undo")}Undo${toolShortcut(modifierLabel, "Z")}</button>
+      <button class="tool-button" id="redo-button" aria-keyshortcuts="${modifierKey}+Shift+Z" disabled>${icon("redo")}Redo${toolShortcut(modifierLabel, macKeyboard ? "⇧" : "Shift", "Z")}</button>
+      <button class="tool-button" id="restart-button" aria-keyshortcuts="Shift+R">${icon("restart")}Restart${toolShortcut(macKeyboard ? "⇧" : "Shift", "R")}</button>
+      <button class="tool-button hint" id="hint-button" aria-keyshortcuts="H">${icon("hint")}Hint${toolShortcut("H")}</button>
+    </div>
     <div class="rotation-tools" role="group" aria-label="Board view"><button class="icon-button" data-rotate="left" aria-label="Rotate left">${icon("left")}</button><button class="icon-button" data-rotate="up" aria-label="Rotate up">${icon("up")}</button><button class="icon-button view-reset" id="view-button">${icon("cube")}Reset view</button><button class="icon-button" data-rotate="down" aria-label="Rotate down">${icon("down")}</button><button class="icon-button" data-rotate="right" aria-label="Rotate right">${icon("right")}</button></div>
   </div>
 </section>
@@ -265,6 +275,7 @@ app.innerHTML = `
     <dl class="shortcut-list">
       <div><dt>Undo</dt><dd><kbd>Ctrl / <span aria-hidden="true">⌘</span><span class="sr-only">Command</span></kbd><span class="shortcut-join">+</span><kbd>Z</kbd></dd></div>
       <div><dt>Redo</dt><dd><kbd>Ctrl / <span aria-hidden="true">⌘</span><span class="sr-only">Command</span></kbd><span class="shortcut-join">+</span><kbd>Shift</kbd><span class="shortcut-join">+</span><kbd>Z</kbd></dd></div>
+      <div><dt>Restart puzzle</dt><dd><kbd>Shift</kbd><span class="shortcut-join">+</span><kbd>R</kbd></dd></div>
       <div><dt>Hint</dt><dd><kbd>H</kbd></dd></div>
       <div><dt>Fullscreen</dt><dd><kbd>F</kbd></dd></div>
     </dl>
@@ -1723,6 +1734,11 @@ document.addEventListener("keydown", (event) => {
   } else if (key === "h") {
     event.preventDefault();
     if (mode === "playing") hint();
+  } else if (key === "r" && event.shiftKey) {
+    if (mode === "playing") {
+      event.preventDefault();
+      if (!event.repeat) el<HTMLButtonElement>("restart-button").click();
+    }
   } else if (key === "r") scene.resetView();
   else if (key === "escape") {
     scene.cancelPendingTap();
