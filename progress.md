@@ -1914,3 +1914,7 @@ TODO / Note
 2026-09-12
 - Moved mobile home activity into the header's flex row immediately before How to play. Stacked online and the rotating statistic in a fixed-width block so labels do not shift the adjacent controls; adjusted narrow-screen sizing and removed the old reserved second row.
 - Production build and focused layout checks passed for every rotating statistic at 320/360/390/430/760px, with desktop layout also checked. Inspected mobile screenshots, including the narrow 320px header. Updated the audience regression's mobile positioning assertions.
+
+2026-09-12
+- Enlarged mobile puzzle setup controls while retaining one-screen setup: perspective options have 44px minimum targets, grid/difficulty buttons are 60×48px, and icons/type/spacing are larger. Removed short-screen rules that previously shrank targets below 32px; the preview uses the remaining space.
+- Build and focused browser checks passed at 390×844, 320×568, 430×932 and 740×390. Verified all visible options meet 44px minimum targets, no horizontal overflow, the portrait Start action remains onscreen, and perspective/grid/difficulty selections update correctly. Inspected 390px and 320px screenshots.
