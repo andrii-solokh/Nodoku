@@ -11,7 +11,10 @@ await mkdir(path.dirname(output), { recursive: true });
 // after a material or camera redesign.
 const scene = await sharp(await readFile(sceneSource))
   .extract({ left: 400, top: 18, width: 400, height: 440 })
-  .resize({ width: 590, height: 630, fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  // Keep the board entirely in the central square-safe area. Mobile apps
+  // routinely crop wide Open Graph cards, so no important node may sit on an
+  // edge of the desktop composition.
+  .resize({ width: 590, height: 590, fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
   .png()
   .toBuffer();
 
@@ -21,27 +24,19 @@ const svg = `
     <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
       <stop stop-color="#f8f7fb"/><stop offset="1" stop-color="#eeedf6"/>
     </linearGradient>
-    <linearGradient id="copyShield" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#f8f7fb" stop-opacity="1"/>
-      <stop offset=".76" stop-color="#f4f2f9" stop-opacity=".97"/>
-      <stop offset="1" stop-color="#eeedf6" stop-opacity="0"/>
-    </linearGradient>
     <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="38"/></filter>
   </defs>
   <rect width="1200" height="630" fill="url(#paper)"/>
-  <circle cx="250" cy="532" r="240" fill="#ded8ed" opacity=".36" filter="url(#soft)"/>
-  <circle cx="1010" cy="150" r="210" fill="#dad7ed" opacity=".38" filter="url(#soft)"/>
-  <rect width="710" height="630" fill="url(#copyShield)"/>
+  <circle cx="600" cy="345" r="270" fill="#ddd8eb" opacity=".34" filter="url(#soft)"/>
   <!-- Match the app logo: its paths join the inset node centres, not their outer edges. -->
-  <g transform="translate(68 57) scale(1.35)">
-    <path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3" stroke-linejoin="round"/>
-    <g fill="#a9cbbd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g>
-    <circle cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/>
+  <g transform="translate(518 42)">
+    <g transform="scale(1.35)">
+      <path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3" stroke-linejoin="round"/>
+      <g fill="#a9cbbd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g>
+      <circle cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/>
+    </g>
+    <text x="54" y="37" fill="#302b48" font-family="Outfit, Arial, sans-serif" font-size="38" font-weight="700" letter-spacing="-1.3">nodoku</text>
   </g>
-  <text x="130" y="92" fill="#302b48" font-family="Outfit, Arial, sans-serif" font-size="38" font-weight="700" letter-spacing="-1.3">nodoku</text>
-  <text x="74" y="245" fill="#302b48" font-family="Outfit, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="-3.2">3D spatial</text>
-  <text x="74" y="308" fill="#302b48" font-family="Outfit, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="-3.2">reasoning puzzle.</text>
-  <text x="78" y="388" fill="#746d87" font-family="Outfit, Arial, sans-serif" font-size="26" font-weight="500">Connect every node.</text>
 </svg>`;
 
 await sharp({
@@ -49,7 +44,7 @@ await sharp({
 })
   .composite([
     { input: Buffer.from(svg) },
-    { input: scene, left: 610, top: 0 },
+    { input: scene, left: 305, top: 20 },
   ])
   .png({ compressionLevel: 9, adaptiveFiltering: true })
   .toFile(output);
