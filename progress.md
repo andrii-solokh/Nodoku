@@ -1731,3 +1731,9 @@ TODO / Note
 - Removed zoom persistence while accepting old saved views that contain it, so returning players keep their orientation but resume at the stable fit distance.
 - Updated camera, persistence, and touch regression coverage. The focused mobile pinch check confirms both camera distance and direction are unchanged.
 - Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:camera`, `TEST_URL=http://127.0.0.1:5175 npm run test:persistence`, `npm run test` (194 passing), visual review of `output/web-game/perspective/mobile-390.png`, and the required Playwright client run. `test:gestures` still has an unrelated pre-existing blocked-node double-tap timing failure before reaching its new pinch assertion.
+
+2026-09-12 score-bound dot release
+- Reworked cleared-dot feedback into a fixed top-screen five-line music staff. Every cleared black pip now flies from its node to a staff position, then lands as a dark notehead and stem; the latest ten notes remain as the small visual score.
+- The score is screen-aligned during 3D turns, is hidden in the landing demo, clears when a new puzzle begins, and respects reduced-motion and instant transition settings.
+- Exposed staff state in `render_game_to_text` and strengthened the dot-animation browser test to verify black-dot launch, flight, and final note landing. Reviewed `output/web-game/music-score/landed-note-3d.png`.
+- Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:dot-animations`, `npm run test` (194 passing), required web-game client run, and 3D visual inspection.

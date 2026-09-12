@@ -114,13 +114,14 @@ try {
     assert.equal(started.style, style);
     assert.equal(started.durationMs, 800);
     assert.equal(started.progress, 0);
-    assert.ok(s.musicNotes.length >= 2, 'each cleared dot becomes a visible music note');
-    assert.ok(s.musicNotes.every(note => ["♪", "♫", "♩", "♬"].includes(note.glyph) && note.progress === 0), 'particles use real note glyphs and start with the cleared dot');
+    assert.ok(s.musicNotes.length >= 2, 'each cleared pip becomes a visible black dot');
+    assert.ok(s.musicNotes.every(note => note.kind === "dot" && note.progress === 0), 'particles launch from their cleared dots before reaching the score');
+    assert.equal(s.musicScore.visible, true, 'a music staff appears above the board');
     await advance(page, 400);
     s = await state(page);
     const mid = nodeDots(s, id);
     assert.ok(mid.active && mid.progress > 0 && mid.progress < 1);
-    assert.ok(s.musicNotes.length >= 2 && s.musicNotes.every(note => note.progress > 0 && note.progress < 1), 'notes rise while the dot transition plays');
+    assert.ok(s.musicNotes.length >= 2 && s.musicNotes.every(note => note.progress > 0 && note.progress < 1), 'black dots fly toward the score while the dot transition plays');
     assert.notDeepEqual(canonical(mid), canonical(nodeDots(initial, id)), 'dots move/fade while redistributing');
     const initialDots = nodeDots(initial, id).dots;
     assert.ok(mid.dots.some(dot => {
@@ -134,7 +135,8 @@ try {
     await advance(page, 400);
     s = await state(page);
     settled(s);
-    assert.equal(s.musicNotes.length, 0, 'released notes clean up after their flight');
+    assert.equal(s.musicNotes.length, 0, 'released dots clean up after their flight');
+    assert.ok(s.musicScore.notes.length >= 2, 'released dots land as notation on the score');
     finalStyles.push(canonical(nodeDots(s, id)));
     assert.equal(nodeDots(s, id).count, endpoints[0].remaining - 1);
     if (style === 'glide') {
@@ -226,5 +228,5 @@ try {
   assert.ok(await admin.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'mobile editor has no horizontal overflow');
   await admin.close();
   assert.deepEqual(errors, []);
-  console.log('Passed: immediate model updates, musical-note particles, four dot styles and canonical settling, count decrease/increase, interruption continuity, final zero dots, initial/reload no entrance, reduced motion/zero duration, mocked admin live preview/export/save/reset/reload, mobile editor. No page errors.');
+  console.log('Passed: immediate model updates, score-bound musical-dot particles, four dot styles and canonical settling, count decrease/increase, interruption continuity, final zero dots, initial/reload no entrance, reduced motion/zero duration, mocked admin live preview/export/save/reset/reload, mobile editor. No page errors.');
 } finally { await browser.close(); }

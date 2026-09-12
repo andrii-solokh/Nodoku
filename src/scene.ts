@@ -56,8 +56,8 @@ type ShapeNode = {
 };
 type ShapeDecoration = { object: THREE.Mesh | THREE.LineSegments; material: THREE.Material; opacity: number; entering: boolean; fromOpacity?: number };
 type MusicNoteParticle = {
-  sprite: THREE.Sprite; material: THREE.SpriteMaterial; start: THREE.Vector3; drift: THREE.Vector3;
-  elapsed: number; duration: number; glyph: string;
+  sprite: THREE.Sprite; material: THREE.SpriteMaterial; start: THREE.Vector3; target: THREE.Vector3;
+  targetLocal: THREE.Vector3; elapsed: number; duration: number; slot: number;
 };
 
 type ShapeTransition = {
@@ -110,8 +110,17 @@ export class BoardScene {
   private activeDotNodes = new Set<number>();
   private pipMeshes = new Map<number, PipMeshes>();
   private musicNotes = new THREE.Group();
+  private musicScore = new THREE.Group();
+  private musicScoreLines = new THREE.LineSegments();
+  private musicScoreLineMaterial = new THREE.LineBasicMaterial({ color: 0x302b48, transparent: true, opacity: .24, depthTest: false });
+  private musicNoteMaterial = new THREE.MeshBasicMaterial({ color: 0x302b48, depthTest: false });
+  private musicNoteLineMaterial = new THREE.LineBasicMaterial({ color: 0x302b48, depthTest: false });
+  private musicNoteHead = new THREE.CircleGeometry(.072, 20);
+  private musicNoteStem = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(.052, 0, 0), new THREE.Vector3(.052, .36, 0)]);
+  private noteDotTexture: THREE.CanvasTexture | null = null;
   private noteParticles: MusicNoteParticle[] = [];
-  private noteTextures = new Map<string, THREE.CanvasTexture>();
+  private scoreNotes = new Map<number, THREE.Group>();
+  private scoreCursor = 0;
   private shapeTransition: ShapeTransition | null = null;
   private floatingPhase = 0;
   private floatingPhases = new Map<string, number>();
@@ -273,7 +282,15 @@ export class BoardScene {
       "display:block;width:100%;height:100%;touch-action:none;";
     this.container.appendChild(canvas);
     this.scene.fog = new THREE.Fog(COLORS.background, 24, 43);
-    this.scene.add(this.board, this.studio);
+    this.scene.add(this.board, this.studio, this.musicScore);
+    this.musicScore.visible = false;
+    const staffPositions: number[] = [];
+    for (const y of [-.16, -.08, 0, .08, .16]) staffPositions.push(-1, y, 0, 1, y, 0);
+    const staffGeometry = new THREE.BufferGeometry();
+    staffGeometry.setAttribute("position", new THREE.Float32BufferAttribute(staffPositions, 3));
+    this.musicScoreLines = new THREE.LineSegments(staffGeometry, this.musicScoreLineMaterial);
+    this.musicScoreLines.renderOrder = 8;
+    this.musicScore.add(this.musicScoreLines);
     this.board.add(
       this.guides,
       this.rods,
@@ -339,6 +356,7 @@ export class BoardScene {
       this.reducedMotion = event.matches;
       if (this.reducedMotion) {
         this.gumPulses.clear();
+        this.clearMusicNotes();
         if (this.dragStrand && this.dragStrand.elapsed !== null) this.clearDragStrand();
       }
       this.render();
@@ -629,6 +647,7 @@ export class BoardScene {
     if (this.config.connectionMs === 0 || this.reducedMotion) this.connectionGrowth.clear();
     if ((this.config.dragReturnMs === 0 || this.reducedMotion) && this.dragStrand && this.dragStrand.elapsed !== null) this.clearDragStrand();
     if (this.config.dotAnimationMs === 0 || this.reducedMotion) {
+      this.clearMusicNotes();
       for (const id of this.activeDotNodes) {
         this.dotAnimations.get(id)!.finish();
         this.syncDots(id);
@@ -824,9 +843,16 @@ export class BoardScene {
 
   getMusicNoteState() {
     return this.noteParticles.map(note => ({
-      glyph: note.glyph, progress: Math.min(1, note.elapsed / note.duration),
-      position: note.sprite.position.toArray(), scale: note.sprite.scale.x,
+      kind: "dot", progress: Math.min(1, note.elapsed / note.duration), slot: note.slot,
+      position: note.sprite.position.toArray(), target: note.target.toArray(), scale: note.sprite.scale.x,
     }));
+  }
+
+  getMusicScoreState() {
+    return {
+      visible: this.musicScore.visible, staffLines: 5,
+      notes: [...this.scoreNotes].map(([slot, note]) => ({ slot, position: note.position.toArray() })),
+    };
   }
 
   setHighlightedGroup(ids: number[] | null): void {
@@ -1039,52 +1065,86 @@ export class BoardScene {
     }
   }
 
-  private noteTexture(glyph: string): THREE.CanvasTexture {
-    let texture = this.noteTextures.get(glyph);
-    if (texture) return texture;
+  private noteDotMap(): THREE.CanvasTexture {
+    if (this.noteDotTexture) return this.noteDotTexture;
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 128;
+    canvas.width = canvas.height = 64;
     const context = canvas.getContext("2d")!;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "#6f5caf";
-    context.font = "600 108px Georgia, serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(glyph, 64, 66);
-    texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    this.noteTextures.set(glyph, texture);
-    return texture;
+    context.fillStyle = "#302b48";
+    context.beginPath();
+    context.arc(32, 32, 22, 0, Math.PI * 2);
+    context.fill();
+    this.noteDotTexture = new THREE.CanvasTexture(canvas);
+    this.noteDotTexture.colorSpace = THREE.SRGBColorSpace;
+    return this.noteDotTexture;
+  }
+
+  private updateMusicScoreLayout(): void {
+    const depth = 2.2;
+    const halfHeight = depth * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    const halfWidth = halfHeight * this.camera.aspect;
+    const localPosition = new THREE.Vector3(0, halfHeight * .84, -depth);
+    this.camera.updateMatrixWorld();
+    this.musicScore.position.copy(this.camera.localToWorld(localPosition));
+    this.musicScore.quaternion.copy(this.camera.quaternion);
+    this.musicScore.scale.setScalar(halfWidth * .46);
+    this.musicScore.updateMatrixWorld();
+  }
+
+  private scoreTarget(slot: number): THREE.Vector3 {
+    const x = -.78 + (slot % 10) * .173;
+    const y = [-.08, .08, 0, .16, -.02, .08, -.08, .02, .12, -.05][slot % 10];
+    return new THREE.Vector3(x, y, .025);
   }
 
   private releaseMusicNotes(nodeId: number, dots: readonly { id: number; x: number; y: number }[]): void {
     const node = this.nodeMeshes.get(nodeId);
     if (!node || dots.length === 0) return;
+    this.musicScore.visible = true;
+    this.updateMusicScoreLayout();
+    this.camera.updateMatrixWorld();
     const up = this.camera.up.clone().normalize();
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion).normalize();
     const forward = this.camera.getWorldDirection(new THREE.Vector3()).normalize();
     const origin = node.position.clone();
     for (const [index, dot] of dots.entries()) {
       if (this.noteParticles.length >= 20) this.removeMusicNote(this.noteParticles.shift()!);
-      const glyph = ["♪", "♫", "♩", "♬"][(nodeId + dot.id) % 4];
+      const slot = this.scoreCursor++ % 10;
+      const targetLocal = this.scoreTarget(slot);
+      const target = this.musicScore.localToWorld(targetLocal.clone());
       const material = new THREE.SpriteMaterial({
-        map: this.noteTexture(glyph), transparent: true, opacity: .94, depthWrite: false, depthTest: false,
+        map: this.noteDotMap(), transparent: true, opacity: 1, depthWrite: false, depthTest: false,
       });
       const sprite = new THREE.Sprite(material);
       const start = origin.clone()
         .addScaledVector(right, dot.x * 1.6 + (index - (dots.length - 1) / 2) * .025)
-        .addScaledVector(up, dot.y * 1.6 + .11)
+        .addScaledVector(up, dot.y * 1.6)
         .addScaledVector(forward, .03);
       sprite.position.copy(start);
-      sprite.scale.setScalar(.2);
-      sprite.renderOrder = 4;
+      sprite.scale.setScalar(.07);
+      sprite.renderOrder = 7;
       this.musicNotes.add(sprite);
       this.noteParticles.push({
-        sprite, material, start,
-        drift: up.multiplyScalar(.48 + index * .045).addScaledVector(right, ((nodeId + dot.id) % 2 ? .18 : -.18)),
-        elapsed: 0, duration: 720 + index * 70, glyph,
+        sprite, material, start, target, targetLocal,
+        elapsed: 0, duration: 580 + index * 60, slot,
       });
     }
+  }
+
+  private placeScoreNote(note: MusicNoteParticle): void {
+    const previous = this.scoreNotes.get(note.slot);
+    if (previous) this.musicScore.remove(previous);
+    const group = new THREE.Group();
+    group.position.copy(note.targetLocal);
+    const head = new THREE.Mesh(this.musicNoteHead, this.musicNoteMaterial);
+    head.scale.y = .72;
+    head.rotation.z = -.32;
+    const stem = new THREE.Line(this.musicNoteStem, this.musicNoteLineMaterial);
+    stem.renderOrder = 9;
+    group.add(head, stem);
+    group.renderOrder = 9;
+    this.musicScore.add(group);
+    this.scoreNotes.set(note.slot, group);
   }
 
   private removeMusicNote(note: MusicNoteParticle): void {
@@ -1095,18 +1155,24 @@ export class BoardScene {
   private clearMusicNotes(): void {
     for (const note of this.noteParticles) this.removeMusicNote(note);
     this.noteParticles = [];
+    for (const note of this.scoreNotes.values()) this.musicScore.remove(note);
+    this.scoreNotes.clear();
+    this.scoreCursor = 0;
+    this.musicScore.visible = false;
   }
 
   private advanceMusicNotes(ms: number): void {
+    this.camera.updateMatrixWorld();
     for (let index = this.noteParticles.length - 1; index >= 0; index--) {
       const note = this.noteParticles[index];
       note.elapsed += ms;
       const progress = Math.min(1, note.elapsed / note.duration);
       const eased = 1 - Math.pow(1 - progress, 3);
-      note.sprite.position.copy(note.start).addScaledVector(note.drift, eased);
-      note.sprite.scale.setScalar(.2 * (1 + .28 * eased));
-      note.material.opacity = .94 * (1 - progress) ** 1.4;
+      note.target.copy(this.musicScore.localToWorld(note.targetLocal.clone()));
+      note.sprite.position.lerpVectors(note.start, note.target, eased);
+      note.sprite.scale.setScalar(THREE.MathUtils.lerp(.07, .09, eased));
       if (progress === 1) {
+        this.placeScoreNote(note);
         this.removeMusicNote(note);
         this.noteParticles.splice(index, 1);
       }
@@ -1501,6 +1567,7 @@ export class BoardScene {
     this.updateDepthHaze(distance);
     this.updateStudio();
     this.updateBillboards();
+    this.updateMusicScoreLayout();
   }
 
   private updateDepthHaze(distance: number): void {
@@ -2202,8 +2269,14 @@ export class BoardScene {
     this.gumDegrees.clear();
     this.gumMaterials.dispose();
     this.clearMusicNotes();
-    for (const texture of this.noteTextures.values()) texture.dispose();
-    this.noteTextures.clear();
+    this.scene.remove(this.musicScore);
+    this.musicScoreLines.geometry.dispose();
+    this.musicScoreLineMaterial.dispose();
+    this.musicNoteMaterial.dispose();
+    this.musicNoteLineMaterial.dispose();
+    this.musicNoteHead.dispose();
+    this.musicNoteStem.dispose();
+    this.noteDotTexture?.dispose();
     this.clearDots();
     this.rodMeshes.clear();
     this.cancelMotion();
