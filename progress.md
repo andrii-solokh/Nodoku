@@ -1702,3 +1702,9 @@ TODO / Note
 - Kept double-tap enabled after the introductory fill step so players can continue bulk-connecting nodes while clearing the tutorial board.
 - Added coverage for a second double-tap during the final 2D clear step.
 - Validation: `npm run build` and `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding` pass.
+
+2026-09-12 onboarding 3D connection lesson
+- Split the 3D tutorial into two separate actions: rotate first with a board swipe or a visible direction pad, then make a real 3D node connection.
+- Restored node-drag connection input only after the rotation lesson, so the player cannot complete the tutorial by rotation alone.
+- Added browser coverage for the visible controls, the 3D connection, and the full six-step sequence. Reviewed the captured 3D tutorial screen with the direction pad.
+- Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding`, `npm run test` (194 passing), and the required web-game Playwright client run.

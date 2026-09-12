@@ -193,6 +193,17 @@ app.innerHTML = `
 </section>
 <section class="onboarding-main" aria-labelledby="onboarding-title">
   <div id="onboarding-stage" class="stage onboarding-stage"></div>
+  <div class="onboarding-turn-controls" id="onboarding-turn-controls" role="group" aria-label="Turn the 3D puzzle" hidden>
+    <span aria-hidden="true"></span>
+    <button class="icon-button" type="button" data-onboarding-rotate="up" aria-label="Turn up">${icon("up")}</button>
+    <span aria-hidden="true"></span>
+    <button class="icon-button" type="button" data-onboarding-rotate="left" aria-label="Turn left">${icon("left")}</button>
+    <span class="onboarding-turn-center" aria-hidden="true">${icon("cube")}</span>
+    <button class="icon-button" type="button" data-onboarding-rotate="right" aria-label="Turn right">${icon("right")}</button>
+    <span aria-hidden="true"></span>
+    <button class="icon-button" type="button" data-onboarding-rotate="down" aria-label="Turn down">${icon("down")}</button>
+    <span aria-hidden="true"></span>
+  </div>
   <section class="onboarding-copy" aria-live="polite">
     <span class="onboarding-step" id="onboarding-step">1 of 3</span>
     <h2 id="onboarding-title">Make one connection.</h2>
@@ -548,33 +559,39 @@ function onDoubleTap(id: number) {
 function renderOnboarding() {
   const copy = [
     {
-      step: "1 of 5",
+      step: "1 of 6",
       title: "Make one connection.",
       message: "Drag from one node to a neighboring node.",
       action: null,
     },
     {
-      step: "2 of 5",
+      step: "2 of 6",
       title: "Remove that connection.",
       message: "Drag across the same linked pair again to remove it.",
       action: null,
     },
     {
-      step: "3 of 5",
+      step: "3 of 6",
       title: "Fill a node.",
       message: "Double-tap a node to connect every available neighboring node at once.",
       action: null,
     },
     {
-      step: "4 of 5",
+      step: "4 of 6",
       title: "Clear every dot.",
       message: "Keep connecting neighboring nodes until every dot is gone.",
       action: null,
     },
     {
-      step: "5 of 5",
-      title: "2D complete.",
-      message: "You cleared every dot. Now turn the 3D puzzle to see another side.",
+      step: "5 of 6",
+      title: "Turn the puzzle.",
+      message: "Swipe over the board, or use the direction controls, to look around.",
+      action: null,
+    },
+    {
+      step: "6 of 6",
+      title: "Make a 3D connection.",
+      message: "Drag from one node to a neighboring node. Turn the puzzle whenever you need another side.",
       action: null,
     },
     {
@@ -590,8 +607,9 @@ function renderOnboarding() {
   const next = el<HTMLButtonElement>("onboarding-next");
   next.hidden = !copy.action;
   next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
+  el("onboarding-turn-controls").hidden = onboardingStep !== 4;
   captureAnalytics("onboarding_lesson_viewed", {
-    lesson: ["connection", "remove", "node_fill", "network", "rotation", "ready"][onboardingStep],
+    lesson: ["connection", "remove", "node_fill", "network", "rotation", "3d_connection", "ready"][onboardingStep],
     step: onboardingStep + 1,
   });
 }
@@ -645,9 +663,10 @@ function onStrokeStart(id: number) {
   if (!puzzle || document.querySelector("dialog[open]"))
     return;
   if (mode === "onboarding") {
-    // The 3D lesson is about turning the board. A drag that begins on a node
-    // must still rotate, because nodes cover much of the small tutorial board.
-    if (onboardingStep === 2 || onboardingStep > 3) return false;
+    // During the turn lesson, even drags that begin on a node should rotate,
+    // because nodes cover much of the compact 3D board. The following lesson
+    // restores node drags so the player can make a real 3D connection.
+    if (onboardingStep === 2 || onboardingStep === 4 || onboardingStep > 5) return false;
     onStrokeEnd(false);
     strokePuzzle = puzzle;
     strokeChanged = false;
@@ -747,6 +766,10 @@ function onStrokeEnd(showCompletion = true) {
           connections: active.edges.length,
         });
         showOnboarding3d();
+      }
+      if (changed && onboardingStep === 5) {
+        onboardingStep = 6;
+        renderOnboarding();
       }
       return;
     }
@@ -1023,8 +1046,15 @@ el("start-button").addEventListener("click", startFresh);
 el("resume-button").addEventListener("click", () => startGame(true));
 el("onboarding-skip").addEventListener("click", () => finishOnboarding());
 el("onboarding-next").addEventListener("click", () => {
-  if (onboardingStep === 5) finishOnboarding(true);
+  if (onboardingStep === 6) finishOnboarding(true);
 });
+document
+  .querySelectorAll<HTMLElement>("[data-onboarding-rotate]")
+  .forEach(button =>
+    button.addEventListener("click", () =>
+      scene.rotate(button.dataset.onboardingRotate as "left" | "right" | "up" | "down"),
+    ),
+  );
 el("home-button").addEventListener("click", () => {
   if (mode === "playing") goHome();
 });
