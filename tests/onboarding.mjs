@@ -31,6 +31,7 @@ try {
   await page.mouse.up();
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 3');
   assert.match(await page.locator('#onboarding-message').textContent(), /Every dot needs a connection/);
+  assert.match(await page.locator('#onboarding-message').textContent(), /Double-tap a node to connect every available neighbor/);
   const afterFirst = await state(page);
   const connected = new Set(afterFirst.edges.map(edge => [...edge].sort((a, b) => a - b).join(':')));
   const source = afterFirst.nodes.find(node => node.remaining > 0 && afterFirst.nodes.some(other =>
