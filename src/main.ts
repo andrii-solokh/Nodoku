@@ -515,14 +515,7 @@ function selectNode(id: number | null) {
 }
 function onTap(id: number): (() => void) | void {
   if (!puzzle || document.querySelector("dialog[open]")) return;
-  if (mode === "onboarding") {
-    // The lessons restrict which connections can change the board, but a tap
-    // should still give the same selected-node feedback as normal play.
-    if (onboardingStep === 4 || onboardingStep > 5) return;
-    const previous = selected;
-    selectNode(id);
-    return () => selectNode(previous);
-  }
+  if (mode === "onboarding") return onOnboardingTap(id);
   if (mode !== "playing") return;
   const active = puzzle;
   const restore = active.checkpoint();
@@ -534,6 +527,70 @@ function onTap(id: number): (() => void) | void {
       melodyStep = restoreMelodyStep;
     }
   };
+}
+function onOnboardingTap(id: number): (() => void) | void {
+  if (!puzzle || onboardingStep === 4 || onboardingStep > 5) return;
+  const active = puzzle;
+  const restore = active.checkpoint();
+  const previousSelection = selected;
+  const rollback = () => {
+    if (puzzle !== active) return;
+    restore();
+    scene.refresh();
+    selectNode(previousSelection);
+  };
+  // Node-fill is taught as a deliberate double-tap. A single tap still gives
+  // the player immediate feedback while the second tap performs the fill.
+  if (onboardingStep === 2 || onboardingStep === 3) {
+    selectNode(id);
+    return rollback;
+  }
+  if (selected === id) {
+    selectNode(null);
+    return rollback;
+  }
+  if (selected === null) {
+    selectNode(id);
+    return rollback;
+  }
+  if (!scene.getScreenNodes().some(node => node.id === selected && node.pickable)) {
+    selectNode(id);
+    return rollback;
+  }
+  const source = selected;
+  if (!active.neighbors(source).includes(id)) {
+    selectNode(id);
+    return rollback;
+  }
+  const key = edgeKey(source, id);
+  if (onboardingStep === 0 && onboardingConnection) return rollback;
+  if (
+    onboardingStep === 1 &&
+    (!onboardingConnection || edgeKey(...onboardingConnection) !== key)
+  )
+    return rollback;
+  const count = active.edges.length;
+  const result = active.toggle(source, id);
+  if (!result.changed) {
+    toast("A node has no dots left. Remove a connection to make room.");
+    return rollback;
+  }
+  const added = active.edges.length > count;
+  if (onboardingStep === 0 && added) onboardingConnection = [source, id];
+  selectNode(null);
+  scene.refresh();
+  if (onboardingStep === 0 && added) {
+    onboardingStep = 1;
+    renderOnboarding();
+  } else if (onboardingStep === 1 && !added) {
+    onboardingConnection = null;
+    onboardingStep = 2;
+    renderOnboarding();
+  } else if (onboardingStep === 5) {
+    onboardingStep = 6;
+    renderOnboarding();
+  }
+  return rollback;
 }
 function onNode(id: number) {
   if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]"))

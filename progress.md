@@ -1749,3 +1749,9 @@ TODO / Note
 - The lesson shows the three familiar controls, desktop keyboard shortcuts (`Ctrl/⌘ Z`, `Ctrl/⌘ Shift Z`, and `H`), and the lower-left mobile control location.
 - Added desktop and portrait-browser coverage, with screenshots in `output/web-game/onboarding-controls/`.
 - Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, and `npm run test` (194 passing).
+
+## 2026-09-12 — Guided tap-to-connect
+- Restored tap-to-connect in onboarding: selecting a node and then a neighboring node now creates the guided connection or removes the guided link.
+- Preserved the separate double-tap-only node-fill lesson and selection-ring feedback.
+- Added browser coverage for the two-tap guided connection.
+- Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, and `npm run test` (194 passing).
