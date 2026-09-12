@@ -74,6 +74,11 @@ let resumeOnLoad = false;
 let puzzle: Puzzle | null = null;
 let selected: number | null = null;
 let mode: "home" | "playing" | "onboarding" = "home";
+const tutorialDirections = ["left", "right", "up", "down"] as const;
+type TutorialDirection = typeof tutorialDirections[number];
+const tutorialKeys = { left: "← / A", right: "→ / D", up: "↑ / W", down: "↓ / S" };
+const touchInput = window.matchMedia("(pointer: coarse)");
+let onboardingRotation = 0;
 let onboardingStep = 0;
 let onboardingToolsComplete = false;
 let onboardingConnection: [number, number] | null = null;
@@ -231,6 +236,7 @@ app.innerHTML = `
     <span class="onboarding-step" id="onboarding-step">1 of 9</span>
     <h2 id="onboarding-title">Make one connection.</h2>
     <p id="onboarding-message">Drag from one node to a neighboring node.</p>
+    <div class="onboarding-rotation-keys" id="onboarding-rotation-keys" aria-label="Rotation keys" hidden></div>
     <button class="onboarding-next" id="onboarding-next" hidden>Show me 3D${icon("right")}</button>
   </section>
   <button class="onboarding-skip" id="onboarding-skip">Skip tutorial</button>
@@ -321,10 +327,6 @@ try {
         captureAnalytics("puzzle_rotated", puzzleAnalyticsProperties());
         trackPuzzleAction("rotate", "gesture");
       }
-      if (mode === "onboarding" && onboardingStep === 4) {
-        onboardingStep = 5;
-        renderOnboarding();
-      }
     },
     onViewChange: () => {
       if (mode === "playing") persist();
@@ -366,7 +368,7 @@ subscribeConfig(config => {
     cycle: `${tutorial.gestureCycleMs}ms`,
   })) cues.style.setProperty(`--cue-${name}`, String(value));
   scene.setRemovalCue(mode === "onboarding" && onboardingStep === 1 && tutorial.enabled && tutorial.removalCue ? onboardingConnection : null);
-  requestAnimationFrame(() => { renderOnboardingCue(); if (mode === "onboarding") renderOnboardingTools(); });
+  requestAnimationFrame(() => { renderOnboardingCue(); if (mode === "onboarding") { renderOnboardingTools(); renderRotationGuidance(); } });
   demo.setConfig(config);
   gameAudio.setConfig(config.sound);
   ambientAudio.setVolume(config.sound.ambientVolume);
@@ -763,9 +765,15 @@ function renderOnboardingCue() {
     const left = Math.min(...nodes.map(node => node.x - node.radius));
     const right = Math.max(...nodes.map(node => node.x + node.radius));
     const top = Math.min(...nodes.map(node => node.y - node.radius));
-    turn.style.left = `${(left + right) / 2}px`;
-    turn.style.top = `${Math.max(80, top - 14)}px`;
+    const direction = tutorialDirections[onboardingRotation];
+    const vertical = direction === "up" || direction === "down";
+    const bottom = Math.max(...nodes.map(node => node.y + node.radius));
+    turn.dataset.direction = direction;
+    turn.style.left = `${vertical ? Math.max(40, left - 40) : (left + right) / 2}px`;
+    turn.style.top = `${vertical ? (top + bottom) / 2 : Math.max(80, top - 14)}px`;
     turn.style.width = `${Math.min(220, (right - left) * .65)}px`;
+    turn.style.transform = vertical ? `translate(-50%, -50%) rotate(${direction === "up" ? -90 : 90}deg)`
+      : `translate(-50%, -100%) scaleX(${direction === "left" ? -1 : 1})`;
     return;
   }
   const start = scene.projectNode(gesture.start!);
@@ -826,8 +834,10 @@ function renderOnboarding() {
     },
     {
       step: "5 of 9",
-      title: "Turn the puzzle.",
-      message: "Swipe over the board, or use the direction controls, to look around.",
+      title: `Turn ${tutorialDirections[onboardingRotation]}.`,
+      message: touchInput.matches
+        ? `Tap the ${tutorialDirections[onboardingRotation]} arrow in the control panel.`
+        : `Press ${tutorialKeys[tutorialDirections[onboardingRotation]]} on your keyboard to turn the puzzle.`,
       action: null,
     },
     {
@@ -856,7 +866,8 @@ function renderOnboarding() {
       action: onboardingToolsComplete ? "Finish tutorial" : null,
     },
   ][onboardingStep];
-  el("onboarding-step").textContent = copy.step;
+  el("onboarding-step").textContent = onboardingStep === 4
+    ? `${copy.step} · Direction ${onboardingRotation + 1} of 4` : copy.step;
   el("onboarding-title").textContent = copy.title;
   el("onboarding-message").textContent = copy.message;
   const next = el<HTMLButtonElement>("onboarding-next");
@@ -866,6 +877,7 @@ function renderOnboarding() {
   el("onboarding-control-lesson").hidden = onboardingStep < 6;
   app.classList.toggle("onboarding-controls-active", onboardingStep >= 6);
   renderOnboardingTools();
+  renderRotationGuidance();
   onboardingCue = onboardingCueForStep();
   scene.setRemovalCue(onboardingStep === 1 && tutorialSettings.enabled && tutorialSettings.removalCue ? onboardingConnection : null);
   requestAnimationFrame(renderOnboardingCue);
@@ -874,6 +886,33 @@ function renderOnboarding() {
     step: onboardingStep + 1,
   });
 }
+function renderRotationGuidance() {
+  const keys = el("onboarding-rotation-keys");
+  keys.hidden = onboardingStep !== 4 || touchInput.matches;
+  keys.innerHTML = tutorialDirections.map((direction, index) =>
+    `<kbd class="${index === onboardingRotation ? "current" : index < onboardingRotation ? "done" : ""}">${tutorialKeys[direction]}</kbd>`,
+  ).join("");
+  const controls = el("onboarding-turn-controls");
+  controls.style.setProperty("--tool-cue-color", tutorialSettings.color);
+  controls.querySelectorAll<HTMLButtonElement>("[data-onboarding-rotate]").forEach(button => {
+    button.classList.toggle("tutorial-tool-ping", onboardingStep === 4 && tutorialSettings.enabled
+      && tutorialSettings.rotationCue && button.dataset.onboardingRotate === tutorialDirections[onboardingRotation]);
+  });
+}
+function rotateOnboarding(direction: TutorialDirection) {
+  if (mode !== "onboarding" || onboardingStep !== 4 || scene.isViewMoving) return;
+  scene.rotate(direction);
+  if (direction !== tutorialDirections[onboardingRotation]) return;
+  onboardingRotation++;
+  if (onboardingRotation === tutorialDirections.length) {
+    onboardingStep = 5;
+    onboardingRotation = 0;
+  }
+  renderOnboarding();
+}
+touchInput.addEventListener("change", () => {
+  if (mode === "onboarding") renderOnboarding();
+});
 function renderOnboardingTools() {
   const toolbar = el("onboarding-control-lesson");
   toolbar.style.setProperty("--tool-cue-color", tutorialSettings.color);
@@ -939,6 +978,7 @@ function startOnboarding() {
   puzzle = new Puzzle({ size: 3, depth: 1, difficulty: "easy", seed: 17 });
   selected = null;
   onboardingStep = 0;
+  onboardingRotation = 0;
   onboardingToolsComplete = false;
   onboardingConnection = null;
   mode = "onboarding";
@@ -1375,7 +1415,7 @@ document
   .querySelectorAll<HTMLElement>("[data-onboarding-rotate]")
   .forEach(button =>
     button.addEventListener("click", () =>
-      scene.rotate(button.dataset.onboardingRotate as "left" | "right" | "up" | "down"),
+      rotateOnboarding(button.dataset.onboardingRotate as TutorialDirection),
     ),
   );
 el("home-button").addEventListener("click", () => {
@@ -1552,7 +1592,12 @@ document.addEventListener("keydown", (event) => {
   )
     return;
   if (mode === "onboarding") {
-    if (onboardingStep >= 6 && (event.ctrlKey || event.metaKey) && key === "z") {
+    const direction = ({ arrowleft: "left", a: "left", arrowright: "right", d: "right",
+      arrowup: "up", w: "up", arrowdown: "down", s: "down" } as Record<string, TutorialDirection>)[key];
+    if (onboardingStep === 4 && direction && !event.ctrlKey && !event.metaKey) {
+      event.preventDefault();
+      if (!event.repeat) rotateOnboarding(direction);
+    } else if (onboardingStep >= 6 && (event.ctrlKey || event.metaKey) && key === "z") {
       event.preventDefault();
       if (!event.repeat) useOnboardingTool(event.shiftKey ? "redo" : "undo");
     } else if (onboardingStep >= 6 && key === "h" && !event.ctrlKey && !event.metaKey) {
@@ -1637,6 +1682,7 @@ Object.assign(window, {
       settings: displayed?.settings ?? settings,
       selected: mode === "home" ? null : selected,
       view: scene.getViewState(),
+      tutorialRotation: mode === "onboarding" && onboardingStep === 4 ? tutorialDirections[onboardingRotation] : null,
       removalCue: scene.getRemovalCueState(),
       progress: displayed?.progress ?? 0,
       solved: displayed?.solved ?? false,

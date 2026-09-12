@@ -167,7 +167,7 @@ try {
   }
   assert.equal(await page.locator('#completion-moment').isVisible(), true, 'The solved 2D lesson gets a completion beat before changing scenes');
   await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/2d-completion-moment.png' });
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '5 of 9');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent.startsWith('5 of 9'));
   let transition = await state(page);
   assert.ok(transition.shapeTransition?.active, 'The flat tutorial board expands into the 3D lesson');
   assert.equal(transition.shapeTransition.fromDepth, 1);
@@ -176,8 +176,8 @@ try {
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).shapeTransition === null);
   transition = await state(page);
   assert.equal(transition.nodes.length, 26, 'The next lesson switches to a 3D board');
-  assert.equal(await page.locator('#onboarding-title').textContent(), 'Turn the puzzle.');
-  assert.match(await page.locator('#onboarding-message').textContent(), /Swipe over the board, or use the direction controls/);
+  assert.equal(await page.locator('#onboarding-title').textContent(), 'Turn left.');
+  assert.match(await page.locator('#onboarding-message').textContent(), /Press ← \/ A on your keyboard/);
   assert.equal(await page.locator('#onboarding-turn-controls').isVisible(), true, 'The turn lesson exposes direction controls');
   assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-turn')), true, 'The turn lesson shows an animated turning cue on the board');
   assert.equal(await page.locator('.rotation-arrow-head').count(), 1, 'Rotation uses a directional arrow');
@@ -199,8 +199,40 @@ try {
   await page.waitForTimeout(250);
 
   await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/solved-2d-3d.png' });
-  await page.locator('[data-onboarding-rotate="right"]').click();
+  // A wrong direction rotates the board but does not complete the requested checkpoint.
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(450);
+  assert.equal((await state(page)).tutorialRotation, 'left');
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForTimeout(450);
+  assert.equal((await state(page)).tutorialRotation, 'right');
+  assert.match(await page.locator('#onboarding-step').textContent(), /Direction 2 of 4/);
+  await page.keyboard.press('d');
+  await page.waitForTimeout(450);
+  assert.equal((await state(page)).tutorialRotation, 'up');
+  assert.equal(await page.locator('.onboarding-cue-turn').getAttribute('data-direction'), 'up');
+  await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-up-desktop.png' });
+  const device = await page.context().newCDPSession(page);
+  await device.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(250);
+  assert.match(await page.locator('#onboarding-message').textContent(), /Tap the up arrow in the control panel/);
+  assert.equal(await page.locator('#onboarding-rotation-keys').isHidden(), true);
+  assert.equal(await page.locator('[data-onboarding-rotate="up"].tutorial-tool-ping').count(), 1);
+  const upArrow = await arrow.boundingBox();
+  assert.ok(upArrow.x >= 0 && upArrow.y >= 0 && upArrow.x + upArrow.width <= 390);
+  await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-up-mobile.png' });
+  await page.locator('[data-onboarding-rotate="up"]').click();
+  await page.waitForTimeout(450);
+  assert.equal((await state(page)).tutorialRotation, 'down');
+  assert.equal(await page.locator('[data-onboarding-rotate="down"].tutorial-tool-ping').count(), 1);
+  await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-down-mobile.png' });
+  await page.locator('[data-onboarding-rotate="down"]').click();
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '6 of 9');
+  await device.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+  await device.detach();
+  await page.setViewportSize({ width: 1200, height: 850 });
+  await page.waitForTimeout(450);
   assert.equal(await page.locator('#onboarding-turn-controls').isHidden(), true, 'The connection lesson replaces turn controls');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Make a 3D connection.');
   const threeD = await state(page);
