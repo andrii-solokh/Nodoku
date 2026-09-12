@@ -1970,3 +1970,7 @@ TODO / Note
 2026-09-12
 - Changed tutorial rings to explicit sphere-centered pixel bounds. Selection/double-tap animations now only scale/fade; drag/removal focus rings share the same centering. Avoids percentage-translation reference-box differences while retaining Studio styling controls.
 - Current Chromium/WebKit did not reproduce the reported older-Safari offset before the patch. New center checks passed in both engines at 1000px and 390px, across selection/drag/double-tap with thick borders and enlarged pulses (under 0.1 CSS pixel error). Build passed; selection tutorial mouse/touch/reduced-motion checks passed on rerun after the parallel run missed a transient success message. Ran the web-game client and inspected the centered WebKit iPad pulse screenshot. Physical Safari confirmation is pending.
+
+2026-09-12
+- Added pressed feedback to onboarding rotation keycaps: the specific arrow or WASD key turns purple/white and depresses while held. Preserves feedback when the guidance re-renders; key release, window blur and hidden-tab cleanup reset it.
+- Build and focused Chromium/WebKit checks passed for individual/simultaneous keys, release, blur, ignored modifiers and lesson transition. Ran the web-game client and inspected the pressed-key screenshot.

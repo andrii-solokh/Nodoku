@@ -1880,4 +1880,11 @@ a {
   color: #584484;
   font: 500 24px/1.2 Outfit, sans-serif;
 }
+.onboarding-shortcut kbd.is-pressed {
+  background: var(--purple);
+  border-color: #63519f;
+  color: white;
+  box-shadow: none;
+  transform: translateY(2px);
+}
 .onboarding-shortcut > span { color: #887a96; font-size: 20px; }
