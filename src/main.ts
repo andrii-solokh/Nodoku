@@ -959,14 +959,7 @@ function confirm(
   el<HTMLDialogElement>("confirm-dialog").showModal();
 }
 function startFresh() {
-  if (savedPuzzle && savedPuzzle.edges.length > 0) {
-    confirm(
-      "Begin a fresh puzzle?",
-      "Your unfinished puzzle will be replaced by today’s shared puzzle.",
-      "Play daily puzzle",
-      () => startGame(),
-    );
-  } else startGame();
+  startGame();
 }
 el("start-button").addEventListener("click", startFresh);
 el("resume-button").addEventListener("click", () => startGame(true));
