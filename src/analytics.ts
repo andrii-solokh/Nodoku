@@ -34,6 +34,10 @@ export function startAnalytics(): void {
         capture_pageview: true,
         capture_pageleave: true,
         person_profiles: "identified_only",
+        // Allow the project-level Replay setting to record the game canvas.
+        // Keep form values masked even if more player-facing inputs are added later.
+        disable_session_recording: false,
+        session_recording: { maskAllInputs: true },
       });
       // This UUID is created locally by Nodoku and contains no profile data.
       instance.identify(getVisitorId());
