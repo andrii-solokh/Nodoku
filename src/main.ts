@@ -330,6 +330,7 @@ try {
         trackPuzzleAction("rotate", "gesture");
       }
     },
+    onRotationGesture: completeOnboardingRotation,
     onViewChange: () => {
       if (mode === "playing") persist();
     },
@@ -878,8 +879,8 @@ function renderOnboarding() {
       step: "5 of 9",
       title: `Turn ${tutorialDirections[onboardingRotation]}.`,
       message: touchInput.matches
-        ? `Tap the ${tutorialDirections[onboardingRotation]} arrow in the control panel.`
-        : `Press ${tutorialKeys[tutorialDirections[onboardingRotation]]} on your keyboard to turn the puzzle.`,
+        ? `Drag to rotate, or tap the ${tutorialDirections[onboardingRotation]} arrow in the control panel.`
+        : `Drag to rotate, or press ${tutorialKeys[tutorialDirections[onboardingRotation]]} on your keyboard.`,
       action: null,
     },
     {
@@ -951,7 +952,11 @@ function renderRotationGuidance() {
 function rotateOnboarding(direction: TutorialDirection) {
   if (mode !== "onboarding" || onboardingCelebrating || onboardingStep !== 4 || scene.isViewMoving) return;
   scene.rotate(direction);
-  if (direction !== tutorialDirections[onboardingRotation]) return;
+  completeOnboardingRotation(direction);
+}
+function completeOnboardingRotation(direction: TutorialDirection) {
+  if (mode !== "onboarding" || onboardingCelebrating || onboardingStep !== 4
+    || direction !== tutorialDirections[onboardingRotation]) return;
   celebrateOnboarding(`Turned ${direction}`, () => {
     onboardingRotation++;
     if (onboardingRotation === tutorialDirections.length) {
