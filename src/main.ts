@@ -833,7 +833,9 @@ function renderOnboardingCue() {
     const vertical = direction === "up" || direction === "down";
     const bottom = Math.max(...nodes.map(node => node.y + node.radius));
     turn.dataset.direction = direction;
-    turn.style.left = `${vertical ? Math.max(40, left - 40) : (left + right) / 2}px`;
+    const arrowX = direction === "down" ? Math.min(innerWidth - 40, right + 40)
+      : direction === "up" ? Math.max(40, left - 40) : (left + right) / 2;
+    turn.style.left = `${arrowX}px`;
     turn.style.top = `${vertical ? (top + bottom) / 2 : Math.max(80, top - 14)}px`;
     turn.style.width = `${Math.min(220, (right - left) * .65)}px`;
     turn.style.transform = vertical ? `translate(-50%, -50%) rotate(${direction === "up" ? -90 : 90}deg)`
