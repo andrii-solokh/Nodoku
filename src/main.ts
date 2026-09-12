@@ -207,10 +207,11 @@ app.innerHTML = `
     <span aria-hidden="true"></span>
   </div>
   <aside class="onboarding-control-lesson" id="onboarding-control-lesson" aria-label="Puzzle controls" hidden>
-    <div class="onboarding-tool-buttons" aria-hidden="true">
-      <span>${icon("undo")}<b>Undo</b></span>
-      <span>${icon("redo")}<b>Redo</b></span>
-      <span>${icon("hint")}<b>Hint</b></span>
+    <div class="tools-group" aria-hidden="true">
+      <button class="tool-button" type="button" tabindex="-1">${icon("undo")}Undo</button>
+      <button class="tool-button" type="button" tabindex="-1">${icon("redo")}Redo</button>
+      <button class="tool-button" type="button" tabindex="-1">${icon("restart")}Restart</button>
+      <button class="tool-button hint" type="button" tabindex="-1">${icon("hint")}Hint</button>
     </div>
     <p class="onboarding-desktop-shortcuts">Desktop: <kbd>Ctrl / ⌘</kbd> <span>+</span> <kbd>Z</kbd> to undo, <kbd>Ctrl / ⌘</kbd> <span>+</span> <kbd>Shift</kbd> <span>+</span> <kbd>Z</kbd> to redo, and <kbd>H</kbd> for a hint.</p>
     <p class="onboarding-mobile-controls">On mobile, these controls stay at the lower-left of the puzzle.</p>
@@ -703,7 +704,7 @@ function renderOnboarding() {
     {
       step: "7 of 7",
       title: "Use your tools.",
-      message: "Undo a move, redo it, or ask for a hint whenever you need one.",
+      message: "Undo, redo, restart, or ask for a hint from the toolbar whenever you need one.",
       action: "Start connecting",
     },
   ][onboardingStep];
@@ -715,6 +716,7 @@ function renderOnboarding() {
   next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
   el("onboarding-turn-controls").hidden = onboardingStep !== 4;
   el("onboarding-control-lesson").hidden = onboardingStep !== 6;
+  app.classList.toggle("onboarding-controls-active", onboardingStep === 6);
   captureAnalytics("onboarding_lesson_viewed", {
     lesson: ["connection", "remove", "node_fill", "network", "rotation", "3d_connection", "controls"][onboardingStep],
     step: onboardingStep + 1,

@@ -1761,3 +1761,9 @@ TODO / Note
 - It defaults off for every player, including when analytics or PostHog flags are unavailable; toggling the flag on restores the existing animation without deployment.
 - Verified the default game render contains no staff or note particles after a connection.
 - Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:dot-animations`, and `npm run test` (194 passing).
+
+## 2026-09-12 — Onboarding toolbar alignment
+- Replaced the tutorial-only toolbar mockup with the normal game `tools-group`, including Undo, Redo, Restart, and Hint.
+- Matched its desktop middle-left column and icon-only lower-left mobile panel; removed mobile copy that overlapped the tutorial CTA.
+- Verified desktop and portrait screenshots in `output/web-game/onboarding-controls/`.
+- Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, and `npm run test` (194 passing).
