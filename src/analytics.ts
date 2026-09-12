@@ -20,7 +20,7 @@ function validConfig(value: unknown): value is AnalyticsConfig {
   if (!value || typeof value !== "object") return false;
   const config = value as Partial<AnalyticsConfig>;
   return typeof config.projectApiKey === "string" && /^phc_/.test(config.projectApiKey)
-    && config.apiHost === "https://us.i.posthog.com";
+    && config.apiHost === "https://go.nodoku.solokh.com";
 }
 
 function send(event: string, properties: EventProperties): void {
@@ -38,6 +38,9 @@ export function startAnalytics(): void {
       posthog = instance;
       instance.init(config.projectApiKey, {
         api_host: config.apiHost,
+        // The ingestion endpoint is proxied, while PostHog UI links and toolbar
+        // integrations must still point at the US Cloud application.
+        ui_host: "https://us.posthog.com",
         autocapture: false,
         // Capture one explicit pageview once our Nodoku visitor ID and app label are
         // registered. This keeps Web Analytics and replay sessions on the same identity.

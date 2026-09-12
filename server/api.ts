@@ -316,7 +316,7 @@ export async function handleApi(request: Request, env: Env, store: Store): Promi
     }
     if (path === '/api/analytics-config') {
       const projectApiKey = env.POSTHOG_PROJECT_API_KEY;
-      return json(projectApiKey ? { projectApiKey, apiHost: 'https://us.i.posthog.com' } : { projectApiKey: null });
+      return json(projectApiKey ? { projectApiKey, apiHost: 'https://go.nodoku.solokh.com' } : { projectApiKey: null });
     }
     if (path === '/api/completions') {
       checkOrigin(request, env);

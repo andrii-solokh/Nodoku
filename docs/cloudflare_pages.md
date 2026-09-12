@@ -15,7 +15,7 @@ To deploy a later build to this project's production branch:
 
 ```sh
 npm run build
-npx wrangler pages deploy dist --project-name nodoku --branch astra-rebuild
+npx wrangler pages deploy dist --project-name nodoku --branch main
 ```
 
 Wrangler includes the Pages Functions beside `dist`. Publishing does not commit or push source code. Git pushes do not automatically deploy this direct-upload project.
