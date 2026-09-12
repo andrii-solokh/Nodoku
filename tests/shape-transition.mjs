@@ -41,6 +41,9 @@ async function fixture({ duration = 800, reduced = false, mobile = false, size =
   await page.goto(`${url}/?admin=1#admin-token=${'a'.repeat(64)}`);
   await page.waitForFunction(() => typeof window.render_game_to_text === 'function', null, { polling: 25 });
   await page.locator('#config-scene-shapeTransitionMs').waitFor({ state: 'attached' });
+  // This fixture freezes animation frames so it can advance the scene exactly.
+  // Remove the production splash, whose normal two-frame dismissal cannot run.
+  await page.locator('#app-loader').evaluate(element => element.remove());
   await page.locator('#admin-close').evaluate(button => button.click());
   assert.equal((await state(page)).config.scene.shapeTransitionMs, duration);
   return page;

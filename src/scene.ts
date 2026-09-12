@@ -375,7 +375,9 @@ export class BoardScene {
       this.updateMaterials();
     }
     const oldPuzzle = this.puzzle;
-    const morph = animateShape && preview && this.preview && !!oldPuzzle
+    // Shape changes are useful outside the landing-page preview too: the
+    // tutorial expands its solved flat board into the first 3D puzzle.
+    const morph = animateShape && !!oldPuzzle
       && (oldPuzzle.settings.size !== puzzle.settings.size || oldPuzzle.settings.depth !== puzzle.settings.depth)
       && !this.reducedMotion && this.config.shapeTransitionMs > 0;
     const fromOrientation = this.orientation.clone();
