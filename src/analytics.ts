@@ -1,3 +1,4 @@
+import { timeoutSignal } from "./timeout";
 import { getVisitorId } from "./visitor";
 
 type EventProperties = Record<string, string | number | boolean | undefined>;
@@ -30,7 +31,8 @@ function send(event: string, properties: EventProperties): void {
 /** Start optional analytics without ever blocking the game when it is unavailable. */
 export function startAnalytics(): void {
   if (starting) return;
-  starting = fetch("/api/analytics-config", { cache: "no-store", signal: AbortSignal.timeout(5_000) })
+  starting = Promise.resolve()
+    .then(() => fetch("/api/analytics-config", { cache: "no-store", signal: timeoutSignal(5_000) }))
     .then(async response => response.ok ? response.json() : null)
     .then(async config => {
       if (!validConfig(config)) return;

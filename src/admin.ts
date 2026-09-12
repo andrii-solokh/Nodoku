@@ -1,3 +1,4 @@
+import { timeoutSignal } from "./timeout";
 import "./admin.css";
 import { applyConfig, getConfig, type GameConfig } from "./config";
 import { CONFIG_RULES, validateConfig } from "./config-schema";
@@ -34,7 +35,7 @@ export async function mountAdmin(previewTutorial: () => void, previewSelection: 
     const response = await fetch("/api/admin/config", {
       ...init,
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(10000),
+      signal: timeoutSignal(10000),
     });
     const body = await response.json();
     if (!response.ok) throw new Error(response.status === 404

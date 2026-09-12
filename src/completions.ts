@@ -1,3 +1,4 @@
+import { timeoutSignal } from "./timeout";
 import { Puzzle } from "./puzzle";
 import { getVisitorId } from "./visitor";
 
@@ -40,7 +41,7 @@ async function flush(): Promise<void> {
       try {
         const response = await fetch("/api/completions", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload), signal: AbortSignal.timeout(12_000),
+          body: JSON.stringify(payload), signal: timeoutSignal(12_000),
         });
         const body = await response.json();
         if (!response.ok || typeof body?.recorded !== "boolean") {
