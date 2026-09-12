@@ -1,3 +1,4 @@
+import { toggleDemoSuspension } from './helpers/demo-suspension.mjs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { melodyCompletionCount, melodyNote, melodyStepMs, midiToFrequency } from '../src/melodies.ts';
@@ -83,6 +84,8 @@ async function fixture(sound = false) {
     }
   }, { settings, sound });
   await page.goto(url);
+  // The fixture freezes RAF, including the loader dismissal callback.
+  await page.evaluate(() => document.getElementById("app-loader")?.remove());
   return page;
 }
 async function reach(page, target) {
@@ -115,27 +118,25 @@ try {
   assert.equal(await page.locator('#sound-button').getAttribute('aria-pressed'), 'true', 'Saved speaker preference is preserved');
   await advance(page, smoke ? 1000 : 60000);
   assert.deepEqual(await audio(page), { contexts: 0, resumes: 0, starts: [], decodes: [] }, 'Saved sound-on does not create, decode, resume, or play audio before a real gesture');
-  await page.locator('#demo-toggle').click();
   await page.locator('[data-size="3"]').click();
-  await page.locator('#demo-toggle').click();
   await page.waitForTimeout(300);
   assert.equal((await audio(page)).contexts, 1, 'A trusted gesture unlocks one shared AudioContext');
   assert.deepEqual((await audio(page)).decodes, [], 'A trusted gesture does not decode a rotation recording');
   let before = await audio(page);
-  await reach(page, 'turn');
+  await reach(page, 'edge');
   const turn = (await audio(page)).starts.slice(before.starts.length);
-  assert.equal(turn.length, 2, 'A visible automatic turn has only the simultaneous connection note and its harmonic');
-  assert.equal((await state(page)).demo.connected, 1, 'The turn and first edge start in the same tick');
+  assert.equal(turn.length, 2, 'The first automatic connection plays only its note and harmonic');
+  assert.equal((await state(page)).demo.connected, 1, 'The first automatic connection adds exactly one edge');
   await reach(page, 'edge');
   assert.deepEqual(notes((await audio(page)).starts.slice(before.starts.length)), [329.63], 'The first automatically added edge plays E4');
   await reach(page, 4);
   assert.deepEqual(notes((await audio(page)).starts.slice(before.starts.length)), [329.63, 329.63, 349.23, 392], 'The demo plays the recognizable E E F G opening, one note per added edge');
   const resumed = (await audio(page)).resumes;
-  await page.locator('#demo-toggle').click();
+  await toggleDemoSuspension(page);
   before = await audio(page);
   await advance(page, 20000);
-  assert.deepEqual(await audio(page), before, 'Paused demo schedules no sounds');
-  await page.locator('#demo-toggle').click();
+  assert.deepEqual(await audio(page), before, 'Suspended demo schedules no sounds');
+  await toggleDemoSuspension(page);
   await page.waitForTimeout(300);
   before = await audio(page);
   await reach(page, 'solved');

@@ -1,3 +1,4 @@
+import { toggleDemoSuspension } from './helpers/demo-suspension.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -47,11 +48,11 @@ try {
       await page.screenshot({ path: `${out}/overlapping-links.png` });
     }
   }
-  await page.locator('#demo-toggle').click();
+  await toggleDemoSuspension(page);
   const paused = (await state(page)).edges;
   await advance(page, 10000);
   assert.deepEqual((await state(page)).edges, paused);
-  await page.locator('#demo-toggle').click();
+  await toggleDemoSuspension(page);
   while (!(await state(page)).solved) {
     s = await state(page);
     await advance(page, Math.max(1, s.demo.delayMs));

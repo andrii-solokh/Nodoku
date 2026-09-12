@@ -415,51 +415,6 @@ a {
   max-height: 70vh;
   min-height: 420px;
 }
-.preview-caption {
-  position: absolute;
-  bottom: 12px;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: #938aa4;
-  font-size: 12px;
-  pointer-events: none;
-}
-.demo-toggle {
-  display: inline-flex;
-  padding: 4px;
-  border-radius: 14px;
-  color: #726a83;
-  background: #e4e1ee;
-  font: inherit;
-  pointer-events: auto;
-}
-.demo-toggle-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 38px;
-  padding: 0 14px;
-  border-radius: 10px;
-  background: #faf9fd;
-  box-shadow: 0 2px 7px #4438660b;
-}
-.demo-toggle-icon {
-  display: grid;
-  place-items: center;
-  width: 15px;
-  height: 15px;
-  color: #66529e;
-}
-.demo-toggle svg {
-  width: 15px;
-  height: 15px;
-}
-.demo-toggle:hover { color: #645080; background: #ded9eb; }
-.demo-toggle:focus-visible { outline: 2px solid #8270bd; outline-offset: 3px; }
 .hidden,
 [hidden] {
   display: none !important;
@@ -1501,10 +1456,6 @@ a {
     min-height: 0;
     max-height: none;
   }
-  .preview-caption {
-    bottom: 9px;
-    font-size: 11px;
-  }
   .puzzle-options {
     order: 3;
     max-width: 365px;
@@ -1766,9 +1717,6 @@ a {
 .size-button {
   color: #766a89;
 }
-.preview-caption {
-  color: #80758e;
-}
 
 @media (max-width: 760px) and (orientation: portrait) {
   #app.home {
@@ -1821,7 +1769,6 @@ a {
   .complexity-icon { width: 34px; height: 18px; }
   .start-actions { margin-top: 1px; }
   .start-button { padding: 11px 16px; border-radius: 12px; font-size: 14px; }
-  .preview-caption { bottom: 2px; }
 }
 @media (max-width: 760px) and (max-height: 700px) and (orientation: portrait) {
   .home .site-header { height: 62px; }

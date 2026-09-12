@@ -1,3 +1,4 @@
+import { toggleDemoSuspension } from './helpers/demo-suspension.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -84,7 +85,7 @@ function changed(before, after) {
 
 try {
   const page = await fixture();
-  await page.locator('#demo-toggle').click();
+  await toggleDemoSuspension(page);
   let s = await state(page);
   assert.equal(s.floating.active, true);
   assert.equal(s.floating.amplitude, .025);
@@ -94,7 +95,7 @@ try {
   attached(s); changed(cube, s);
   assert.deepEqual(s.nodes.map(({ x, y, z }) => [x, y, z]), cube.nodes.map(({ x, y, z }) => [x, y, z]), 'floating never alters the logical puzzle topology');
   assert.deepEqual(s.view.direction, cube.view.direction, 'idle floating does not rotate the camera');
-  assert.equal(s.edges.length, 0, 'paused demo stays paused while nodes float');
+  assert.equal(s.edges.length, 0, 'suspended demo adds no connections while nodes float');
   await page.screenshot({ path: `${out}/cube-floating.png` });
 
   await page.locator('[data-size="4"]').click();
@@ -119,7 +120,7 @@ try {
   assert.equal(s.nodes.length, 16);
   assert.ok(s.nodes.every(node => node.z === 0), 'floating flat board keeps its one-layer topology');
   await page.screenshot({ path: `${out}/flat-floating.png` });
-  await page.locator('#demo-toggle').click();
+  await toggleDemoSuspension(page);
   for (let i = 0; i < 160 && !(await state(page)).solved; i++) await advance(page, 500);
   assert.equal((await state(page)).solved, true, 'ambient floating does not block demo auto-solving');
   assert.equal((await state(page)).demo.phase, 'complete');
@@ -152,7 +153,7 @@ try {
 
   for (const options of [{ amplitude: 0 }, { reduced: true }]) {
     const still = await fixture(options);
-    await still.locator('#demo-toggle').click();
+    await toggleDemoSuspension(still);
     const before = await state(still);
     await advance(still, 2000);
     const after = await state(still);
@@ -163,7 +164,7 @@ try {
     await still.close();
   }
   const mobile = await fixture({ mobile: true });
-  await mobile.locator('#demo-toggle').click();
+  await toggleDemoSuspension(mobile);
   await advance(mobile, 1100); attached(await state(mobile));
   await mobile.screenshot({ path: `${out}/mobile-floating.png`, fullPage: true });
   assert.ok(await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'floating does not widen the mobile page');

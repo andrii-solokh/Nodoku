@@ -1,3 +1,4 @@
+import { toggleDemoSuspension } from './helpers/demo-suspension.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -260,7 +261,7 @@ try {
   await click(cube, '#home-button');
   for (let index = 0; index < 16 && (await state(cube)).edges.length < 2; index++) await advance(cube, 500);
   assert.ok((await state(cube)).edges.length >= 2, 'Gum pulses allow the landing demo to continue solving');
-  await click(cube, '#demo-toggle');
+  await toggleDemoSuspension(cube);
   await advance(cube, 800);
   await click(cube, '[data-size="4"]');
   await click(cube, '[data-depth="flat"]');
