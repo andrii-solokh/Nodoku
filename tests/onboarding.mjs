@@ -6,15 +6,15 @@ const browser = await chromium.launch();
 const errors = [];
 const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text()));
 const adjacent = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.z - b.z) === 1;
-async function fixture() {
+async function fixture(openOnboarding = true) {
   const page = await browser.newPage({ viewport: { width: 1200, height: 850 } });
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/api/visitors', route => route.fulfill({ json: { count: 1, scope: 'local' } }));
   await page.route('**/api/presence', route => route.fulfill({ json: { online: 1, scope: 'local' } }));
   await page.route('**/api/statistics?**', route => route.fulfill({ json: { period: 'all', scope: 'local', trackingSince: null, totals: { visitors: 1, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
   await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors: [] } }));
-  await page.goto(`${url}?onboarding=1`);
-  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'onboarding');
+  await page.goto(openOnboarding ? `${url}?onboarding=1` : url);
+  await page.waitForFunction(expected => JSON.parse(window.render_game_to_text()).mode === expected, openOnboarding ? 'onboarding' : 'home');
   return page;
 }
 try {
@@ -86,8 +86,15 @@ try {
   await skipped.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');
   assert.equal(await skipped.evaluate(() => JSON.parse(localStorage.getItem('nodoku.astra.v1')).onboardingCompleted), true, 'Skipping is stored');
   await skipped.close();
+
+  const howToPlay = await fixture(false);
+  await howToPlay.locator('#help-button').click();
+  await howToPlay.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'onboarding');
+  assert.equal(await howToPlay.locator('#help-dialog').isVisible(), false, 'How to play starts the guided tutorial instead of a static dialog');
+  await howToPlay.locator('#onboarding-skip').click();
+  await howToPlay.close();
   assert.deepEqual(errors, []);
-  console.log('Passed: skippable first-run 3 by 3 connection lesson, goal explanation, 3D rotation lesson, and persisted completion.');
+  console.log('Passed: skippable first-run 3 by 3 connection lesson, goal explanation, 3D rotation lesson, How to play entry, and persisted completion.');
 } finally {
   await browser.close();
 }
