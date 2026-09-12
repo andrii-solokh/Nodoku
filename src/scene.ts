@@ -14,7 +14,8 @@ import {
 type GestureCallbacks = {
   onDoubleTap?: (id: number) => void;
   onTapSettled?: () => void;
-  onStrokeStart?: (id: number) => void;
+  // Returning false hands this drag back to camera rotation instead of drawing.
+  onStrokeStart?: (id: number) => boolean | void;
   onStrokeEdge?: (a: number, b: number) => boolean;
   onStrokeEnd?: () => void;
   onRotate?: () => void;
@@ -2059,7 +2060,11 @@ export class BoardScene {
           if (this.gestureNode !== null) {
             this.strokeNode = this.gestureNode;
             this.strokeActive = true;
-            this.gestures.onStrokeStart?.(this.gestureNode);
+            if (this.gestures.onStrokeStart?.(this.gestureNode) === false) {
+              this.gestureNode = null;
+              this.strokeNode = null;
+              this.strokeActive = false;
+            }
           }
         }
         if (!this.moved) return;

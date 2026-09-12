@@ -1677,3 +1677,8 @@ TODO / Note
 - Simplified the mobile game activity link to show only the live Online count.
 - Kept the link clickable so the complete visitor, puzzle, connection, and dot totals remain available in Statistics.
 - Verified the iPhone game header hides the rotating metric and divider, then ran the required web-game smoke check.
+
+## 2026-09-12 — Reliable 3D onboarding rotation
+- Fixed the 3D tutorial so a drag that begins on a node still rotates the board; compact 3D boards no longer require finding empty space first.
+- Rewrote the connection lesson to state that a link clears a dot from both nodes and that double-tapping a node connects every available neighboring node at once.
+- Added regression coverage for turning the 3D tutorial from a visible node. Verified the iPhone tutorial reaches Done after that gesture, with build and onboarding tests passing.

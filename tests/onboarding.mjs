@@ -30,8 +30,8 @@ try {
   await page.mouse.move(b.screen.x, b.screen.y, { steps: 8 });
   await page.mouse.up();
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 3');
-  assert.match(await page.locator('#onboarding-message').textContent(), /Every dot needs a connection/);
-  assert.match(await page.locator('#onboarding-message').textContent(), /Double-tap a node to connect every available neighbor/);
+  assert.match(await page.locator('#onboarding-message').textContent(), /Each link clears one dot from both nodes/);
+  assert.match(await page.locator('#onboarding-message').textContent(), /Double-tap a node to connect every available neighboring node at once/);
   const afterFirst = await state(page);
   const connected = new Set(afterFirst.edges.map(edge => [...edge].sort((a, b) => a - b).join(':')));
   const source = afterFirst.nodes.find(node => node.remaining > 0 && afterFirst.nodes.some(other =>
@@ -49,10 +49,11 @@ try {
   await page.locator('#onboarding-next').click();
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 3');
   assert.equal((await state(page)).nodes.length, 26, 'The next lesson switches to a 3D board');
-  const canvas = await page.locator('#onboarding-stage canvas').boundingBox();
-  await page.mouse.move(canvas.x + 48, canvas.y + 80);
+  const rotationNode = (await state(page)).nodes.find(node => node.screen?.pickable);
+  assert.ok(rotationNode, 'The 3D lesson has a visible node to turn from');
+  await page.mouse.move(rotationNode.screen.x, rotationNode.screen.y);
   await page.mouse.down();
-  await page.mouse.move(canvas.x + 150, canvas.y + 95, { steps: 8 });
+  await page.mouse.move(rotationNode.screen.x + 102, rotationNode.screen.y + 15, { steps: 8 });
   await page.mouse.up();
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === 'Done');
   await page.locator('#onboarding-next').click();
