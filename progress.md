@@ -1905,3 +1905,8 @@ TODO / Note
 2026-09-12
 - Show Finish tutorial only after the tutorial cube is fully solved, and guard the completion handler against unsolved or celebrating states. Undoing completion hides the action; restoring the solved puzzle reveals it again.
 - Build and full onboarding browser walkthrough passed, including hidden-button activation protection, the final-connection gate, and undo/redo after completion. Inspected mobile free-play screenshot with the action hidden and ran the web-game client.
+
+2026-09-12
+- Removed the home preview's Solving / Continue Solving control, click handler, and styles. The preview runs automatically without a player pause/resume option.
+- Updated browser fixtures that previously used that button to isolate scene animations through the existing dialog suspension behavior instead. Live-demo assertions now check automatic progress and absence of the control.
+- Production build, syntax checks, required web-game client, and focused desktop/mobile autoplay checks passed; inspected both layouts. The broader demo/audio suites were stopped after slow runs under local browser load; they are not reported as passing. Deterministic demo/audio fixtures now remove the loader whose dismissal is blocked by their frozen RAF.

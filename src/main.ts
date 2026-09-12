@@ -189,7 +189,7 @@ app.innerHTML = `
       <div class="start-actions"><button class="start-button" id="start-button">${icon("play")}Start connecting</button><button class="resume-button" id="resume-button" hidden>Continue your puzzle</button></div>
     </div>
   </section>
-  <div class="home-stage-wrap"><div id="home-stage" class="stage home-stage"></div><div class="preview-caption"><button class="demo-toggle" id="demo-toggle" aria-label="Pause demo" aria-pressed="false" title="Pause demo"><span class="demo-toggle-option"><span class="demo-toggle-icon" id="demo-toggle-icon">${icon("pause")}</span><span id="preview-caption">Solving</span></span></button></div></div>
+  <div class="home-stage-wrap"><div id="home-stage" class="stage home-stage"></div></div>
 </section>
 <section class="game-main" aria-label="Puzzle board">
   <div id="game-stage" class="stage game-stage"></div>
@@ -1599,17 +1599,6 @@ document.addEventListener("visibilitychange", () => {
     ambientAudio.resume();
     maybeComplete();
   }
-});
-el("demo-toggle").addEventListener("click", () => {
-  demo.togglePaused();
-  el("demo-toggle-icon").innerHTML = icon(demo.paused ? "play" : "pause");
-  const label = demo.paused ? "Resume demo" : "Pause demo";
-  el("demo-toggle").setAttribute("aria-label", label);
-  el("demo-toggle").setAttribute("aria-pressed", String(demo.paused));
-  el("demo-toggle").title = label;
-  el("preview-caption").textContent = demo.paused
-    ? "Continue Solving"
-    : "Solving";
 });
 el("undo-button").addEventListener("click", undo);
 el("redo-button").addEventListener("click", redo);

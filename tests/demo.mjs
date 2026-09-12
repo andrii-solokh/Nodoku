@@ -62,21 +62,35 @@ const connection = async page => {
 try {
   const live = await browser.newPage({ viewport: { width: 1440, height: 960 } });
   watch(live);
-  await live.goto(url);
+  await live.goto(url, { waitUntil: "domcontentloaded" });
   await live.waitForFunction(() => JSON.parse(window.render_game_to_text()).demo?.connected >= 2);
   assert.equal((await state(live)).mode, "home", "actual animation runs on the home page");
-  await live.locator("#demo-toggle").click();
-  const paused = (await state(live)).edges;
-  await live.waitForTimeout(1600);
-  assert.deepEqual((await state(live)).edges, paused, "pause stops real-time connections");
-  await live.screenshot({ path: `${out}/home-paused.png` });
+  assert.equal(await live.locator('#demo-toggle').count(), 0, 'Preview has no pause/resume button');
+  const connected = (await state(live)).demo.connected;
+  await live.waitForFunction(count => JSON.parse(window.render_game_to_text()).demo.connected > count, connected);
+  await live.screenshot({ path: `${out}/home-autoplay.png` });
   await live.close();
 
+  if (process.argv.includes('--autoplay-smoke')) {
+    const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    watch(mobile);
+    await mobile.goto(url, { waitUntil: 'domcontentloaded' });
+    await mobile.waitForFunction(() => JSON.parse(window.render_game_to_text()).demo?.connected >= 2);
+    assert.equal(await mobile.locator('#demo-toggle').count(), 0);
+    const connected = (await state(mobile)).demo.connected;
+    await mobile.waitForFunction(count => JSON.parse(window.render_game_to_text()).demo.connected > count, connected);
+    await mobile.screenshot({ path: `${out}/mobile-autoplay.png`, fullPage: true });
+    await mobile.close();
+    assert.deepEqual(errors, []);
+    console.log('Passed: automatic desktop/mobile preview progresses without pause/resume controls');
+  } else {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
   watch(page);
   // Drive the app's explicit time hook without competing real-time animation frames.
   await page.addInitScript(() => { window.requestAnimationFrame = () => 1; window.cancelAnimationFrame = () => {}; });
   await page.goto(url);
+  // The deterministic fixture freezes the loader dismissal frames too.
+  await page.evaluate(() => document.getElementById("app-loader")?.remove());
   assert.equal((await state(page)).edges.length, 0, "preview starts empty");
   let s;
   do { s = await connection(page); } while (!s.solved);
@@ -146,10 +160,7 @@ try {
   await connection(page);
   await page.screenshot({ path: `${out}/mobile-demo.png`, fullPage: true });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "mobile preview has no horizontal overflow");
-  await page.locator('#demo-toggle').click();
-  await advance(page, 5000);
-  assert.equal((await state(page)).edges.length, 1);
-  await page.locator('#demo-toggle').click();
+  assert.equal(await page.locator('#demo-toggle').count(), 0, 'Mobile preview has no pause/resume button');
   await connection(page);
   const reduced = await browser.newPage({ viewport: { width: 1000, height: 800 }, reducedMotion: "reduce" });
   watch(reduced);
@@ -159,7 +170,8 @@ try {
   assert.deepEqual((await state(reduced)).connectionAnimations, [], "actual reduced-motion scene has no growing rods");
   await reduced.close();
   assert.equal(errors.length, 0, errors.join("\n"));
-  console.log("Passed: real-time demo/pause, simultaneous turn and connection, fixed preview zoom, uninterrupted manual rotation, immediate clues and rod growth, complete hold, reduced motion, visible endpoints, one edge per step, full cube/flat solutions, replay, dialogs, settings changes, player save isolation, start/resume, large cube, mobile layout, and no browser errors.");
+  console.log("Passed: automatic real-time demo, simultaneous turn and connection, fixed preview zoom, uninterrupted manual rotation, immediate clues and rod growth, complete hold, reduced motion, visible endpoints, one edge per step, full cube/flat solutions, replay, dialogs, settings changes, player save isolation, start/resume, large cube, mobile layout, and no browser errors.");
+  }
 } finally {
   await fs.writeFile(`${out}/errors.json`, JSON.stringify(errors, null, 2));
   await browser.close();

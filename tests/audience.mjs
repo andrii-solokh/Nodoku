@@ -163,7 +163,6 @@ try {
   const timed = await fixture({ clock: true });
   const live = timed.page;
   const control = timed.mock;
-  await live.locator('#demo-toggle').click();
   await live.clock.pauseAt(await live.evaluate(() => Date.now() + 1000));
   let before = snapshot(control);
   control.presence.body = { online: 15, scope: 'global' };
@@ -236,7 +235,6 @@ try {
 
   const rotating = await fixture({ clock: true });
   const rotatingPage = rotating.page;
-  await rotatingPage.locator('#demo-toggle').click();
   await rotatingPage.clock.pauseAt(await rotatingPage.evaluate(() => Date.now() + 1000));
   const currentMetric = () => rotatingPage.locator('.visitor-home .audience-rotating > :not([hidden])').textContent();
   assert.match(await currentMetric(), /Puzzles solved/, 'Solved puzzles lead the rotating stat');

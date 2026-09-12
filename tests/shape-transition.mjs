@@ -1,3 +1,4 @@
+import { toggleDemoSuspension } from './helpers/demo-suspension.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -114,7 +115,7 @@ try {
   assert.deepEqual(s.view.direction, [0, 0, 1]);
   await page.screenshot({ path: `${out}/flat-settled.png` });
 
-  await page.locator('#demo-toggle').click();
+  await toggleDemoSuspension(page);
   const flat = await state(page);
   await depth(page, '3d');
   cameraUnchanged(flat, await state(page));
@@ -123,7 +124,7 @@ try {
   active(s, 4);
   assert.ok(s.shapeTransition.nodes.some(node => Math.abs(node.position[2]) > .1), 'expansion spreads flat spheres into depth');
   assert.ok(s.shapeTransition.nodes.some(node => node.opacity > 0 && node.opacity < 1), 'new layers fade in during expansion');
-  assert.equal(s.demo.phase, 'paused', 'shape changes retain the manual demo pause');
+  assert.equal(s.edges.length, 0, 'Shape changes remain empty while the fixture suspends the demo');
   await page.screenshot({ path: `${out}/expand-mid.png` });
   await depth(page, 'flat');
   const reversed = await state(page);
@@ -139,8 +140,8 @@ try {
   await advance(page, 800);
   settled(await state(page), 4);
   await advance(page, 5000);
-  assert.equal((await state(page)).edges.length, 0, 'paused demo cannot add stale connections after a reversal');
-  await page.locator('#demo-toggle').click();
+  assert.equal((await state(page)).edges.length, 0, 'suspended demo cannot add stale connections after a reversal');
+  await toggleDemoSuspension(page);
   for (let i = 0; i < 50 && (await state(page)).edges.length === 0; i++) await advance(page, 100);
   assert.ok((await state(page)).edges.length > 0, 'demo resumes after shape settles');
 
@@ -212,7 +213,7 @@ try {
     await advance(sizing, 160);
   }
   await advance(sizing, 800); settled(await state(sizing), 3, 3);
-  await sizing.locator('#demo-toggle').click();
+  await toggleDemoSuspension(sizing);
   const beforeFlat = await state(sizing);
   await depth(sizing, 'flat');
   let flatSize = await state(sizing);
@@ -226,7 +227,7 @@ try {
   await resizeGrid(sizing, 5); await advance(sizing, 400);
   flatSize = await state(sizing);
   active(flatSize, 1, 5, 41);
-  assert.equal(flatSize.demo.phase, 'paused', 'size changes retain the manual pause');
+  assert.equal(flatSize.edges.length, 0, 'Size changes remain empty while the fixture suspends the demo');
   await sizing.screenshot({ path: `${out}/flat-size-grow-mid.png` });
   await resizeGrid(sizing, 4);
   const flatReversed = await state(sizing);
@@ -237,7 +238,7 @@ try {
   await resizeGrid(sizing, 5); await advance(sizing, 800);
   settled(await state(sizing), 1, 5);
   await advance(sizing, 4000);
-  assert.equal((await state(sizing)).edges.length, 0, 'paused size changes leave no stale demo connections');
+  assert.equal((await state(sizing)).edges.length, 0, 'suspended size changes leave no stale demo connections');
   await resizeGrid(sizing, 4); await advance(sizing, 160);
   await sizing.locator('[data-difficulty="medium"]').click();
   settled(await state(sizing), 1, 4);
@@ -250,7 +251,7 @@ try {
   await sizing.close();
 
   const resized = await fixture();
-  await resized.locator('#demo-toggle').click();
+  await toggleDemoSuspension(resized);
   await depth(resized, 'flat'); await advance(resized, 800);
   await depth(resized, '3d'); await resizeGrid(resized, 5); await advance(resized, 400);
   const beforeResize = (await state(resized)).shapeTransition;
