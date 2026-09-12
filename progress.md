@@ -1943,3 +1943,7 @@ TODO / Note
 2026-09-12
 - Removed Undo, Redo and Hint lessons, the onboarding tool toolbar, tool shortcuts, arrow guide and its Studio setting. The tutorial now has eight steps, ending with unrestricted gesture play to finish the cube; Finish tutorial remains gated on full completion. Normal game tools and tutorial rotation guidance remain.
 - Updated direct-step URLs, documentation and browser fixtures. Production build, full onboarding walkthrough, all eight navigation links, 199 unit tests and focused normal-game tool/keyboard checks passed. Ran the web-game client and inspected mobile practice/completion screenshots. Closed superseded arrow-animation PR #119 without merging.
+
+2026-09-12
+- Preserved the link established by selecting two nodes when the tutorial advances to dragging. The drag cue prefers the bottom pair, with an available-pair fallback when the player already connected that pair. Direct flat-lesson links also retain the selection connection.
+- Build, full onboarding walkthrough and eight-step navigation checks passed. Verified the alternate bottom-first selection path on desktop/touch, ran the web-game client and inspected the retained top link beside the bottom drag guide.

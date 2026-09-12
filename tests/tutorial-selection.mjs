@@ -45,6 +45,7 @@ try {
     assert.equal((await connected.jsonValue()).edges.length, 1);
     await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '2 of 8');
     assert.equal(await page.locator('.onboarding-cue.is-drag').count(), 1);
+    assert.deepEqual((await state(page)).edges, [[first, second]], 'The established connection survives the lesson transition');
     await page.close();
   }
   const reduced = await browser.newPage({ reducedMotion: 'reduce' });
