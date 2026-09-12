@@ -1667,3 +1667,8 @@ TODO / Note
 - Kept compact PostHog puzzle-action telemetry, but let the renderer use its normal mobile-safe frame lifecycle.
 - Removed the fresh-puzzle confirmation; Start connecting now opens the shared daily puzzle directly.
 - Verified the mobile home screen becomes interactive with no loader or browser errors, and ran the required web-game Playwright smoke check.
+
+## 2026-09-12 — Centered mobile puzzle header
+- Centered the active puzzle title and progress in the portrait mobile header.
+- Moved the Online/Visitors activity link to the upper-right edge below the header controls, preserving its Statistics destination.
+- Verified the iPhone game view has centered puzzle information, a right-aligned activity link, and no browser errors; ran the required web-game smoke check.
