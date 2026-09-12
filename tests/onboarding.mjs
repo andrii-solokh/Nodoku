@@ -305,6 +305,8 @@ try {
   await page.waitForTimeout(450);
   assert.equal(await page.locator('#onboarding-turn-controls').isHidden(), true, 'The connection lesson replaces turn controls');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Make a 3D connection.');
+  const connectionStageBounds = await page.locator('#onboarding-stage').boundingBox();
+  const connectionCopyTop = (await page.locator('.onboarding-copy').boundingBox()).y;
   const threeD = await state(page);
   const source = threeD.nodes.find(node =>
     node.screen?.pickable && threeD.nodes.some(other => other.screen?.pickable && adjacent(node, other)),
@@ -314,6 +316,10 @@ try {
   await drag(page, source, target);
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '7 of 9');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Undo your move.');
+  assert.deepEqual(await page.locator('#onboarding-stage').boundingBox(), connectionStageBounds,
+    'Showing the tools and keyboard shortcut must not move or resize the puzzle');
+  assert.equal((await page.locator('.onboarding-copy').boundingBox()).y, connectionCopyTop,
+    'Instruction text starts at the same position when shortcuts appear');
   assert.equal(await page.locator('#onboarding-shortcut').isVisible(), true);
   assert.equal(await page.locator('#onboarding-shortcut kbd').first().evaluate(e => getComputedStyle(e).fontSize), '24px');
   const modifier = await page.evaluate(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? '⌘' : 'Ctrl');
@@ -402,17 +408,16 @@ try {
     const canvas = document.querySelector('#onboarding-stage canvas');
     const copy = document.querySelector('.onboarding-copy');
     if (!canvas || !copy) throw new Error('Portrait onboarding elements are missing');
-    const canvasBounds = canvas.getBoundingClientRect();
     const copyBounds = copy.getBoundingClientRect();
     return {
       height: window.innerHeight,
       scrollHeight: document.documentElement.scrollHeight,
-      canvasBottom: canvasBounds.bottom,
+      boardBottom: Math.max(...JSON.parse(window.render_game_to_text()).nodes.map(node => node.screen.y + node.screen.radius)),
       copyTop: copyBounds.top,
     };
   });
   assert.ok(portraitLayout.scrollHeight <= portraitLayout.height + 1, 'portrait onboarding fits without vertical page scroll');
-  assert.ok(portraitLayout.canvasBottom <= portraitLayout.copyTop, 'portrait lesson copy stays below the board');
+  assert.ok(portraitLayout.boardBottom <= portraitLayout.copyTop, 'portrait lesson copy stays below the visible board');
   const cueBounds = await portrait.locator('#onboarding-cue .onboarding-cue-line').boundingBox();
   assert.ok(cueBounds && cueBounds.x >= 0 && cueBounds.x + cueBounds.width <= 390, 'the visual cue realigns with the board after resizing to mobile');
   await portrait.close();

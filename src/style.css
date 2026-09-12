@@ -457,11 +457,14 @@ a {
 }
 .onboarding-main {
   display: none;
-  --onboarding-board-offset: 118px;
+  /* Reserve the tallest lesson up front; keep the board centered for every step. */
+  --onboarding-board-space: 380px;
+  --onboarding-board-offset: calc(var(--onboarding-board-space) / 2);
+  --onboarding-copy-space: max(236px, calc(196px + env(safe-area-inset-bottom)));
   box-sizing: border-box;
   height: 100dvh;
   min-height: 0;
-  padding-bottom: max(236px, calc(196px + env(safe-area-inset-bottom)));
+  padding-bottom: var(--onboarding-board-space);
   position: relative;
   overflow: hidden;
 }
@@ -613,7 +616,7 @@ a {
   position: absolute;
   z-index: 1;
   left: 50%;
-  bottom: max(24px, env(safe-area-inset-bottom));
+  top: calc(100% - var(--onboarding-copy-space) + 12px);
   width: min(440px, calc(100% - 40px));
   transform: translateX(-50%);
   text-align: center;
@@ -1314,8 +1317,7 @@ a {
 }
 @media (max-height: 700px) {
   .onboarding-main {
-    --onboarding-board-offset: 102px;
-    padding-bottom: max(205px, calc(176px + env(safe-area-inset-bottom)));
+    --onboarding-copy-space: max(205px, calc(176px + env(safe-area-inset-bottom)));
   }
   .onboarding-copy h2 { font-size: 28px; }
   .onboarding-copy p { font-size: 14px; margin-top: 6px; }
@@ -1329,6 +1331,22 @@ a {
   display: none;
 }
 .onboarding .onboarding-main { display: block; }
+@media (max-height: 500px) and (min-aspect-ratio: 3/2) {
+  .onboarding-main { --onboarding-board-space: 64px; }
+  .onboarding-stage { width: calc(55% - 120px); margin-left: 120px; }
+  .onboarding-turn-controls {
+    left: 12px;
+    right: auto;
+    bottom: 50%;
+    transform: translateY(50%);
+  }
+  .onboarding-copy {
+    top: 50%;
+    left: 77.5%;
+    width: calc(45% - 40px);
+    transform: translate(-50%, -50%);
+  }
+}
 @media (min-width: 1600px) {
   .home-stage {
     height: 700px;
@@ -1796,13 +1814,6 @@ a {
 @keyframes tutorial-tool-ping {
   0%, 15% { opacity: .9; transform: scale(1); }
   75%, 100% { opacity: 0; transform: scale(1.14); }
-}
-.onboarding-controls-active .onboarding-main { --onboarding-board-offset: 58px; }
-@media (max-width: 760px) and (orientation: portrait) {
-  .onboarding-controls-active .onboarding-main { --onboarding-board-offset: 0px; }
-  .onboarding-controls-active .onboarding-copy {
-    bottom: max(132px, calc(116px + env(safe-area-inset-bottom)));
-  }
 }
 
 .onboarding-rotation-keys { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
