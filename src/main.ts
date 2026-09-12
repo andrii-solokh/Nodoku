@@ -888,6 +888,7 @@ function renderOnboardingCue() {
 }
 
 function renderOnboarding() {
+  updateOnboardingUrl();
   app.classList.toggle("onboarding-practice", isOnboardingPractice());
   app.classList.toggle("onboarding-rotation-lesson", onboardingStep === 5);
   const copy = [
@@ -1093,13 +1094,26 @@ function finishOnboarding(completed = false) {
   puzzle = null;
   selected = null;
   mode = "home";
+  updateOnboardingUrl();
   app.className = "home";
   moveCanvas("home-stage");
   updateOptions();
   persist();
   el("start-button").focus({ preventScroll: true });
 }
-function startOnboarding() {
+function updateOnboardingUrl() {
+  const url = new URL(location.href);
+  if (mode === "onboarding") {
+    url.searchParams.set("onboarding", "1");
+    url.searchParams.set("step", String(onboardingStep + 1));
+    if (onboardingStep === 5) url.searchParams.set("direction", tutorialDirections[onboardingRotation]);
+    else url.searchParams.delete("direction");
+  } else {
+    for (const key of ["onboarding", "step", "direction"]) url.searchParams.delete(key);
+  }
+  if (url.href !== location.href) history.replaceState(history.state, "", url);
+}
+function startOnboarding(step = 0, rotation = 0) {
   clearCompletionMoment();
   if (mode === "playing" && puzzle && !puzzle.solved) {
     onStrokeEnd(false);
@@ -1110,20 +1124,30 @@ function startOnboarding() {
   if (demoFrame) cancelAnimationFrame(demoFrame);
   demoFrame = 0;
   demo.stop();
-  puzzle = new Puzzle({ size: 2, depth: 1, difficulty: "easy", seed: 17 });
+  puzzle = new Puzzle({ size: 2, depth: step >= 5 ? 2 : 1, difficulty: "easy", seed: 17 });
   selected = null;
-  onboardingStep = 0;
-  onboardingRotation = 0;
+  onboardingStep = step;
+  onboardingRotation = step === 5 ? rotation : 0;
   onboardingToolsComplete = false;
   onboardingPuzzleCompleted = false;
   keyboardIndex = -1;
   onboardingConnection = null;
+  // Direct links prepare the prerequisite move without skipping the lesson itself.
+  if (step === 2) {
+    onboardingConnection = [0, 1];
+    puzzle.toggle(...onboardingConnection);
+  } else if (step === 4) {
+    puzzle.toggleNode(0);
+  } else if (step >= 7) {
+    puzzle.toggle(...puzzle.solution[0]);
+    if (step === 8) puzzle.undo();
+  }
   mode = "onboarding";
   app.className = "onboarding";
   moveCanvas("onboarding-stage");
   scene.setPuzzle(puzzle);
   scene.setInteractive(true);
-  captureAnalytics("onboarding_started", { grid_size: 2, depth: 1 });
+  captureAnalytics("onboarding_started", { grid_size: 2, depth: puzzle.settings.depth, step: step + 1 });
   renderOnboarding();
 }
 function showOnboarding3d() {
@@ -1861,7 +1885,12 @@ if (document.hidden) ambientAudio.suspend();
 startCompletionTracking();
 subscribeFeatureFlag("music-score", enabled => scene.setMusicScoreEnabled(enabled));
 startAnalytics();
-if (showOnboarding) startOnboarding();
+if (showOnboarding) {
+  const params = new URLSearchParams(location.search);
+  const step = Number(params.get("step"));
+  const rotation = tutorialDirections.indexOf(params.get("direction") as TutorialDirection);
+  startOnboarding(Number.isInteger(step) && step >= 1 && step <= 10 ? step - 1 : 0, Math.max(0, rotation));
+}
 else if (resumeOnLoad) startGame(true);
 else updateOptions();
 finishLoading();
@@ -1876,7 +1905,7 @@ document.addEventListener("close", (event) => {
     maybeComplete();
 }, true);
 if (new URLSearchParams(location.search).has("admin")) {
-  void import("./admin").then(({ mountAdmin }) => mountAdmin(startOnboarding, () => {
+  void import("./admin").then(({ mountAdmin }) => mountAdmin(() => startOnboarding(), () => {
     startOnboarding();
     onboardingCue = { kind: "none" };
     selectNode(puzzle!.nodes[0].id);

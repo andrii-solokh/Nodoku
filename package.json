@@ -16,6 +16,7 @@
     "test:shape-transition": "node --import tsx tests/shape-transition.mjs",
     "test:node-floating": "node --import tsx tests/node-floating.mjs",
     "test:onboarding": "node --import tsx tests/onboarding.mjs",
+    "test:onboarding-navigation": "node tests/onboarding-navigation.mjs",
     "test:completion-moment": "node --import tsx tests/completion-moment.mjs",
     "test:demo-sound": "node --import tsx tests/demo-sound.mjs",
     "test:ad-free": "node tests/ad-free.mjs",
