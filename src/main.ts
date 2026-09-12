@@ -89,7 +89,7 @@ const rotationKeyDirections: Record<string, TutorialDirection> = {
   arrowup: "up", w: "up", arrowdown: "down", s: "down",
 };
 const rotationShortcut = (direction: TutorialDirection) =>
-  `<span class="rotation-shortcut" aria-hidden="true"><kbd data-key="arrow${direction}">${tutorialKeys[direction][0]}</kbd><span>or</span><kbd data-key="${tutorialKeys[direction][1].toLowerCase()}">${tutorialKeys[direction][1]}</kbd></span>`;
+  `<span class="rotation-shortcut" aria-hidden="true"><kbd data-key="arrow${direction}">${tutorialKeys[direction][0]}</kbd><kbd data-key="${tutorialKeys[direction][1].toLowerCase()}">${tutorialKeys[direction][1]}</kbd></span>`;
 const touchInput = window.matchMedia("(pointer: coarse)");
 let onboardingRotation = 0;
 let onboardingStep = 0;
