@@ -5,7 +5,7 @@ import { CONFIG_RULES, validateConfig } from "./config-schema";
 const TOKEN_KEY = "nodoku.admin-session.v1";
 type Snapshot = { config: GameConfig; revision: string };
 
-export async function mountAdmin(): Promise<void> {
+export async function mountAdmin(previewTutorial: () => void): Promise<void> {
   let token = "";
   const url = new URL(location.href);
   const fragment = new URLSearchParams(url.hash.slice(1));
@@ -26,7 +26,7 @@ export async function mountAdmin(): Promise<void> {
   launcher.className = "text-button";
   launcher.textContent = "Studio";
   launcher.hidden = true;
-  document.querySelector(".header-actions")?.prepend(launcher);
+  document.body.appendChild(launcher);
   launcher.addEventListener("click", () => { panel.hidden = false; panel.querySelector<HTMLButtonElement>("#admin-close")!.focus(); });
   panel.querySelector("#admin-close")!.addEventListener("click", () => { panel.hidden = true; if (!launcher.hidden) launcher.focus(); });
 
@@ -63,6 +63,7 @@ export async function mountAdmin(): Promise<void> {
     const dragKeys = Object.keys(CONFIG_RULES.scene).filter(key => key.startsWith("drag"));
     const sections: { title: string; group: Group; keys: string[] }[] = [
       { title: "Gum materials", group: "scene", keys: gumKeys },
+      { title: "Tutorial visuals", group: "tutorial", keys: Object.keys(CONFIG_RULES.tutorial) },
       { title: "Drag feel", group: "scene", keys: dragKeys },
       { title: "Home auto-solve", group: "demo", keys: Object.keys(CONFIG_RULES.demo).filter(key => key !== "revealDelayMs") },
       { title: "Node dots", group: "scene", keys: dotKeys },
@@ -97,6 +98,14 @@ export async function mountAdmin(): Promise<void> {
       summary.textContent = title;
       section.appendChild(summary);
       fields.appendChild(section);
+      if (group === "tutorial") {
+        const preview = document.createElement("button");
+        preview.type = "button";
+        preview.className = "admin-preview";
+        preview.textContent = "Preview tutorial";
+        preview.addEventListener("click", previewTutorial);
+        section.appendChild(preview);
+      }
       for (const key of keys) {
         const rule = CONFIG_RULES[group][key];
         const row = document.createElement("div");

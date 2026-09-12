@@ -51,6 +51,19 @@ export interface GameConfig {
     showAmbientMusic: boolean;
     ambientVolume: number;
   };
+  tutorial: {
+    enabled: boolean;
+    color: string;
+    focusCircles: boolean;
+    ringWidth: number;
+    ringScale: number;
+    ringOpacity: number;
+    dragCue: boolean;
+    doubleTapCue: boolean;
+    removalCue: boolean;
+    rotationCue: boolean;
+    gestureCycleMs: number;
+  };
   sponsors: { enabled: boolean; slots: number; showOnHome: boolean; showInGame: boolean };
 }
 
@@ -65,7 +78,12 @@ const dragDefaults = {
   dragFollowMs: 90, dragMagnetRange: .45, dragMagnetStrength: .7,
   dragMagnetResponseMs: 120, dragReturnMs: 520, dragElasticity: .55,
 };
-export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors", Record<string, Rule>> = {
+export const TUTORIAL_DEFAULTS: GameConfig["tutorial"] = {
+  enabled: true, color: "#8870bd", focusCircles: true, ringWidth: 2,
+  ringScale: 1.08, ringOpacity: .8, dragCue: true, doubleTapCue: true,
+  removalCue: true, rotationCue: true, gestureCycleMs: 2400,
+};
+export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tutorial", Record<string, Rule>> = {
   demo: {
     timingMode: {
       label: "Connection timing", kind: "choice", options: { melody: "Melody rhythm", fixed: "Fixed delay" },
@@ -176,6 +194,19 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors", Recor
     showAmbientMusic: { label: "Show ambient music", kind: "boolean", description: "Show the music button and let players listen to Moonlight. Hidden by default; turning this off also stops ambient playback." },
     ambientVolume: { label: "Ambient music volume", kind: "number", min: 0, max: 1, step: .01, description: "Volume of Moonlight, controlled separately from sound effects. Set to 0 to silence background music." },
   },
+  tutorial: {
+    enabled: { label: "Show tutorial visuals", kind: "boolean", description: "Show visual guidance alongside the tutorial instructions." },
+    color: { label: "Cue color", kind: "color" },
+    focusCircles: { label: "Focus circles", kind: "boolean", description: "Highlight both nodes in the connect and remove lessons." },
+    ringWidth: { label: "Ring thickness", kind: "number", min: 1, max: 6, step: .5, unit: "px" },
+    ringScale: { label: "Ring size", kind: "number", min: 1, max: 1.3, step: .01, unit: "× sphere", description: "Applies to focus circles and the outer edge of each double-tap ping." },
+    ringOpacity: { label: "Ring opacity", kind: "number", min: .1, max: 1, step: .05 },
+    dragCue: { label: "Drag trail", kind: "boolean", description: "Show a moving dot between the highlighted nodes." },
+    doubleTapCue: { label: "Double-tap pings", kind: "boolean", description: "Two quick pings on one sphere, followed by a pause." },
+    removalCue: { label: "Removal preview", kind: "boolean", description: "Temporarily fade the link and show a minus sign. This does not change the puzzle." },
+    rotationCue: { label: "Rotation cue", kind: "boolean" },
+    gestureCycleMs: { ...milliseconds("Drag and removal cycle", 1200, 6000), description: "Duration of each repeating demonstration. Double-tap pings keep their quick tapping rhythm." },
+  },
   sponsors: {
     enabled: { label: "Show sponsor placements", kind: "boolean", description: "Hide every sponsor placement across Nodoku while keeping the saved placement settings ready to restore." },
     slots: { label: "Sponsor slots", kind: "number", min: 1, max: 6, step: 1, integer: true },
@@ -210,7 +241,7 @@ function migrateSound(value: unknown, present: boolean): Record<string, unknown>
 export function validateConfig(value: unknown): GameConfig {
   const source = object(value);
   const hasSound = Object.hasOwn(source, "sound");
-  exactKeys(source, ["version", "demo", "scene", "sponsors", ...(hasSound ? ["sound"] : [])]);
+  exactKeys(source, ["version", "demo", "scene", "sponsors", ...(hasSound ? ["sound"] : []), ...(Object.hasOwn(source, "tutorial") ? ["tutorial"] : [])]);
   if (source.version !== 1) throw new Error("Unsupported configuration version.");
   const result: Record<string, unknown> = { version: 1 };
   for (const [group, rules] of Object.entries(CONFIG_RULES)) {
@@ -225,6 +256,8 @@ export function validateConfig(value: unknown): GameConfig {
       })()
       : group === "sound"
       ? migrateSound(source[group], hasSound)
+      : group === "tutorial"
+      ? { ...TUTORIAL_DEFAULTS, ...(Object.hasOwn(source, group) ? object(source[group]) : {}) }
       : group === "sponsors"
       ? { enabled: true, ...object(source[group]) }
       : object(source[group]);

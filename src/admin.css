@@ -46,15 +46,14 @@
 .admin-material-option:has(input:disabled) { opacity: .6; cursor: default; }
 .admin-description { grid-column: 1 / -1; margin: 0; color: #887a96; font-size: 11px; line-height: 1.5; }
 .admin-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
-.admin-actions button, #admin-login button { padding: 11px 8px; border-radius: 8px; background: #ede7f5; font-size: 12px; }
+.admin-preview, .admin-actions button, #admin-login button { padding: 11px 8px; border-radius: 8px; background: #ede7f5; font-size: 12px; }
 .admin-actions .admin-primary, #admin-login .admin-primary { color: white; background: #7966bd; }
 #admin-status { color: #7a688c; font-size: 11px; line-height: 1.6; margin-bottom: 0; }
 .admin-file { font-size: 10px; color: #9b8ba7; margin-bottom: 0; }
 #admin-login { display: grid; gap: 10px; }
 #admin-panel input:focus-visible { outline: 2px solid #8170c9; outline-offset: 2px; }
-#admin-open { color: #7966bd; font-size: 12px; }
+#admin-open { position: fixed; top: 76px; right: 20px; z-index: 40; color: #7966bd; font-size: 12px; background: #f8f6fd; padding: 10px 16px; border-radius: 12px; box-shadow: 0 3px 16px #33294a18; }
 @media (max-width: 760px) {
   #admin-panel { top: auto; left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 65dvh; padding: 18px; }
   .admin-heading { top: -18px; margin: -18px -18px 0; padding: 14px 18px; }
-  .playing .header-actions #admin-open { font-size: 11px; }
 }

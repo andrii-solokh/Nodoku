@@ -681,3 +681,25 @@ test("fixed endpoint and allowed methods prevent alternate filesystem paths", as
   assert.equal((await call("DELETE")).status, 405);
   assert.ok(!existsSync(resolve(root, "other")));
 });
+
+
+test("tutorial settings migrate missing fields and validate explicit tuning", () => {
+  const legacy = structuredClone(baseline);
+  delete legacy.tutorial;
+  assert.deepEqual(validateConfig(legacy).tutorial, baseline.tutorial);
+  legacy.tutorial = { enabled: false, ringOpacity: .25, gestureCycleMs: 6000 };
+  assert.deepEqual(validateConfig(legacy).tutorial, { ...baseline.tutorial, ...legacy.tutorial });
+  for (const [key, value] of Object.entries({ enabled: "false", color: "purple", ringWidth: 0, ringScale: 2,
+    ringOpacity: 1.1, gestureCycleMs: 0, unknown: true })) {
+    assert.throws(() => validateConfig({ ...baseline, tutorial: { ...baseline.tutorial, [key]: value } }));
+  }
+});
+
+test("tutorial visual tuning survives saving and reloading", async t => {
+  const { call } = fixture(t);
+  const snapshot = await (await call()).json();
+  snapshot.config.tutorial = { ...snapshot.config.tutorial, color: "#123456", focusCircles: false, gestureCycleMs: 4000 };
+  const saved = await call("PUT", snapshot);
+  assert.equal(saved.status, 200);
+  assert.deepEqual((await (await call()).json()).config.tutorial, snapshot.config.tutorial);
+});

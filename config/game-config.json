@@ -56,5 +56,18 @@
     "slots": 1,
     "showOnHome": true,
     "showInGame": true
+  },
+  "tutorial": {
+    "enabled": true,
+    "color": "#8870bd",
+    "focusCircles": true,
+    "ringWidth": 2,
+    "ringScale": 1.08,
+    "ringOpacity": 0.8,
+    "dragCue": true,
+    "doubleTapCue": true,
+    "removalCue": true,
+    "rotationCue": true,
+    "gestureCycleMs": 2400
   }
 }
