@@ -246,6 +246,10 @@ export class BoardScene {
       antialias: true,
       alpha: true,
       powerPreference: "high-performance",
+      // Session Replay snapshots the WebGL canvas after each frame. Preserve
+      // the drawing buffer so those snapshots contain the board rather than a
+      // cleared transparent frame.
+      preserveDrawingBuffer: true,
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setClearColor(COLORS.background, 0);

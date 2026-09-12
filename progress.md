@@ -1655,3 +1655,9 @@ TODO / Note
 - Reduced the graphic to the aligned Nodoku logo plus the 3D scene, retaining metadata copy outside the image.
 - Updated the image cache version to `3d-safe-v2` so social platforms fetch the new card.
 - Reviewed the full card, a centered square crop, and a 4:5 crop; all foreground nodes and the logo remain framed. Verified `tests/open-graph.test.ts`, `npm run build`, and the web-game Playwright smoke check.
+
+## 2026-09-12 — Replayable puzzle analytics
+- Enabled low-fidelity canvas capture for PostHog Session Replay (4 FPS at 60% resolution) and retained masked form fields, so Three.js boards appear in replay instead of as blank DOM space.
+- Preserved the WebGL drawing buffer specifically for capture frames, while keeping the gameplay renderer and interaction model unchanged.
+- Added privacy-safe puzzle telemetry: generated-board seed, connection/fill/drag actions, first connection, hint, undo/redo, first rotation, live completion progress, and compact session summaries for completion, exit, and backgrounding. No node coordinates or individual selection history is recorded.
+- Verified `npm run build`, `npm test` (194 passing), and the required Playwright game smoke run; reviewed `output/web-game/posthog-replay-canvas/shot-0.png`.
