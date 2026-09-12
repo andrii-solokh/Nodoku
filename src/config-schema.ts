@@ -263,7 +263,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     doubleTapPauseMs: { ...milliseconds("Pause before repeating", 400, 6000), description: "Pause after the second ping before the next pair." },
     doubleTapEasing: { label: "Ping movement", kind: "choice", options: { linear: "Steady", "ease-out": "Gentle finish" } },
     removalCue: { label: "Removal preview", kind: "boolean", description: "Temporarily fade the link and show a minus sign. This does not change the puzzle." },
-    toolCue: { label: "Tool pings", kind: "boolean", description: "Highlight Undo, Redo and Hint in their tutorial steps." },
+    toolCue: { label: "Tool pings", kind: "boolean", description: "Highlight Undo, Redo and Hint with pings and an arrow guiding the tool and keyboard shortcut." },
     rotationCue: { label: "Rotation cue", kind: "boolean" },
     gestureCycleMs: { ...milliseconds("Drag and removal cycle", 1200, 6000), description: "Duration of each repeating demonstration. Double-tap pings keep their quick tapping rhythm." },
   },
