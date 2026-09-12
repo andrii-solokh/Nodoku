@@ -89,7 +89,8 @@ try {
   await drag(page, a, b);
   mirror.toggle(firstA, firstB);
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 7');
-  assert.match(await page.locator('#onboarding-message').textContent(), /Double-tap a node/);
+  assert.equal(await page.locator('#onboarding-title').textContent(), 'Double-tap a node.');
+  assert.match(await page.locator('#onboarding-message').textContent(), /Tap twice quickly.*double-click/);
   assert.equal((await state(page)).removalCue, null, 'The removal preview is cleared when the player removes the link');
   assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-double-tap')), true, 'The fill lesson demonstrates the double-tap gesture');
   for (const selector of ['.onboarding-cue-line', '.onboarding-cue-end', '.onboarding-cue-hand'])

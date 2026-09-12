@@ -242,7 +242,7 @@ app.innerHTML = `
   <div class="dialog-header"><h2 id="help-title">Clear every dot.</h2><button class="icon-button close" data-close="help-dialog" aria-label="Close help">${icon("close")}</button></div>
   <p class="help-summary">Each dot is one connection a node still needs.</p>
   <p class="help-rule">3 dots = 3 links to neighboring nodes.</p>
-  <p class="help-instructions">Tap or drag between neighbors to connect. Clear every dot and join all nodes into one network. Swipe empty space to turn the puzzle.</p>
+  <p class="help-instructions">Tap or drag between neighbors to connect. Double-tap a node to connect all available neighbors. Clear every dot and join all nodes into one network. Swipe empty space to turn the puzzle.</p>
   <button class="start-button" data-close="help-dialog">Got it</button>
 </dialog>
 <dialog class="dialog" id="keyboard-dialog" aria-labelledby="keyboard-title">
@@ -789,14 +789,14 @@ function renderOnboarding() {
     },
     {
       step: "3 of 7",
-      title: "Fill a node.",
-      message: "Double-tap a node to connect every available neighboring node at once.",
+      title: "Double-tap a node.",
+      message: "Tap twice quickly to connect all available neighbors. With a mouse, double-click.",
       action: null,
     },
     {
       step: "4 of 7",
       title: "Clear every dot.",
-      message: "Keep connecting neighboring nodes until every dot is gone.",
+      message: "Drag or double-tap nodes until every dot is gone. Double-tap a cleared node to remove its links.",
       action: null,
     },
     {
