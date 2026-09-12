@@ -129,6 +129,7 @@ try {
   await drag(page, source, target);
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '7 of 7');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Use your tools.');
+  assert.match(await page.locator('#onboarding-next').textContent(), /Finish tutorial/, 'The final action closes the tutorial instead of starting a game');
   assert.equal(await page.locator('#onboarding-control-lesson').isVisible(), true, 'The final lesson shows the game toolbar');
   assert.equal(await page.locator('#onboarding-control-lesson .tools-group .tool-button').count(), 4, 'The tutorial uses every normal-game tool');
   assert.equal(await page.locator('.onboarding-desktop-shortcuts').isVisible(), true, 'Desktop shows the matching keyboard shortcuts');

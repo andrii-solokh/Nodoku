@@ -705,7 +705,7 @@ function renderOnboarding() {
       step: "7 of 7",
       title: "Use your tools.",
       message: "Undo, redo, restart, or ask for a hint from the toolbar whenever you need one.",
-      action: "Start connecting",
+      action: "Finish tutorial",
     },
   ][onboardingStep];
   el("onboarding-step").textContent = copy.step;
