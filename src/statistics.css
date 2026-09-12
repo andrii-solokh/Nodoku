@@ -52,7 +52,11 @@
 .statistics-ranking-bar { align-self: end; display: block; height: var(--ranking-height); min-height: 5px; border-radius: 7px 7px 2px 2px; background: #ad9dce; box-shadow: inset 0 1px #ffffff50; }
 .statistics-breakdowns > :last-child .statistics-ranking-bar { background: #9fbcad; }
 .statistics-ranking-meta { display: flex; align-items: start; justify-content: space-between; gap: 7px; min-height: 34px; color: #6f627d; line-height: 1.3; }
-.statistics-ranking-label { overflow-wrap: anywhere; }
+.statistics-ranking-label { display: inline-flex; min-height: 20px; align-items: center; overflow-wrap: anywhere; }
+.statistics-complexity-icon { width: 40px; height: 20px; color: #796491; }
+.statistics-complexity-icon .complexity-track { opacity: .22; }
+.statistics-complexity-icon .complexity-dot { fill: var(--paper); stroke: currentColor; stroke-opacity: .28; }
+.statistics-complexity-icon .complexity-dot.filled { fill: currentColor; stroke-opacity: 1; }
 .statistics-ranking strong { flex: 0 0 auto; font-weight: 500; color: #796491; font-variant-numeric: tabular-nums; }
 .statistics-ranking li.statistics-empty { display: block; grid-column: 1 / -1; height: auto; color: #8b7b94; font-size: 13px; line-height: 1.6; }
 .statistics-tracking { margin: 19px 0 6px; color: #93869d; font-size: 12px; line-height: 1.6; }

@@ -1583,3 +1583,7 @@ TODO / Note
 ## 2026-09-12 — Statistics home link
 - Made the statistics header logo a labelled link back to the Nodoku landing screen.
 - Verified the rendered link and navigation to `/`, plus the production build and full unit suite.
+
+## 2026-09-12 — Statistics complexity icons
+- Replaced text difficulty labels in statistics with the same connected-dot complexity symbols used on the home page.
+- Kept difficulty names in accessible row labels and verified the correct filled-dot level for each difficulty.
