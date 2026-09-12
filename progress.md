@@ -1825,3 +1825,8 @@ TODO / Note
 - Replaced the non-interactive tutorial toolbar with real Undo, Redo, Restart and Hint actions. Three separate lessons now require undoing the last 3D connection, restoring it, then applying a hint before Finish tutorial appears.
 - Expected tool pulses in the shared toolbar layout. Added Studio Tool pings toggle; global cue visibility/color and reduced motion apply. Desktop shortcuts work without intercepting admin/form inputs; Restart returns to the 3D practice step.
 - Build, 196 unit tests, full onboarding browser flow (buttons, shortcuts, real edge changes, replay after Restart), desktop/mobile screenshots and web-game client passed.
+
+2026-09-12
+- Rotation lesson now requires left/right/up/down checkpoints. Desktop players receive arrow-key/WASD prompts and highlighted keycaps; touch players receive matching control-panel guidance and pings. Primary-input changes update the instructions live.
+- Wrong-direction turns do not advance; held keys and input during camera motion cannot skip checkpoints. Directional arrows track the expected orientation, with vertical arrows beside the puzzle.
+- Build, complete onboarding regression through wrong-direction input, desktop keys and touch controls, all four checkpoints, subsequent tools, desktop/mobile screenshots and web-game client passed.
