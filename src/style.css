@@ -549,7 +549,10 @@ a {
 .onboarding-cue.is-double-tap .onboarding-cue-hand { display: none; }
 .onboarding-cue.is-double-tap .onboarding-cue-start {
   display: block;
-  animation: onboarding-cue-double-ping 2.4s linear infinite;
+  border-color: var(--cue-ping-color, #8870bd);
+  border-width: var(--cue-ping-width, 2px);
+  opacity: var(--cue-ping-opacity, .8);
+  animation: onboarding-cue-double-ping var(--cue-ping-cycle, 2400ms) var(--cue-ping-easing, linear) infinite;
 }
 .onboarding-cue.is-turn .onboarding-cue-line,
 .onboarding-cue.is-turn .onboarding-cue-node,
@@ -561,11 +564,6 @@ a {
   65% { opacity: var(--cue-drag-dot-opacity, .8); transform: translate(calc(-50% + var(--cue-dx)), calc(-50% + var(--cue-dy))); }
   75%, 100% { opacity: 0; transform: translate(calc(-50% + var(--cue-dx)), calc(-50% + var(--cue-dy))); }
 }
-@keyframes onboarding-cue-double-ping {
-  0%, 10% { opacity: var(--cue-ring-opacity, .7); transform: translate(-50%, -50%) scale(1); }
-  9%, 19% { opacity: 0; transform: translate(-50%, -50%) scale(var(--cue-ring-scale, 1.08)); }
-  20%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(var(--cue-ring-scale, 1.08)); }
-}
 @keyframes onboarding-cue-turn {
   0%, 12% { stroke-dashoffset: 24; opacity: 0; }
   20% { opacity: 1; }
@@ -573,7 +571,8 @@ a {
   85%, 100% { stroke-dashoffset: -208; opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .onboarding-cue *, .onboarding-cue-turn { animation: none; }
+  .onboarding-cue *, .onboarding-cue-turn,
+  .onboarding-cue.is-double-tap .onboarding-cue-start { animation: none; }
   .rotation-arrow-motion { display: none; }
 }
 /* Independent switches keep focus rings available without the moving demonstrations. */

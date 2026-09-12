@@ -77,6 +77,14 @@ export interface GameConfig {
     dragDotOpacity: number;
     dragEasing: "linear" | "ease-in-out";
     doubleTapCue: boolean;
+    doubleTapColor: string;
+    doubleTapWidth: number;
+    doubleTapScale: number;
+    doubleTapOpacity: number;
+    doubleTapPulseMs: number;
+    doubleTapGapMs: number;
+    doubleTapPauseMs: number;
+    doubleTapEasing: "linear" | "ease-out";
     removalCue: boolean;
     rotationCue: boolean;
     toolCue: boolean;
@@ -105,6 +113,8 @@ export const TUTORIAL_DEFAULTS: GameConfig["tutorial"] = {
   ringScale: 1.08, ringOpacity: .8, dragCue: true, dragColor: "#8870bd",
   dragLineWidth: 1, dragLineOpacity: .3, dragDotSize: 5, dragDotOpacity: .8,
   dragEasing: "ease-in-out", doubleTapCue: true,
+  doubleTapColor: "#8870bd", doubleTapWidth: 2, doubleTapScale: 1.08, doubleTapOpacity: .8,
+  doubleTapPulseMs: 216, doubleTapGapMs: 24, doubleTapPauseMs: 1944, doubleTapEasing: "linear",
   removalCue: true, rotationCue: true, toolCue: true, gestureCycleMs: 2400,
 };
 export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tutorial" | "selection", Record<string, Rule>> = {
@@ -234,7 +244,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     color: { label: "Cue color", kind: "color" },
     focusCircles: { label: "Focus circles", kind: "boolean", description: "Highlight both nodes in the connect and remove lessons." },
     ringWidth: { label: "Ring thickness", kind: "number", min: 1, max: 6, step: .5, unit: "px" },
-    ringScale: { label: "Ring size", kind: "number", min: 1, max: 1.3, step: .01, unit: "× sphere", description: "Applies to focus circles and the outer edge of each double-tap ping." },
+    ringScale: { label: "Ring size", kind: "number", min: 1, max: 1.3, step: .01, unit: "× sphere", description: "Size of the focus circles in the connect and remove lessons." },
     ringOpacity: { label: "Ring opacity", kind: "number", min: .1, max: 1, step: .05 },
     dragCue: { label: "Drag trail", kind: "boolean", description: "Show a moving dot between the highlighted nodes." },
     dragColor: { label: "Drag trail color", kind: "color", description: "Color of the line and its moving dot." },
@@ -244,6 +254,14 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     dragDotOpacity: { label: "Moving dot opacity", kind: "number", min: .1, max: 1, step: .05 },
     dragEasing: { label: "Drag movement", kind: "choice", options: { linear: "Steady", "ease-in-out": "Gentle start and finish" }, description: "Use Drag and removal cycle below to adjust timing." },
     doubleTapCue: { label: "Double-tap pings", kind: "boolean", description: "Two quick pings on one sphere, followed by a pause." },
+    doubleTapColor: { label: "Ping color", kind: "color" },
+    doubleTapWidth: { label: "Ping thickness", kind: "number", min: 1, max: 8, step: .5, unit: "px" },
+    doubleTapScale: { label: "Ping expansion", kind: "number", min: 1, max: 1.6, step: .01, unit: "× sphere", description: "Each ping starts at the sphere and expands to this size." },
+    doubleTapOpacity: { label: "Ping opacity", kind: "number", min: .1, max: 1, step: .05 },
+    doubleTapPulseMs: { ...milliseconds("Each ping duration", 80, 600), description: "Time for one ring to expand and fade." },
+    doubleTapGapMs: { ...milliseconds("Gap between pings", 20, 400), description: "Quiet interval between the two pings." },
+    doubleTapPauseMs: { ...milliseconds("Pause before repeating", 400, 6000), description: "Pause after the second ping before the next pair." },
+    doubleTapEasing: { label: "Ping movement", kind: "choice", options: { linear: "Steady", "ease-out": "Gentle finish" } },
     removalCue: { label: "Removal preview", kind: "boolean", description: "Temporarily fade the link and show a minus sign. This does not change the puzzle." },
     toolCue: { label: "Tool pings", kind: "boolean", description: "Highlight Undo, Redo and Hint in their tutorial steps." },
     rotationCue: { label: "Rotation cue", kind: "boolean" },
@@ -302,7 +320,15 @@ export function validateConfig(value: unknown): GameConfig {
       ? { ...SELECTION_DEFAULTS, ringColor: object(source.scene).connectionColor, guideColor: object(source.scene).connectionColor,
         ...(Object.hasOwn(source, group) ? object(source[group]) : {}) }
       : group === "tutorial"
-      ? { ...TUTORIAL_DEFAULTS, ...(Object.hasOwn(source, group) ? object(source[group]) : {}) }
+      ? (() => {
+        const tutorial = Object.hasOwn(source, group) ? object(source[group]) : {};
+        return { ...TUTORIAL_DEFAULTS,
+          doubleTapColor: tutorial.color ?? TUTORIAL_DEFAULTS.color,
+          doubleTapWidth: tutorial.ringWidth ?? TUTORIAL_DEFAULTS.ringWidth,
+          doubleTapScale: tutorial.ringScale ?? TUTORIAL_DEFAULTS.ringScale,
+          doubleTapOpacity: tutorial.ringOpacity ?? TUTORIAL_DEFAULTS.ringOpacity,
+          ...tutorial };
+      })()
       : group === "sponsors"
       ? { enabled: true, ...object(source[group]) }
       : object(source[group]);

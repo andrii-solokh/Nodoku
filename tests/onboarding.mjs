@@ -262,7 +262,7 @@ try {
   assert.equal(await page.locator('#onboarding-control-lesson .tools-group').evaluate(node => getComputedStyle(node).gridTemplateColumns), '42px 42px', 'Mobile uses the same compact two-by-two game toolbar');
   const shortcutDevice = await page.context().newCDPSession(page);
   await shortcutDevice.send('Emulation.setTouchEmulationEnabled', { enabled: true });
-  await page.waitForTimeout(100);
+  await page.locator('#onboarding-shortcut').waitFor({ state: 'hidden' });
   assert.equal(await page.locator('#onboarding-shortcut').isHidden(), true, 'Touch instruction focuses on the control panel');
   await page.screenshot({ path: 'output/web-game/onboarding-controls/mobile.png' });
   await shortcutDevice.send('Emulation.setTouchEmulationEnabled', { enabled: false });
