@@ -1579,3 +1579,7 @@ TODO / Note
 - Seven days, 30 days, and all time stack each activity histogram in a full-width row.
 - Removed the requested overview copy and category eyebrows.
 - Verified with the production build, the complete unit suite, a focused browser interaction capture, and a manual statistics period check.
+
+## 2026-09-12 — Statistics home link
+- Made the statistics header logo a labelled link back to the Nodoku landing screen.
+- Verified the rendered link and navigation to `/`, plus the production build and full unit suite.
