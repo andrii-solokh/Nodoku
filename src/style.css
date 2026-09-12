@@ -502,6 +502,24 @@ a {
   transform: translate(-50%, -50%) scale(var(--cue-ring-scale, 1.08));
 }
 .onboarding-cue.is-remove .onboarding-cue-line { background: none; opacity: 1; }
+.onboarding-cue.is-select .onboarding-cue-line,
+.onboarding-cue.is-select .onboarding-cue-hand { display: none; }
+.onboarding-cue.is-select .onboarding-cue-node {
+  display: block;
+  opacity: 0;
+  animation: onboarding-select-ping var(--cue-cycle, 2400ms) ease-out infinite;
+}
+.onboarding-cue.is-select .onboarding-cue-end { animation-delay: calc(var(--cue-cycle, 2400ms) * .4); }
+.onboarding-cue.is-select[data-selected="true"] .onboarding-cue-start {
+  /* The selected node already has the normal game selection ring. */
+  display: none;
+}
+.onboarding-cue.is-select[data-selected="true"] .onboarding-cue-end { animation-delay: 0s; }
+@keyframes onboarding-select-ping {
+  0%, 35%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+  8% { opacity: var(--cue-ring-opacity, .8); transform: translate(-50%, -50%) scale(1); }
+  30% { opacity: 0; transform: translate(-50%, -50%) scale(var(--cue-ring-scale, 1.08)); }
+}
 .onboarding-cue.is-remove .onboarding-cue-line::after {
   content: "−";
   position: absolute;
@@ -575,11 +593,14 @@ a {
 }
 @media (prefers-reduced-motion: reduce) {
   .onboarding-cue *, .onboarding-cue-turn,
+  .onboarding-cue.is-select .onboarding-cue-node,
   .onboarding-cue.is-double-tap .onboarding-cue-start { animation: none; }
+  .onboarding-cue.is-select .onboarding-cue-node { opacity: var(--cue-ring-opacity, .8); }
   .rotation-arrow-motion { display: none; }
 }
 /* Independent switches keep focus rings available without the moving demonstrations. */
 .onboarding-cue[data-focus="false"].is-drag .onboarding-cue-node,
+.onboarding-cue[data-focus="false"].is-select .onboarding-cue-node,
 .onboarding-cue[data-focus="false"].is-remove .onboarding-cue-node,
 .onboarding-cue[data-drag="false"] .onboarding-cue-hand,
 .onboarding-cue[data-drag="false"].is-drag .onboarding-cue-line,
