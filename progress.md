@@ -1888,3 +1888,8 @@ TODO / Note
 2026-09-12
 - Reversed all four 3D onboarding rotation arrowheads and animated strokes by reversing the SVG path direction. Preserved curve geometry, node-relative positioning, and existing rotation inputs/checkpoints.
 - Build and full onboarding walkthrough passed with screen-space direction assertions for all four arrows. Inspected desktop and mobile rotation screenshots and the required web-game client output.
+
+2026-09-12
+- Unlocked free play after the final Hint lesson. Tap-to-connect, drag add/remove, double-tap fill/clear, rotation controls, shared keyboard shortcuts and tools remain available on the tutorial cube. Restart preserves the unlocked state.
+- Added guarded cube completion handling with the existing success animation/sound and completed copy, while retaining the optional Finish tutorial action. Kept mobile captions and the finish action clear of both control groups. Reset keyboard focus on tutorial entry and preserve melody position when a tentative tap is rolled back.
+- Production build and full tutorial walkthrough passed. Regression flow exercises each free-play input, undo/redo/hint/restart, rotation, final connection via drag, exactly one cube completion acknowledgement and exit. Inspected mobile free play and completion screenshots and required web-game client output.
