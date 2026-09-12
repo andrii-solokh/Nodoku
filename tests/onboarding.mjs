@@ -129,11 +129,12 @@ try {
   await drag(page, source, target);
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '7 of 7');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Use your tools.');
-  assert.equal(await page.locator('#onboarding-control-lesson').isVisible(), true, 'The final lesson shows Undo, Redo, and Hint controls');
+  assert.equal(await page.locator('#onboarding-control-lesson').isVisible(), true, 'The final lesson shows the game toolbar');
+  assert.equal(await page.locator('#onboarding-control-lesson .tools-group .tool-button').count(), 4, 'The tutorial uses every normal-game tool');
   assert.equal(await page.locator('.onboarding-desktop-shortcuts').isVisible(), true, 'Desktop shows the matching keyboard shortcuts');
   await page.screenshot({ path: 'output/web-game/onboarding-controls/desktop.png' });
   await page.setViewportSize({ width: 390, height: 844 });
-  assert.equal(await page.locator('.onboarding-mobile-controls').isVisible(), true, 'Mobile explains where the controls live');
+  assert.equal(await page.locator('.onboarding-mobile-controls').isHidden(), true, 'Mobile keeps the matching toolbar clear of redundant copy');
   await page.screenshot({ path: 'output/web-game/onboarding-controls/mobile.png' });
   await page.locator('#onboarding-next').click();
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');
