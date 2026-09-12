@@ -213,15 +213,13 @@ app.innerHTML = `
     <button class="icon-button" type="button" data-onboarding-rotate="down" aria-label="Turn down">${icon("down")}</button>
     <span aria-hidden="true"></span>
   </div>
-  <aside class="onboarding-control-lesson" id="onboarding-control-lesson" aria-label="Puzzle controls" hidden>
+  <aside class="game-toolbar onboarding-toolbar" id="onboarding-control-lesson" aria-label="Puzzle controls" aria-hidden="true" hidden>
     <div class="tools-group" aria-hidden="true">
-      <button class="tool-button" type="button" tabindex="-1">${icon("undo")}Undo</button>
-      <button class="tool-button" type="button" tabindex="-1">${icon("redo")}Redo</button>
+      <button class="tool-button" type="button" tabindex="-1" disabled>${icon("undo")}Undo</button>
+      <button class="tool-button" type="button" tabindex="-1" disabled>${icon("redo")}Redo</button>
       <button class="tool-button" type="button" tabindex="-1">${icon("restart")}Restart</button>
       <button class="tool-button hint" type="button" tabindex="-1">${icon("hint")}Hint</button>
     </div>
-    <p class="onboarding-desktop-shortcuts">Desktop: <kbd>Ctrl / ⌘</kbd> <span>+</span> <kbd>Z</kbd> to undo, <kbd>Ctrl / ⌘</kbd> <span>+</span> <kbd>Shift</kbd> <span>+</span> <kbd>Z</kbd> to redo, and <kbd>H</kbd> for a hint.</p>
-    <p class="onboarding-mobile-controls">On mobile, these controls stay at the lower-left of the puzzle.</p>
   </aside>
   <section class="onboarding-copy" aria-live="polite">
     <span class="onboarding-step" id="onboarding-step">1 of 3</span>

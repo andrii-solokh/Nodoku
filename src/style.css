@@ -1778,59 +1778,9 @@ a {
   .difficulty-button { height: 29px; }
   .start-button { padding: 9px 14px; }
 }
-.onboarding-control-lesson {
-  position: absolute;
-  z-index: 2;
-  inset: 0;
-  color: #756a87;
-  pointer-events: none;
-}
-.onboarding-control-lesson .tools-group {
-  /* Reuse the game toolbar’s component and desktop position. */
-  top: calc(50% + 30px);
-}
-.onboarding-desktop-shortcuts,
-.onboarding-mobile-controls {
-  position: absolute;
-  left: max(20px, env(safe-area-inset-left));
-  top: calc(50% + 148px);
-  width: min(340px, calc(100% - 40px));
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.4;
-}
-.onboarding-desktop-shortcuts kbd {
-  display: inline-grid;
-  min-width: 18px;
-  height: 19px;
-  padding: 0 4px;
-  place-items: center;
-  border: 1px solid #d6cfe4;
-  border-bottom-width: 2px;
-  border-radius: 5px;
-  background: #fbfaff;
-  color: #625672;
-  font: 500 10px/1 var(--font);
-}
-.onboarding-desktop-shortcuts > span { padding: 0 2px; }
-.onboarding-mobile-controls { display: none; }
+.onboarding-toolbar > div { pointer-events: none; }
 .onboarding-controls-active .onboarding-main { --onboarding-board-offset: 58px; }
 @media (max-width: 760px) and (orientation: portrait) {
-  .onboarding-control-lesson .tools-group {
-    top: auto;
-    bottom: max(12px, env(safe-area-inset-bottom));
-  }
-  .onboarding-control-lesson .tools-group .tool-button {
-    width: 42px;
-    min-width: 42px;
-    height: 42px;
-    padding: 0;
-    justify-content: center;
-    gap: 0;
-    font-size: 0;
-  }
-  .onboarding-desktop-shortcuts { display: none; }
-  .onboarding-mobile-controls { display: none; }
   .onboarding-controls-active .onboarding-main { --onboarding-board-offset: 0px; }
   .onboarding-controls-active .onboarding-copy {
     bottom: max(132px, calc(116px + env(safe-area-inset-bottom)));
