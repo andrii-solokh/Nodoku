@@ -1974,3 +1974,8 @@ TODO / Note
 2026-09-12
 - Added pressed feedback to onboarding rotation keycaps: the specific arrow or WASD key turns purple/white and depresses while held. Preserves feedback when the guidance re-renders; key release, window blur and hidden-tab cleanup reset it.
 - Build and focused Chromium/WebKit checks passed for individual/simultaneous keys, release, blur, ignored modifiers and lesson transition. Ran the web-game client and inspected the pressed-key screenshot.
+
+2026-09-12
+- Added compact keyboard labels beside desktop Undo, Redo, Restart and Hint, using Mac/Windows modifier labels. Labels stay hidden on touch devices and compact toolbar layouts; accessible button names remain unchanged.
+- Added Shift+R for Restart through the existing button confirmation flow, with keyboard help and aria-keyshortcuts. Plain R still resets the view.
+- Build and focused Chromium/WebKit checks passed for all four shortcuts, restart confirmation, Mac/Windows labels and hidden phone/tablet labels in portrait/landscape. Ran the web-game client and inspected the desktop toolbar screenshot.
