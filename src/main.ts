@@ -85,6 +85,15 @@ let nextGroupToShow = 0;
 let firstConnectionTracked = false;
 let viewRotationTracked = false;
 let gameStartedAt = 0;
+let puzzleSessionStats = {
+  actions: 0,
+  connectionsAdded: 0,
+  connectionsRemoved: 0,
+  hints: 0,
+  undos: 0,
+  redos: 0,
+  rotations: 0,
+};
 const gameAudio = new GameAudio();
 const ambientAudio = new AmbientAudio(moonlightUrl);
 try {
@@ -256,6 +265,8 @@ app.querySelectorAll<HTMLButtonElement>(".game-toolbar button").forEach((button)
 let scene: BoardScene;
 let strokePuzzle: Puzzle | null = null;
 let strokeChanged = false;
+let strokeAdded = 0;
+let strokeRemoved = 0;
 const strokeEdges = new Set<string>();
 try {
   scene = new BoardScene(el("home-stage"), onTap, () => selectNode(null), {
@@ -268,6 +279,7 @@ try {
       if (mode === "playing" && !viewRotationTracked) {
         viewRotationTracked = true;
         captureAnalytics("puzzle_rotated", puzzleAnalyticsProperties());
+        trackPuzzleAction("rotate", "gesture");
       }
       if (mode === "onboarding" && onboardingStep === 2) {
         onboardingStep = 3;
@@ -489,7 +501,10 @@ function onNode(id: number) {
     toast("A node has no dots left. Remove a connection to make room.");
     return;
   }
-  tone(puzzle.edges.length > count ? "connect" : "disconnect");
+  const added = puzzle.edges.length > count;
+  trackFirstConnection("tap");
+  trackPuzzleAction("connection", "tap", 1, added ? 1 : 0, added ? 0 : 1);
+  tone(added ? "connect" : "disconnect");
   selectNode(null);
   updateGame();
 }
@@ -501,6 +516,13 @@ function onDoubleTap(id: number) {
   selectNode(null);
   if (result.changed) {
     trackFirstConnection("double_tap");
+    trackPuzzleAction(
+      "node_fill",
+      "double_tap",
+      result.count,
+      result.removed ? 0 : result.count,
+      result.removed ? result.count : 0,
+    );
     tone(result.removed ? "disconnect" : "connect", result.count,
       result.removed ? undefined : getConfig().demo.tempoBpm);
   }
@@ -602,6 +624,8 @@ function onStrokeStart(id: number) {
     onStrokeEnd(false);
     strokePuzzle = puzzle;
     strokeChanged = false;
+    strokeAdded = 0;
+    strokeRemoved = 0;
     strokeEdges.clear();
     puzzle.beginBatch();
     return;
@@ -610,6 +634,8 @@ function onStrokeStart(id: number) {
   onStrokeEnd();
   strokePuzzle = puzzle;
   strokeChanged = false;
+  strokeAdded = 0;
+  strokeRemoved = 0;
   strokeEdges.clear();
   puzzle.beginBatch();
   selectNode(id);
@@ -638,6 +664,8 @@ function onStrokeEdge(a: number, b: number): boolean {
     return true;
   }
   trackFirstConnection("drag");
+  if (puzzle.edges.length > count) strokeAdded++;
+  else strokeRemoved++;
   selectNode(b);
   tone(puzzle.edges.length > count ? "connect" : "disconnect");
   updateGame();
@@ -648,8 +676,12 @@ function onStrokeEnd(showCompletion = true) {
   if (!active) return;
   active.endBatch();
   const changed = strokeChanged;
+  const added = strokeAdded;
+  const removed = strokeRemoved;
   strokePuzzle = null;
   strokeChanged = false;
+  strokeAdded = 0;
+  strokeRemoved = 0;
   strokeEdges.clear();
   if (active === puzzle) {
     selectNode(null);
@@ -661,6 +693,7 @@ function onStrokeEnd(showCompletion = true) {
       return;
     }
     if (changed) {
+      trackPuzzleAction("connection_stroke", "drag", added + removed, added, removed);
       updateGame(showCompletion);
     } else if (showCompletion) maybeComplete();
   }
@@ -689,9 +722,57 @@ function puzzleAnalyticsProperties() {
     depth: current.depth,
     perspective: current.depth === 1 ? "flat" : "3d",
     difficulty: current.difficulty,
+    puzzle_seed: current.seed,
   } : {};
 }
-function trackFirstConnection(input: "drag" | "double_tap" | "hint") {
+function puzzleProgressProperties() {
+  const active = puzzle;
+  if (!active) return {};
+  return {
+    connection_count: active.edges.length,
+    dots_remaining: active.nodes.reduce((total, _, id) => total + active.remaining(id), 0),
+    progress_percent: Math.round(active.progress * 100),
+    network_groups: active.connectionGroups.length,
+    elapsed_seconds: Math.max(0, Math.round((performance.now() - gameStartedAt) / 1000)),
+  };
+}
+type PuzzleAction = "connection" | "connection_stroke" | "node_fill" | "hint" | "undo" | "redo" | "rotate";
+type PuzzleInput = "tap" | "drag" | "double_tap" | "hint" | "toolbar" | "gesture";
+function trackPuzzleAction(
+  action: PuzzleAction,
+  input: PuzzleInput,
+  changedConnections = 0,
+  connectionsAdded = 0,
+  connectionsRemoved = 0,
+) {
+  if (mode !== "playing" || !puzzle) return;
+  puzzleSessionStats.actions++;
+  puzzleSessionStats.connectionsAdded += connectionsAdded;
+  puzzleSessionStats.connectionsRemoved += connectionsRemoved;
+  if (action === "hint") puzzleSessionStats.hints++;
+  if (action === "undo") puzzleSessionStats.undos++;
+  if (action === "redo") puzzleSessionStats.redos++;
+  if (action === "rotate") puzzleSessionStats.rotations++;
+  captureAnalytics("puzzle_action", {
+    ...puzzleAnalyticsProperties(),
+    ...puzzleProgressProperties(),
+    action,
+    input,
+    changed_connections: changedConnections,
+    connections_added: connectionsAdded,
+    connections_removed: connectionsRemoved,
+  });
+}
+function trackPuzzleSession(event: "puzzle_session_completed" | "puzzle_session_exited" | "puzzle_progress_snapshot", reason: string) {
+  if (mode !== "playing" || !puzzle) return;
+  captureAnalytics(event, {
+    ...puzzleAnalyticsProperties(),
+    ...puzzleProgressProperties(),
+    ...puzzleSessionStats,
+    reason,
+  });
+}
+function trackFirstConnection(input: "tap" | "drag" | "double_tap" | "hint") {
   if (mode !== "playing" || firstConnectionTracked) return;
   firstConnectionTracked = true;
   captureAnalytics("puzzle_first_connection", { input, ...puzzleAnalyticsProperties() });
@@ -728,9 +809,9 @@ function maybeComplete() {
     if (attemptId) recordCompletion(puzzle, attemptId);
     captureAnalytics("puzzle_completion_viewed", {
       ...puzzleAnalyticsProperties(),
-      connection_count: puzzle.edges.length,
-      elapsed_seconds: Math.max(0, Math.round((performance.now() - gameStartedAt) / 1000)),
+      ...puzzleProgressProperties(),
     });
+    trackPuzzleSession("puzzle_session_completed", "completed");
     savedPuzzle = null;
     // The cadence continues the player's score, including its rests and held notes.
     tone("complete", 1, undefined, getConfig().demo.tempoBpm);
@@ -766,6 +847,15 @@ function startGame(
   firstConnectionTracked = resumedPuzzle ? puzzle.edges.length > 0 : false;
   viewRotationTracked = false;
   gameStartedAt = performance.now();
+  puzzleSessionStats = {
+    actions: 0,
+    connectionsAdded: 0,
+    connectionsRemoved: 0,
+    hints: 0,
+    undos: 0,
+    redos: 0,
+    rotations: 0,
+  };
   mode = "playing";
   app.className = `playing${puzzle.settings.depth === 1 ? " flat-playing" : ""}`;
   el("toast").textContent = "";
@@ -788,6 +878,7 @@ function startGame(
 }
 function goHome() {
   onStrokeEnd();
+  if (puzzle && !puzzle.solved) trackPuzzleSession("puzzle_session_exited", "home");
   document
     .querySelectorAll<HTMLDialogElement>("dialog[open]")
     .forEach((dialog) => dialog.close());
@@ -810,6 +901,8 @@ function undo() {
   const previous = new Set(puzzle?.edges.map(edge => edgeKey(...edge)));
   if (!puzzle || !puzzle.undo()) return;
   const added = puzzle.edges.filter(edge => !previous.has(edgeKey(...edge))).length;
+  const removed = previous.size - puzzle.edges.length + added;
+  trackPuzzleAction("undo", "toolbar", added + removed, added, removed);
   tone(added ? "connect" : "disconnect", added || 1);
   updateGame();
 }
@@ -820,6 +913,8 @@ function redo() {
   if (!puzzle || !puzzle.redo()) return;
   selectNode(null);
   const added = puzzle.edges.filter(edge => !previous.has(edgeKey(...edge))).length;
+  const removed = previous.size - puzzle.edges.length + added;
+  trackPuzzleAction("redo", "toolbar", added + removed, added, removed);
   tone(added ? "connect" : "disconnect", added || 1);
   updateGame();
 }
@@ -837,6 +932,7 @@ function hint() {
     scene.focusNode(result.edge[0]);
   }
   trackFirstConnection("hint");
+  trackPuzzleAction("hint", "hint", 1, result.removed ? 0 : 1, result.removed ? 1 : 0);
   captureAnalytics("puzzle_hint_used", {
     ...puzzleAnalyticsProperties(),
     action: result.removed ? "removed" : "added",
@@ -918,6 +1014,7 @@ for (const event of ["pointerdown", "pointerup", "touchend", "keydown", "click"]
 document.addEventListener("visibilitychange", () => {
   gameAudio.setEnabled(soundEnabled && !document.hidden);
   if (document.hidden) {
+    trackPuzzleSession("puzzle_progress_snapshot", "backgrounded");
     ambientAudio.suspend();
     demo.cancelPendingSound();
     onStrokeEnd(false);

@@ -34,10 +34,19 @@ export function startAnalytics(): void {
         capture_pageview: true,
         capture_pageleave: true,
         person_profiles: "identified_only",
-        // Allow the project-level Replay setting to record the game canvas.
-        // Keep form values masked even if more player-facing inputs are added later.
+        // The puzzle is rendered by Three.js, so DOM-only replay would otherwise
+        // show an empty board. Keep this deliberately low fidelity: it is enough
+        // to understand a solve without making replay a rendering workload.
         disable_session_recording: false,
-        session_recording: { maskAllInputs: true },
+        session_recording: {
+          maskAllInputs: true,
+          captureCanvas: {
+            recordCanvas: true,
+            canvasFps: 4,
+            canvasQuality: "0.5",
+          },
+          canvasCapture: { resolutionScale: 0.6 },
+        },
       });
       // This UUID is created locally by Nodoku and contains no profile data.
       instance.identify(getVisitorId());
