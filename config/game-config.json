@@ -51,24 +51,49 @@
     "showAmbientMusic": false,
     "ambientVolume": 0.18
   },
-  "sponsors": {
-    "enabled": false,
-    "slots": 1,
-    "showOnHome": true,
-    "showInGame": true
+  "selection": {
+    "ringEnabled": true,
+    "ringColor": "#8170c9",
+    "ringSize": 1.05,
+    "ringThickness": 1.45,
+    "ringOpacity": 1,
+    "guidesEnabled": true,
+    "guideColor": "#8170c9",
+    "guideThickness": 0.4,
+    "guideOpacity": 1
   },
   "tutorial": {
     "enabled": true,
     "color": "#8870bd",
     "focusCircles": true,
-    "ringWidth": 2,
-    "ringScale": 1.08,
-    "ringOpacity": 0.8,
+    "ringWidth": 5,
+    "ringScale": 1.04,
+    "ringOpacity": 1,
     "dragCue": true,
+    "dragColor": "#8870bd",
+    "dragLineWidth": 6,
+    "dragLineOpacity": 1,
+    "dragDotSize": 20,
+    "dragDotOpacity": 1,
+    "dragEasing": "ease-in-out",
     "doubleTapCue": true,
+    "doubleTapColor": "#8870bd",
+    "doubleTapWidth": 5,
+    "doubleTapScale": 1.04,
+    "doubleTapOpacity": 1,
+    "doubleTapPulseMs": 216,
+    "doubleTapGapMs": 24,
+    "doubleTapPauseMs": 1944,
+    "doubleTapEasing": "linear",
     "removalCue": true,
+    "toolCue": true,
     "rotationCue": true,
-    "gestureCycleMs": 2400,
-    "toolCue": true
+    "gestureCycleMs": 2400
+  },
+  "sponsors": {
+    "enabled": false,
+    "slots": 1,
+    "showOnHome": true,
+    "showInGame": true
   }
 }
