@@ -1879,3 +1879,8 @@ TODO / Note
 - Added a first tutorial lesson for selecting one node and then a neighbor, before the drag lesson. Two rings ping sequentially, follow floating nodes, and guide the second selection after the first; the selected node uses its normal game ring. Existing tutorial color/ring/cycle settings and reduced motion apply.
 - Each introduction requires the gesture it teaches. The first real connection gets a success acknowledgement and resets for drag practice without moving the board. Updated all lesson indexes, analytics names, tool gates and Studio double-tap preview for the 10-step sequence. Selection also remains usable in the free-solving lesson.
 - Build, full onboarding walkthrough and focused mouse/touch tests passed. Verified sequential ping timing, separate selections, rejected drag bypass, stationary transition, later tool/rotation progression, and static reduced-motion targets. Updated Studio walkthrough expectations. Inspected desktop/mobile screenshots and required web-game client output.
+
+2026-09-12
+- Reduced tutorial boards to 2×2 flat and 2×2×2 in 3D, keeping all ten lessons and the animated depth transition. Enabled size-two puzzles in the engine and expanded generation/solvability coverage; updated onboarding analytics, board assertions and Studio selection preview's node target.
+- Kept the selection lesson's second cue attached to the demonstrated neighbor after selecting the first node, which avoids a target jump on the four-node board.
+- Production build, all 199 unit tests, the full tutorial walkthrough, and focused mouse/touch selection/reduced-motion checks passed. Inspected the smaller flat board and eight-node cube screenshots; required web-game client ran.

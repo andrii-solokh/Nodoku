@@ -34,10 +34,15 @@ try {
     };
     await select(first);
     await page.waitForFunction(id => JSON.parse(window.render_game_to_text()).selected === id, first);
+    assert.equal(await page.locator('.onboarding-cue-end').getAttribute('data-node-id'), String(second),
+      'Selecting the first target keeps the second ping on the demonstrated neighbor');
     assert.equal((await state(page)).edges.length, 0, 'First selection does not connect on its own');
     await select(second);
-    await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).tutorialSuccess === 'Connection made');
-    assert.equal((await state(page)).edges.length, 1);
+    const connected = await page.waitForFunction(() => {
+      const current = JSON.parse(window.render_game_to_text());
+      return current.tutorialSuccess === 'Connection made' ? current : null;
+    });
+    assert.equal((await connected.jsonValue()).edges.length, 1);
     await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '2 of 10');
     assert.equal(await page.locator('.onboarding-cue.is-drag').count(), 1);
     await page.close();

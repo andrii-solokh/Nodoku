@@ -18,7 +18,7 @@ const settings: PuzzleSettings = {
 const keys = (edges: Edge[]) => edges.map((edge) => edgeKey(...edge)).sort();
 
 test("all board sizes, shapes, difficulties, and seeds generate connected solvable surface networks", () => {
-  for (let size = 3; size <= 7; size++) {
+  for (let size = 2; size <= 7; size++) {
     for (const depth of [1, size]) {
       for (const difficulty of ["easy", "medium", "hard"] as Difficulty[]) {
         for (const seed of [0, 1, 42, 1776, 0xffffffff]) {
@@ -467,7 +467,7 @@ test("corrupt or unbounded saves are rejected", () => {
   for (const value of [null, undefined, [], "save", 1, {}])
     assert.equal(Puzzle.restore(value), null);
   for (const [key, value] of [
-    ["size", 2],
+    ["size", 1],
     ["size", 1000000],
     ["size", 4.5],
     ["depth", 3],
