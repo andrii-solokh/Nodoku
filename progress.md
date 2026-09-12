@@ -1901,3 +1901,7 @@ TODO / Note
 2026-09-12
 - Hints now use the existing connection framing routine, choosing a shared face and checking both endpoints and the connection span for occlusion. Applied to normal play and onboarding; flat boards retain their orientation.
 - Build and full onboarding walkthrough passed, including a new two-endpoint visibility assertion after the Hint lesson. Added desktop/mobile browser coverage for hint additions and removals in flat and 3D puzzles.
+
+2026-09-12
+- Show Finish tutorial only after the tutorial cube is fully solved, and guard the completion handler against unsolved or celebrating states. Undoing completion hides the action; restoring the solved puzzle reveals it again.
+- Build and full onboarding browser walkthrough passed, including hidden-button activation protection, the final-connection gate, and undo/redo after completion. Inspected mobile free-play screenshot with the action hidden and ran the web-game client.

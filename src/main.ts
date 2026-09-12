@@ -950,7 +950,7 @@ function renderOnboarding() {
       message: onboardingPuzzleCompleted ? "You solved the cube. Ready for another puzzle?"
         : onboardingToolsComplete ? "Finish connecting the cube. All gestures and tools are available."
         : "Press Hint to get help with a connection.",
-      action: onboardingToolsComplete ? "Finish tutorial" : null,
+      action: onboardingToolsComplete && onboardingPuzzleCompleted && puzzle?.solved ? "Finish tutorial" : null,
     },
   ][onboardingStep];
   el("onboarding-step").textContent = onboardingStep === 5
@@ -1541,7 +1541,8 @@ for (const tool of ["undo", "redo", "restart", "hint"] as const)
   el(`onboarding-${tool}`).addEventListener("click", () => useOnboardingTool(tool));
 el("onboarding-skip").addEventListener("click", () => finishOnboarding());
 el("onboarding-next").addEventListener("click", () => {
-  if (onboardingStep === 9 && onboardingToolsComplete) finishOnboarding(true);
+  if (isOnboardingPractice() && onboardingStep === 9 && puzzle?.solved && !onboardingCelebrating)
+    finishOnboarding(true);
 });
 document
   .querySelectorAll<HTMLElement>("[data-onboarding-rotate]")

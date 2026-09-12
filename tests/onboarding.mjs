@@ -409,7 +409,9 @@ try {
     assert.equal(afterHint.nodes.find(node => node.id === id).screen.visible, true, 'Tutorial hint reveals both endpoints');
   assert.equal(await page.locator('.tutorial-tool-ping').count(), 0);
   assert.equal(await page.locator('#onboarding-shortcut').isHidden(), true);
-  assert.match(await page.locator('#onboarding-next').textContent(), /Finish tutorial/);
+  assert.equal(await page.locator('#onboarding-next').isHidden(), true, 'Finish stays hidden until the cube is solved');
+  await page.locator('#onboarding-next').evaluate(button => button.click());
+  assert.equal((await state(page)).mode, 'onboarding', 'Unsolved tutorial cannot be completed through the hidden button');
   // Finishing the lessons unlocks normal play on the same cube.
   await page.locator('#onboarding-restart').click();
   assert.equal(await page.locator('#onboarding-step').textContent(), '10 of 10');
@@ -462,6 +464,7 @@ try {
     await page.waitForFunction(() => !JSON.parse(window.render_game_to_text()).view.animating);
   }
   const almostSolved = await state(page);
+  assert.equal(await page.locator('#onboarding-next').isHidden(), true, 'One missing connection keeps Finish hidden');
   const missing = solution.solution.find(([a,b]) => !almostSolved.edges.some(([x,y]) => a === x && b === y));
   assert.ok(missing, 'One final connection remains for the player');
   let finalPair;
@@ -479,11 +482,17 @@ try {
   await settleSuccess(page);
   assert.equal((await state(page)).solved, true, 'Free play completes the real cube');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'All connected.');
+  assert.equal(await page.locator('#onboarding-next').isVisible(), true, 'Solving the cube reveals Finish tutorial');
   assert.deepEqual(await page.evaluate(() => window.tutorialSuccessMessages), [
     'Connection made', 'Connection made', 'Connection removed', 'Neighbors connected', 'All connected',
     'Turned left', 'Turned right', 'Turned up', 'Turned down', '3D connection made',
     'Move undone', 'Move restored', 'Hint applied', 'All connected',
   ], 'Free-play completion celebrates once without replaying lessons');
+  await page.locator('#onboarding-undo').click();
+  assert.equal(await page.locator('#onboarding-next').isHidden(), true, 'Undoing completion hides Finish again');
+  await page.locator('#onboarding-redo').click();
+  await settleSuccess(page);
+  assert.equal(await page.locator('#onboarding-next').isVisible(), true, 'Restoring the solved cube reveals Finish again');
   await page.locator('#onboarding-next').click();
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');
   assert.equal(await page.locator('.site-header').isVisible(), true, 'Finishing returns to the normal home screen');
