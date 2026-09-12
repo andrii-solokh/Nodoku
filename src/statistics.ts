@@ -26,6 +26,8 @@ export function parseStatistics(value: unknown, period: StatisticsPeriod): Stati
   return value as unknown as StatisticsData;
 }
 const format = new Intl.NumberFormat();
+const complexityIcon = (level: number) =>
+  `<svg class="complexity-icon statistics-complexity-icon" viewBox="0 0 40 20" aria-hidden="true"><path class="complexity-track" d="M6 10h28"/>${level > 1 ? `<path class="complexity-link" d="M6 10h${(level - 1) * 14}"/>` : ''}${[1, 2, 3].map(dot => `<circle class="complexity-dot${dot <= level ? ' filled' : ''}" cx="${6 + (dot - 1) * 14}" cy="10" r="3.5"/>`).join('')}</svg>`;
 const periodLabels: Record<StatisticsPeriod, string> = { today: 'Today', '7d': '7 days', '30d': '30 days', all: 'All time' };
 const metricLabels: Record<ActivityMetric, string> = { puzzlesSolved: 'Puzzles solved', visitors: 'Visitors', dotsCleared: 'Dots cleared' };
 const activityMetrics = Object.keys(metricLabels) as ActivityMetric[];
@@ -96,7 +98,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
     }
     el('statistics-chart-note').textContent = period === 'all' ? 'All-time totals appear above. Histograms show the last 30 days, in UTC.' : `${periodLabels[period]} · daily values in UTC.`;
   }
-  function ranking(id: string, entries: { label: string; count: number }[]) {
+  function ranking(id: string, entries: { label: string; count: number; complexity?: number }[]) {
     const list = el(id);
     list.replaceChildren();
     if (!entries.some(entry => entry.count > 0)) {
@@ -117,7 +119,8 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
       bar.setAttribute('aria-hidden', 'true');
       const label = document.createElement('span');
       label.className = 'statistics-ranking-label';
-      label.textContent = entry.label;
+      if (entry.complexity) label.innerHTML = complexityIcon(entry.complexity);
+      else label.textContent = entry.label;
       const value = document.createElement('strong');
       value.textContent = format.format(entry.count);
       const meta = document.createElement('span');
@@ -134,7 +137,8 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
     el('statistics-tracking').textContent = `Daily tracking began ${dateLabel(data.trackingSince)}. Earlier visitors appear only in the all-time visitor total.`;
     ranking('statistics-sizes', data.sizes.map(row => ({ label: `${row.size} × ${row.size}${row.depth === 1 ? ' · Flat' : ` × ${row.depth}`}`, count: row.count })));
     const labels = { easy: 'Gentle', medium: 'Focused', hard: 'Intricate' };
-    ranking('statistics-difficulties', data.difficulties.map(row => ({ label: labels[row.difficulty], count: row.count })));
+    const complexity = { easy: 1, medium: 2, hard: 3 };
+    ranking('statistics-difficulties', data.difficulties.map(row => ({ label: labels[row.difficulty], complexity: complexity[row.difficulty], count: row.count })));
     const body = el('statistics-daily-values');
     body.replaceChildren();
     for (const row of data.daily) {
