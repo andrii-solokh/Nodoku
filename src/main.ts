@@ -544,7 +544,7 @@ function renderOnboarding() {
     {
       step: "2 of 3",
       title: "Clear every dot.",
-      message: "Join every node into one network. Every dot needs a connection, so use every available connection. Double-tap a node to connect every available neighbor.",
+      message: "Each link clears one dot from both nodes. Double-tap a node to connect every available neighboring node at once.",
       action: "Show me 3D",
     },
     {
@@ -620,7 +620,9 @@ function onStrokeStart(id: number) {
   if (!puzzle || document.querySelector("dialog[open]"))
     return;
   if (mode === "onboarding") {
-    if (onboardingStep > 1) return;
+    // The 3D lesson is about turning the board. A drag that begins on a node
+    // must still rotate, because nodes cover much of the small tutorial board.
+    if (onboardingStep > 1) return false;
     onStrokeEnd(false);
     strokePuzzle = puzzle;
     strokeChanged = false;
