@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { chromium } from "playwright";
+import { validateConfig } from "../src/config-schema.ts";
 import { readAdminToken } from "../scripts/admin-api.ts";
 
 const url = process.env.TEST_URL || "http://127.0.0.1:4173";
@@ -8,7 +9,7 @@ const out = "output/web-game/configurator";
 await fs.mkdir(out, { recursive: true });
 const configPath = new URL("../config/game-config.json", import.meta.url);
 const original = await fs.readFile(configPath, "utf8");
-const originalConfig = JSON.parse(original);
+const originalConfig = validateConfig(JSON.parse(original));
 let written;
 const token = readAdminToken(process.cwd());
 const browser = await chromium.launch();

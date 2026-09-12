@@ -59,6 +59,12 @@ export interface GameConfig {
     ringScale: number;
     ringOpacity: number;
     dragCue: boolean;
+    dragColor: string;
+    dragLineWidth: number;
+    dragLineOpacity: number;
+    dragDotSize: number;
+    dragDotOpacity: number;
+    dragEasing: "linear" | "ease-in-out";
     doubleTapCue: boolean;
     removalCue: boolean;
     rotationCue: boolean;
@@ -81,7 +87,9 @@ const dragDefaults = {
 };
 export const TUTORIAL_DEFAULTS: GameConfig["tutorial"] = {
   enabled: true, color: "#8870bd", focusCircles: true, ringWidth: 2,
-  ringScale: 1.08, ringOpacity: .8, dragCue: true, doubleTapCue: true,
+  ringScale: 1.08, ringOpacity: .8, dragCue: true, dragColor: "#8870bd",
+  dragLineWidth: 1, dragLineOpacity: .3, dragDotSize: 5, dragDotOpacity: .8,
+  dragEasing: "ease-in-out", doubleTapCue: true,
   removalCue: true, rotationCue: true, toolCue: true, gestureCycleMs: 2400,
 };
 export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tutorial", Record<string, Rule>> = {
@@ -203,6 +211,12 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     ringScale: { label: "Ring size", kind: "number", min: 1, max: 1.3, step: .01, unit: "× sphere", description: "Applies to focus circles and the outer edge of each double-tap ping." },
     ringOpacity: { label: "Ring opacity", kind: "number", min: .1, max: 1, step: .05 },
     dragCue: { label: "Drag trail", kind: "boolean", description: "Show a moving dot between the highlighted nodes." },
+    dragColor: { label: "Drag trail color", kind: "color", description: "Color of the line and its moving dot." },
+    dragLineWidth: { label: "Trail thickness", kind: "number", min: 0, max: 8, step: .5, unit: "px", description: "Set to 0 to show only the moving dot." },
+    dragLineOpacity: { label: "Trail opacity", kind: "number", min: 0, max: 1, step: .05 },
+    dragDotSize: { label: "Moving dot size", kind: "number", min: 2, max: 24, step: 1, unit: "px" },
+    dragDotOpacity: { label: "Moving dot opacity", kind: "number", min: .1, max: 1, step: .05 },
+    dragEasing: { label: "Drag movement", kind: "choice", options: { linear: "Steady", "ease-in-out": "Gentle start and finish" }, description: "Use Drag and removal cycle below to adjust timing." },
     doubleTapCue: { label: "Double-tap pings", kind: "boolean", description: "Two quick pings on one sphere, followed by a pause." },
     removalCue: { label: "Removal preview", kind: "boolean", description: "Temporarily fade the link and show a minus sign. This does not change the puzzle." },
     toolCue: { label: "Tool pings", kind: "boolean", description: "Highlight Undo, Redo and Hint in their tutorial steps." },

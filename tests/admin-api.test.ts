@@ -5,9 +5,9 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 import { handleAdminApi, readAdminToken, type AdminContext } from "../scripts/admin-api.ts";
-import { validateConfig } from "../src/config-schema.ts";
+import { validateConfig, TUTORIAL_DEFAULTS } from "../src/config-schema.ts";
 
-const baseline = JSON.parse(readFileSync(new URL("../config/game-config.json", import.meta.url), "utf8"));
+const baseline = validateConfig(JSON.parse(readFileSync(new URL("../config/game-config.json", import.meta.url), "utf8")));
 const origin = "http://localhost:5173";
 
 function fixture(t: { after(fn: () => void): void }) {
@@ -686,9 +686,9 @@ test("fixed endpoint and allowed methods prevent alternate filesystem paths", as
 test("tutorial settings migrate missing fields and validate explicit tuning", () => {
   const legacy = structuredClone(baseline);
   delete legacy.tutorial;
-  assert.deepEqual(validateConfig(legacy).tutorial, baseline.tutorial);
+  assert.deepEqual(validateConfig(legacy).tutorial, TUTORIAL_DEFAULTS);
   legacy.tutorial = { enabled: false, ringOpacity: .25, gestureCycleMs: 6000 };
-  assert.deepEqual(validateConfig(legacy).tutorial, { ...baseline.tutorial, ...legacy.tutorial });
+  assert.deepEqual(validateConfig(legacy).tutorial, { ...TUTORIAL_DEFAULTS, ...legacy.tutorial });
   for (const [key, value] of Object.entries({ enabled: "false", color: "purple", ringWidth: 0, ringScale: 2,
     ringOpacity: 1.1, gestureCycleMs: 0, unknown: true })) {
     assert.throws(() => validateConfig({ ...baseline, tutorial: { ...baseline.tutorial, [key]: value } }));
@@ -702,4 +702,18 @@ test("tutorial visual tuning survives saving and reloading", async t => {
   const saved = await call("PUT", snapshot);
   assert.equal(saved.status, 200);
   assert.deepEqual((await (await call()).json()).config.tutorial, snapshot.config.tutorial);
+});
+
+
+test("drag trail tuning preserves zeros and rejects invalid values", () => {
+  const config = structuredClone(baseline);
+  config.tutorial.dragLineWidth = 0;
+  config.tutorial.dragLineOpacity = 0;
+  config.tutorial.dragDotSize = 24;
+  config.tutorial.dragEasing = "linear";
+  assert.deepEqual(validateConfig(config), config);
+  for (const [key, value] of Object.entries({ dragLineWidth: -1, dragLineOpacity: 2, dragDotSize: 25,
+    dragDotOpacity: 0, dragColor: "purple", dragEasing: "fast" })) {
+    assert.throws(() => validateConfig({ ...config, tutorial: { ...config.tutorial, [key]: value } }));
+  }
 });

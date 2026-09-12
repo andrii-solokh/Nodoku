@@ -1834,3 +1834,8 @@ TODO / Note
 2026-09-12
 - Moved Undo/Redo/Hint keyboard combinations out of tutorial prose into prominent raised keycaps (24px labels, 52px keys). Command/Ctrl follows the platform; touch devices keep concise control-panel guidance.
 - Verified build, full onboarding flow, each key combination, rendered font size, touch visibility and desktop/mobile screenshots. Required web-game client exercised.
+
+2026-09-12
+- Added live tutorial drag-trail tuning: independent color, line thickness/opacity, moving-dot size/opacity, and easing. Existing gesture cycle keeps removal timing synchronized; trail thickness stays centered on projected endpoints.
+- Legacy config gains missing defaults during validation. Owner's uncommitted ring settings are left untouched; refreshed local preview on port 4173 for the new admin schema.
+- Build, 197 unit tests, live admin controls including zero-width trail, full onboarding regression, desktop/mobile screenshots and web-game client passed.
