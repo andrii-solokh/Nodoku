@@ -1884,3 +1884,7 @@ TODO / Note
 - Reduced tutorial boards to 2×2 flat and 2×2×2 in 3D, keeping all ten lessons and the animated depth transition. Enabled size-two puzzles in the engine and expanded generation/solvability coverage; updated onboarding analytics, board assertions and Studio selection preview's node target.
 - Kept the selection lesson's second cue attached to the demonstrated neighbor after selecting the first node, which avoids a target jump on the four-node board.
 - Production build, all 199 unit tests, the full tutorial walkthrough, and focused mouse/touch selection/reduced-motion checks passed. Inspected the smaller flat board and eight-node cube screenshots; required web-game client ran.
+
+2026-09-12
+- Reversed all four 3D onboarding rotation arrowheads and animated strokes by reversing the SVG path direction. Preserved curve geometry, node-relative positioning, and existing rotation inputs/checkpoints.
+- Build and full onboarding walkthrough passed with screen-space direction assertions for all four arrows. Inspected desktop and mobile rotation screenshots and the required web-game client output.
