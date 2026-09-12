@@ -65,6 +65,8 @@ async function complete(page, last) {
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).dialog === 'completion-dialog');
   assert.equal((await state(page)).solved, true, 'Real gameplay opens completion');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'next-button', 'Completion focuses the existing continuation action');
+  assert.match((await page.locator('#next-button').textContent()) ?? '', /Solve another puzzle/, 'Completion offers another puzzle without implying a daily mode');
+  assert.equal((await page.locator('#completion-home').textContent())?.trim(), 'Return home', 'Completion uses a clear home action');
 }
 
 async function payload(page) {

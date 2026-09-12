@@ -1627,3 +1627,8 @@ TODO / Note
 ## 2026-09-12 — PostHog Session Replay readiness
 - Explicitly enabled PostHog Session Replay in the browser client and kept all form input values masked.
 - Verified with `npm run build` and `npm test` (193 passing).
+
+## 2026-09-12 — Completion actions
+- Replaced the unavailable daily-puzzle prompt with “Solve another puzzle” and renamed the exit action “Return home.”
+- Added browser coverage for both completion labels.
+- Verified with `npm run build` and `npm run test:share`.
