@@ -11,7 +11,7 @@ test("home page publishes complete Open Graph and social-card metadata", async (
     ["property", "og:site_name", "Nodoku"],
     ["property", "og:url", "https://nodoku.solokh.com/"],
     ["property", "og:title", "Nodoku — 3D Spatial Reasoning Puzzle"],
-    ["property", "og:image", "https://nodoku.solokh.com/og-image.png?v=3d-green-white"],
+    ["property", "og:image", "https://nodoku.solokh.com/og-image.png?v=3d-safe-v2"],
     ["property", "og:image:width", "1200"],
     ["property", "og:image:height", "630"],
     ["name", "twitter:card", "summary_large_image"],

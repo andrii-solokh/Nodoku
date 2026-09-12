@@ -1649,3 +1649,9 @@ TODO / Note
 - A trusted pointer/touch release now also unlocks SFX, and the initial gesture warms iOS Web Audio with a silent source.
 - Retained only the immediate first sound until its gesture-owned resume completes; mute, suspension, and stop still discard it.
 - Verified `node --import tsx --test tests/sound.test.ts` (34 passing), `npm run build`, and the required web-game Playwright smoke run. Screenshot reviewed at `output/web-game/mobile-audio-unlock/shot-0.png`.
+
+## 2026-09-12 — Mobile-safe Open Graph card
+- Reframed the captured Three.js scene into the central square-safe area of the 1200×630 social card, replacing the desktop left-copy/right-scene split that cropped foreground nodes in mobile previews.
+- Reduced the graphic to the aligned Nodoku logo plus the 3D scene, retaining metadata copy outside the image.
+- Updated the image cache version to `3d-safe-v2` so social platforms fetch the new card.
+- Reviewed the full card, a centered square crop, and a 4:5 crop; all foreground nodes and the logo remain framed. Verified `tests/open-graph.test.ts`, `npm run build`, and the web-game Playwright smoke check.
