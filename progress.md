@@ -1797,3 +1797,7 @@ TODO / Note
 - Used Astra for the requested onboarding cue design review. Replaced oversized halos and cursor with a fine rim-to-rim drag trail/glint; double tap now shows only two brief pings on one sphere, separated by a quiet pause.
 - Cues track current mesh positions and per-sphere sizes after every scene render through lightweight projection (no per-frame picking). Hide during view transitions and select a visible pair when turns settle.
 - Added regression checks for single-sphere double-tap cues and alignment across actual floating motion; reviewed desktop/mobile screenshots.
+
+2026-09-12
+- Restored persistent, close-fitting focus circles on both endpoints for onboarding drag lessons, retaining live sphere tracking and the minimal traveling glint. Double-tap remains a double ping on one sphere.
+- Build and desktop/mobile visual checks completed; existing full onboarding regression and web-game client exercised.
