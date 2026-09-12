@@ -505,8 +505,16 @@ function selectNode(id: number | null) {
       `Node ${id + 1}, ${remaining} ${remaining === 1 ? "dot" : "dots"} remaining. Choose a neighbor.`;
 }
 function onTap(id: number): (() => void) | void {
-  if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]"))
-    return;
+  if (!puzzle || document.querySelector("dialog[open]")) return;
+  if (mode === "onboarding") {
+    // The lessons restrict which connections can change the board, but a tap
+    // should still give the same selected-node feedback as normal play.
+    if (onboardingStep === 4 || onboardingStep > 5) return;
+    const previous = selected;
+    selectNode(id);
+    return () => selectNode(previous);
+  }
+  if (mode !== "playing") return;
   const active = puzzle;
   const restore = active.checkpoint();
   const restoreMelodyStep = melodyStep;
@@ -720,6 +728,7 @@ function onStrokeStart(id: number) {
     // restores node drags so the player can make a real 3D connection.
     if (onboardingStep === 2 || onboardingStep === 4 || onboardingStep > 5) return false;
     onStrokeEnd(false);
+    selectNode(id);
     strokePuzzle = puzzle;
     strokeChanged = false;
     strokeAdded = 0;
@@ -1351,7 +1360,7 @@ Object.assign(window, {
       coordinates:
         "Node coordinates: x right, y up, z front. Screen coordinates are viewport pixels, origin top-left.",
       settings: displayed?.settings ?? settings,
-      selected: mode === "playing" ? selected : null,
+      selected: mode === "home" ? null : selected,
       view: scene.getViewState(),
       progress: displayed?.progress ?? 0,
       solved: displayed?.solved ?? false,
