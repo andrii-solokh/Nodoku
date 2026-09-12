@@ -1661,3 +1661,9 @@ TODO / Note
 - Preserved the WebGL drawing buffer specifically for capture frames, while keeping the gameplay renderer and interaction model unchanged.
 - Added privacy-safe puzzle telemetry: generated-board seed, connection/fill/drag actions, first connection, hint, undo/redo, first rotation, live completion progress, and compact session summaries for completion, exit, and backgrounding. No node coordinates or individual selection history is recorded.
 - Verified `npm run build`, `npm test` (194 passing), and the required Playwright game smoke run; reviewed `output/web-game/posthog-replay-canvas/shot-0.png`.
+
+## 2026-09-12 — Mobile startup recovery
+- Removed WebGL’s retained drawing buffer from the replay work because it can stall mobile GPU initialization before the game replaces the loading screen.
+- Kept compact PostHog puzzle-action telemetry, but let the renderer use its normal mobile-safe frame lifecycle.
+- Removed the fresh-puzzle confirmation; Start connecting now opens the shared daily puzzle directly.
+- Verified the mobile home screen becomes interactive with no loader or browser errors, and ran the required web-game Playwright smoke check.
