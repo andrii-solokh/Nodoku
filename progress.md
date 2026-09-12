@@ -1910,3 +1910,7 @@ TODO / Note
 - Removed the home preview's Solving / Continue Solving control, click handler, and styles. The preview runs automatically without a player pause/resume option.
 - Updated browser fixtures that previously used that button to isolate scene animations through the existing dialog suspension behavior instead. Live-demo assertions now check automatic progress and absence of the control.
 - Production build, syntax checks, required web-game client, and focused desktop/mobile autoplay checks passed; inspected both layouts. The broader demo/audio suites were stopped after slow runs under local browser load; they are not reported as passing. Deterministic demo/audio fixtures now remove the loader whose dismissal is blocked by their frozen RAF.
+
+2026-09-12
+- Moved mobile home activity into the header's flex row immediately before How to play. Stacked online and the rotating statistic in a fixed-width block so labels do not shift the adjacent controls; adjusted narrow-screen sizing and removed the old reserved second row.
+- Production build and focused layout checks passed for every rotating statistic at 320/360/390/430/760px, with desktop layout also checked. Inspected mobile screenshots, including the narrow 320px header. Updated the audience regression's mobile positioning assertions.

@@ -76,6 +76,7 @@ async function layout(page, mode, label) {
     return {
       width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth,
       widget: rect(element), header: rect(document.querySelector('.site-header')),
+      help: rect(document.querySelector('#help-button')),
       inGameHeader: !!element.closest('.site-header #game-activity'),
       inHomeHeader: !!element.closest('.site-header #home-activity'),
       pieces: [...element.querySelectorAll('strong, .visitor-scope')].filter(node => node.getClientRects().length).map(rect),
@@ -92,7 +93,12 @@ async function layout(page, mode, label) {
     assert.ok(boxes.widget.y >= boxes.header.y - 1 && boxes.widget.y + boxes.widget.height <= boxes.header.y + boxes.header.height + 48, `${label}: game audience stays in the header's responsive instruction area`);
   } else {
     assert.equal(boxes.inHomeHeader, true, 'Home audience is mounted in the header');
-    assert.ok(Math.abs(boxes.widget.x + boxes.widget.width / 2 - boxes.width / 2) <= 1, `${label}: home audience is centered in the viewport`);
+    if (boxes.width <= 760) {
+      assert.ok(boxes.help.x - boxes.widget.x - boxes.widget.width >= 0 && boxes.help.x - boxes.widget.x - boxes.widget.width <= 12, `${label}: audience sits immediately before How to play`);
+      assert.ok(Math.abs(boxes.widget.y + boxes.widget.height / 2 - boxes.help.y - boxes.help.height / 2) <= 1, `${label}: audience aligns with the help control`);
+    } else {
+      assert.ok(Math.abs(boxes.widget.x + boxes.widget.width / 2 - boxes.width / 2) <= 1, `${label}: home audience is centered in the viewport`);
+    }
     assert.ok(boxes.widget.y >= boxes.header.y - 1 && boxes.widget.y + boxes.widget.height <= boxes.header.y + boxes.header.height + 1, `${label}: home audience stays within the header`);
   }
   assert.ok(boxes.widget.y + boxes.widget.height <= boxes.height, `${label}: audience stays on screen`);
@@ -305,7 +311,7 @@ try {
   assert.equal(publicLoads, 2, 'Ordinary GET polling does not reload the open statistics page');
   await direct.close();
   assert.deepEqual(errors, [], 'No uncaught browser errors');
-  console.log('Passed: centered home header at 1440/1000/390/320, game header layouts, selected-node UI, refresh identity/counts, 30s presence and 60s statistics polling, validation/error recovery, lifecycle pause/resume, stale responses, stable rotating stats, hover/focus/reduced-motion pauses, and UTC-day visitor registration.');
+  console.log('Passed: desktop centered activity and mobile activity before help, game header layouts, selected-node UI, refresh identity/counts, 30s presence and 60s statistics polling, validation/error recovery, lifecycle pause/resume, stale responses, stable rotating stats, hover/focus/reduced-motion pauses, and UTC-day visitor registration.');
 } finally {
   await browser.close();
   await fs.writeFile(`${out}/errors.json`, JSON.stringify(errors, null, 2));
