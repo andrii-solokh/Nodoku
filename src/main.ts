@@ -76,6 +76,8 @@ let selected: number | null = null;
 let mode: "home" | "playing" | "onboarding" = "home";
 let onboardingStep = 0;
 let onboardingConnection: [number, number] | null = null;
+let completionMomentTimer: ReturnType<typeof setTimeout> | undefined;
+let completionMomentRevision = 0;
 let toastTimer: ReturnType<typeof setTimeout>;
 let completionShown = false;
 let keyboardIndex = -1;
@@ -212,6 +214,11 @@ app.innerHTML = `
   </section>
   <button class="onboarding-skip" id="onboarding-skip">Skip tutorial</button>
 </section>
+<div class="completion-moment" id="completion-moment" role="status" aria-live="assertive" hidden>
+  <div class="completion-moment-glow" aria-hidden="true"></div>
+  <div class="completion-moment-emblem" aria-hidden="true">${icon("check")}</div>
+  <strong>All connected</strong>
+</div>
 </main>
 <div id="toast" class="status-toast" role="status" aria-live="polite"></div>
 <div id="node-announcement" class="sr-only" aria-live="polite"></div>
@@ -384,6 +391,31 @@ function toast(message: string) {
   toastTimer = setTimeout(() => {
     el("toast").textContent = "";
   }, 3400);
+}
+function clearCompletionMoment() {
+  completionMomentRevision++;
+  if (completionMomentTimer !== undefined) clearTimeout(completionMomentTimer);
+  completionMomentTimer = undefined;
+  const moment = el("completion-moment");
+  moment.classList.remove("is-active");
+  moment.hidden = true;
+}
+function playCompletionMoment(onComplete: () => void) {
+  clearCompletionMoment();
+  const revision = completionMomentRevision;
+  const moment = el("completion-moment");
+  moment.hidden = false;
+  requestAnimationFrame(() => {
+    if (revision === completionMomentRevision) moment.classList.add("is-active");
+  });
+  const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 900;
+  completionMomentTimer = setTimeout(() => {
+    if (revision !== completionMomentRevision) return;
+    completionMomentTimer = undefined;
+    moment.classList.remove("is-active");
+    moment.hidden = true;
+    onComplete();
+  }, duration);
 }
 function tone(
   kind: "connect" | "disconnect" | "complete",
@@ -619,6 +651,7 @@ function finishOnboarding(completed = false) {
   });
   onboardingCompleted = true;
   showOnboarding = false;
+  clearCompletionMoment();
   onStrokeEnd(false);
   puzzle = null;
   selected = null;
@@ -630,6 +663,7 @@ function finishOnboarding(completed = false) {
   el("start-button").focus({ preventScroll: true });
 }
 function startOnboarding() {
+  clearCompletionMoment();
   if (mode === "playing" && puzzle && !puzzle.solved) {
     onStrokeEnd(false);
     savedPuzzle = puzzle;
@@ -765,7 +799,11 @@ function onStrokeEnd(showCompletion = true) {
         captureAnalytics("onboarding_2d_completed", {
           connections: active.edges.length,
         });
-        showOnboarding3d();
+        scene.setInteractive(false);
+        playCompletionMoment(() => {
+          if (mode === "onboarding" && onboardingStep === 3 && puzzle === active)
+            showOnboarding3d();
+        });
       }
       if (changed && onboardingStep === 5) {
         onboardingStep = 6;
@@ -896,8 +934,13 @@ function maybeComplete() {
     savedPuzzle = null;
     // The cadence continues the player's score, including its rests and held notes.
     tone("complete", 1, undefined, getConfig().demo.tempoBpm);
-    completionShare.update(puzzle.settings, puzzle.edges.length);
-    el<HTMLDialogElement>("completion-dialog").showModal();
+    scene.setInteractive(false);
+    const completedPuzzle = puzzle;
+    playCompletionMoment(() => {
+      if (mode !== "playing" || puzzle !== completedPuzzle || !puzzle.solved) return;
+      completionShare.update(puzzle.settings, puzzle.edges.length);
+      el<HTMLDialogElement>("completion-dialog").showModal();
+    });
   }
 }
 function startGame(
@@ -905,6 +948,7 @@ function startGame(
   seed = dailyPuzzleSeed(),
   puzzleType: "daily" | "new" = "daily",
 ) {
+  clearCompletionMoment();
   if (demoFrame) cancelAnimationFrame(demoFrame);
   demoFrame = 0;
   demo.stop();
@@ -958,6 +1002,7 @@ function startGame(
     app.querySelector("canvas")?.focus({ preventScroll: true });
 }
 function goHome() {
+  clearCompletionMoment();
   onStrokeEnd();
   if (puzzle && !puzzle.solved) trackPuzzleSession("puzzle_session_exited", "home");
   document

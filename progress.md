@@ -1708,3 +1708,9 @@ TODO / Note
 - Restored node-drag connection input only after the rotation lesson, so the player cannot complete the tutorial by rotation alone.
 - Added browser coverage for the visible controls, the 3D connection, and the full six-step sequence. Reviewed the captured 3D tutorial screen with the direction pad.
 - Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding`, `npm run test` (194 passing), and the required web-game Playwright client run.
+
+2026-09-12 animated completion moments
+- Added a short, interrupt-safe completion beat that preserves the final connection and dot animation before moving on.
+- The player game now shows an animated green check and “All connected” before the completion dialog. The solved 2D onboarding board gets the same beat before switching to 3D.
+- Added focused player and onboarding browser coverage and reviewed both visual captures.
+- Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding`, `TEST_URL=http://127.0.0.1:5173 npm run test:completion-moment`, `npm run test` (194 passing), and the required web-game client smoke run.
