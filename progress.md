@@ -1573,3 +1573,9 @@ TODO / Note
 - Added official TikTok and Instagram marks to the completion share panel, alongside the existing social, device-share, and copy actions.
 - Both open their platform in a new tab; the existing copy and native-share actions provide the completed-puzzle message for composing a post.
 - Verified with the production build, 192 unit tests, the completion-share browser suite at desktop and 320px mobile widths, and the Playwright game client.
+
+## 2026-09-12 — Focused statistics periods
+- Today now presents totals without duplicate daily histograms.
+- Seven days, 30 days, and all time stack each activity histogram in a full-width row.
+- Removed the requested overview copy and category eyebrows.
+- Verified with the production build, the complete unit suite, a focused browser interaction capture, and a manual statistics period check.
