@@ -9,6 +9,7 @@ interface Env {
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   REMOVE_ADS_AMOUNT?: string;
+  POSTHOG_PROJECT_API_KEY?: string;
 }
 
 export const onRequest: PagesFunction<Env> = ({ request, env }) => {
@@ -19,5 +20,6 @@ export const onRequest: PagesFunction<Env> = ({ request, env }) => {
     STRIPE_SECRET_KEY: env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: env.STRIPE_WEBHOOK_SECRET,
     REMOVE_ADS_AMOUNT: env.REMOVE_ADS_AMOUNT,
+    POSTHOG_PROJECT_API_KEY: env.POSTHOG_PROJECT_API_KEY,
   }, store);
 };

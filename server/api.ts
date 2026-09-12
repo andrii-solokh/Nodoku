@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import type { Order, Store } from './store.js';
 import type { StatisticsPeriod } from './statistics.js';
 import { Puzzle } from '../src/puzzle.js';
+import { capturePostHog } from './posthog.js';
 
 type Env = Record<string, string | undefined>;
 const PLAN = { id: 'spotlight', name: 'Sponsored placement', days: 30, amount: 10000, currency: 'usd' } as const;
@@ -283,7 +284,7 @@ export async function handleApi(request: Request, env: Env, store: Store): Promi
   const path = new URL(request.url).pathname;
   const allowed: Record<string, string[]> = {
     '/api/visitors': ['GET', 'POST'], '/api/presence': ['POST'], '/api/sponsorship': ['GET'], '/api/checkout': ['POST'],
-    '/api/statistics': ['GET'], '/api/completions': ['POST'], '/api/sponsor-events': ['POST'], '/api/sponsor-report': ['POST'],
+    '/api/statistics': ['GET'], '/api/analytics-config': ['GET'], '/api/completions': ['POST'], '/api/sponsor-events': ['POST'], '/api/sponsor-report': ['POST'],
     '/api/checkout-status': ['GET'], '/api/stripe-webhook': ['POST'],
     '/api/ad-free/checkout': ['POST'], '/api/ad-free/status': ['GET'], '/api/ad-free/entitlement': ['POST'],
   };
@@ -313,6 +314,10 @@ export async function handleApi(request: Request, env: Env, store: Store): Promi
       await statisticsStore(store);
       return json(await store.statistics(period));
     }
+    if (path === '/api/analytics-config') {
+      const projectApiKey = env.POSTHOG_PROJECT_API_KEY;
+      return json(projectApiKey ? { projectApiKey, apiHost: 'https://us.i.posthog.com' } : { projectApiKey: null });
+    }
     if (path === '/api/completions') {
       checkOrigin(request, env);
       const body = await bodyJson(request, 262144);
@@ -325,6 +330,14 @@ export async function handleApi(request: Request, env: Env, store: Store): Promi
       const recorded = await store.recordCompletion({
         visitorId: id, attemptId: body.attemptId.toLowerCase(), size, depth, difficulty, seed,
         connections: puzzle.edges.length, dots: puzzle.nodes.reduce((sum, node) => sum + node.required, 0),
+      });
+      if (recorded) await capturePostHog(env, 'puzzle_completed', id, {
+        grid_size: size,
+        depth,
+        perspective: depth === 1 ? 'flat' : '3d',
+        difficulty,
+        connection_count: puzzle.edges.length,
+        dot_count: puzzle.nodes.reduce((sum, node) => sum + node.required, 0),
       });
       return json({ recorded });
     }
