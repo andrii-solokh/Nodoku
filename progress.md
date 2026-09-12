@@ -1601,3 +1601,8 @@ TODO / Note
 - Renamed the loading caption to “Connecting the nodes.”
 - Reworked the logo animation so its links draw in sequence and the final node sends a restrained completion pulse.
 - Preserved a complete static mark for reduced-motion preferences.
+
+## 2026-09-12 — Sponsorship temporarily hidden
+- Disabled sponsorship globally in the saved game configuration, which hides placements on the landing page and during play and hides the private placement report in Statistics.
+- Retained the other sponsor settings for a later admin re-enable.
+- Verified the built landing page and Statistics view; ran the web-game interaction smoke test, `npm test` (192 passing), and `npm run build`.
