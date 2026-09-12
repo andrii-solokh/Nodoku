@@ -1687,3 +1687,8 @@ TODO / Note
 - Removed the onboarding “Show me 3D” shortcut. The 2D tutorial stays playable until its full network is solved, then automatically switches to the 3D rotation lesson with a “2D complete” congratulations message.
 - Extended the onboarding browser test to solve the deterministic tutorial through actual drag interactions before asserting the 3D transition, and captured `output/web-game/onboarding-auto-3d/solved-2d-3d.png` for visual review.
 - Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding`, and `npm run test` pass.
+
+2026-09-12 analytics update
+- Investigated the reported PostHog Web Analytics undercount. Production has an encrypted `POSTHOG_PROJECT_API_KEY`, and `/api/analytics-config` returns a valid US Cloud configuration. Nodoku uses a per-browser UUID, so visitors are not intentionally collapsed.
+- Replaced the SDK's automatic initial pageview with one explicit `$pageview` after the Nodoku visitor ID and `app: nodoku` are registered. This makes the pageview Web Analytics consumes use the same identity as replay and game events.
+- The connected PostHog MCP account only has access to LATdx project 157216, not Nodoku project 605581, so it cannot inspect Nodoku's raw events or dashboard filters.
