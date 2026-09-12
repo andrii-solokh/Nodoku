@@ -1784,3 +1784,7 @@ TODO / Note
 - Shifted the 3D direction pad with the board. The final controls lesson keeps a compact board position so its action, copy, and mobile toolbar remain unobstructed.
 - Added an onboarding assertion for viewport-centering and reviewed desktop, mobile, 3D rotation, and controls screenshots.
 - Verified with `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, `npm run test` (194 passing), and the required browser game-client run.
+
+2026-09-12
+- Added live visual gesture cues to all interactive onboarding lessons: animated drag path, double-tap pulse, and turn prompt; cue targets use the active puzzle's visible nodes and realign after viewport changes.
+- Validated build, onboarding flow, and the web-game Playwright client; visually inspected desktop and mobile cues.
