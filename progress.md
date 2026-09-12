@@ -1692,3 +1692,8 @@ TODO / Note
 - Investigated the reported PostHog Web Analytics undercount. Production has an encrypted `POSTHOG_PROJECT_API_KEY`, and `/api/analytics-config` returns a valid US Cloud configuration. Nodoku uses a per-browser UUID, so visitors are not intentionally collapsed.
 - Replaced the SDK's automatic initial pageview with one explicit `$pageview` after the Nodoku visitor ID and `app: nodoku` are registered. This makes the pageview Web Analytics consumes use the same identity as replay and game events.
 - The connected PostHog MCP account only has access to LATdx project 157216, not Nodoku project 605581, so it cannot inspect Nodoku's raw events or dashboard filters.
+
+2026-09-12 onboarding update
+- Expanded onboarding into a five-part flow: make one connection, remove that same connection, double-tap to fill a node's available neighbors, clear the 2D board, then turn the 3D board.
+- Restricted each guided action so accidental drags cannot skip the removal or double-tap lesson. The browser flow covers the whole sequence with actual input, including a filled node and a solvable final board.
+- Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding`, and the required Playwright web-game client run.

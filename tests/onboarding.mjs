@@ -6,6 +6,12 @@ const url = process.env.TEST_URL || 'http://127.0.0.1:4173';
 const browser = await chromium.launch();
 const errors = [];
 const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text()));
+async function drag(page, source, target) {
+  await page.mouse.move(source.screen.x, source.screen.y);
+  await page.mouse.down();
+  await page.mouse.move(target.screen.x, target.screen.y, { steps: 8 });
+  await page.mouse.up();
+}
 async function fixture(openOnboarding = true) {
   const page = await browser.newPage({ viewport: { width: 1200, height: 850 } });
   page.on('pageerror', error => errors.push(error.message));
@@ -20,34 +26,45 @@ async function fixture(openOnboarding = true) {
 try {
   const page = await fixture();
   assert.equal(await page.locator('.site-header').isVisible(), false, 'Onboarding hides the normal header');
-  assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 3');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 5');
   const board = await state(page);
   const tutorial = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
+  const mirror = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
   assert.equal(board.nodes.length, 9, 'The first lesson is a 3 by 3 board');
   const [firstA, firstB] = tutorial.solution[0];
   const a = board.nodes.find(node => node.id === firstA);
   const b = board.nodes.find(node => node.id === firstB);
   assert.ok(a && b, 'The tutorial solution has visible endpoints');
-  await page.mouse.move(a.screen.x, a.screen.y);
-  await page.mouse.down();
-  await page.mouse.move(b.screen.x, b.screen.y, { steps: 8 });
-  await page.mouse.up();
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 3');
-  assert.match(await page.locator('#onboarding-message').textContent(), /Each link clears one dot from both nodes/);
-  assert.match(await page.locator('#onboarding-message').textContent(), /Double-tap a node to connect every available neighboring node at once/);
+  await drag(page, a, b);
+  mirror.toggle(firstA, firstB);
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 5');
+  assert.match(await page.locator('#onboarding-message').textContent(), /same linked pair again to remove it/);
   assert.equal(await page.locator('#onboarding-next').isHidden(), true, 'The tutorial cannot jump to 3D before the 2D board is solved');
-  for (const [sourceId, targetId] of tutorial.solution.slice(1)) {
+  await drag(page, a, b);
+  mirror.toggle(firstA, firstB);
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 5');
+  assert.match(await page.locator('#onboarding-message').textContent(), /Double-tap a node/);
+  const fillNode = mirror.nodes.find(node => node.required > 0);
+  assert.ok(fillNode, 'The tutorial has a node to fill');
+  const fillResult = mirror.toggleNode(fillNode.id);
+  assert.equal(fillResult.changed, true, 'The tutorial fill action creates connections');
+  const fillScreenNode = (await state(page)).nodes.find(node => node.id === fillNode.id);
+  assert.ok(fillScreenNode, 'The node to fill is visible');
+  await page.mouse.dblclick(fillScreenNode.screen.x, fillScreenNode.screen.y, { delay: 40 });
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '4 of 5');
+  assert.match(await page.locator('#onboarding-message').textContent(), /until every dot is gone/);
+  while (!mirror.solved) {
+    const hint = mirror.hint();
+    assert.equal(hint.changed, true, 'The tutorial board remains solvable after filling a node');
+    assert.ok(hint.edge, 'Every tutorial hint supplies a connection');
     const current = await state(page);
-    const source = current.nodes.find(node => node.id === sourceId);
-    const target = current.nodes.find(node => node.id === targetId);
+    const source = current.nodes.find(node => node.id === hint.edge[0]);
+    const target = current.nodes.find(node => node.id === hint.edge[1]);
     assert.ok(source && target, 'Each solution connection has visible endpoints');
-    await page.mouse.move(source.screen.x, source.screen.y);
-    await page.mouse.down();
-    await page.mouse.move(target.screen.x, target.screen.y, { steps: 8 });
-    await page.mouse.up();
+    await drag(page, source, target);
     await page.waitForTimeout(20);
   }
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 3');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '5 of 5');
   assert.equal((await state(page)).nodes.length, 26, 'The next lesson switches to a 3D board');
   assert.equal(await page.locator('#onboarding-title').textContent(), '2D complete.');
   assert.match(await page.locator('#onboarding-message').textContent(), /You cleared every dot/);
