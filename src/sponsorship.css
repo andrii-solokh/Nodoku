@@ -8,9 +8,9 @@
 .sponsor-card {
   border: 1px solid #d8d1e5;
   border-radius: 13px;
-  padding: 18px 20px 14px;
-  height: 180px;
-  min-height: 180px;
+  padding: 14px 16px 12px;
+  height: 136px;
+  min-height: 136px;
   background: #f4f1fa9c;
   min-width: 0;
   display: flex;
@@ -137,7 +137,7 @@
     pointer-events: none;
   }
   .sponsorship-game .sponsor-grid {
-    --sponsor-side-width: clamp(200px, calc(50vw - 50dvh - 18px), 360px);
+    --sponsor-side-width: clamp(170px, calc(50vw - 50dvh - 28px), 280px);
     height: 100%;
     grid-template-columns: var(--sponsor-side-width) 1fr var(--sponsor-side-width);
     grid-template-rows: repeat(3, minmax(0, 1fr));
@@ -145,8 +145,9 @@
   }
   .sponsorship-game .sponsor-card {
     min-height: 0;
-    height: 100%;
-    padding: clamp(12px, 1.6dvh, 22px);
+    height: clamp(104px, 15dvh, 132px);
+    align-self: center;
+    padding: clamp(10px, 1.35dvh, 16px);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
