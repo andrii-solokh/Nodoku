@@ -1956,3 +1956,8 @@ TODO / Note
 2026-09-12
 - Investigated completion audio overlapping the home demo. Current origin/main already calls GameAudio.stop() when returning home (introduced in #122); verified the deployed production asset matches this build.
 - Added a native Web Audio return-home regression with a long completion phrase queued. Captures audio time inside the actual Return home click, verifies every future completion source is stopped, and checks the home demo's first onset occurs after the cancellation fade. Browser check passed and return-home screenshot inspected. No production code change was needed; existing open tabs may require a refresh.
+
+2026-09-12
+- Matched mobile How to play and sound buttons with 42px circular backgrounds, including muted sound. Reduced the narrowest activity block slightly to keep the header aligned.
+- Reserved 100lvh for the portrait landing page before descriptive text; the setup area continues using the visible dynamic viewport so Start remains onscreen as browser bars move.
+- Build and focused layout checks passed at 320/360/390/430/760px portrait, mobile landscape and desktop. Checked button dimensions/backgrounds, header boundaries, text starting below the viewport, Start visibility and tutorial entry; inspected mobile screenshots and the web-game client capture.

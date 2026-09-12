@@ -1426,6 +1426,16 @@ a {
     font-size: 0;
     gap: 0;
   }
+  .header-actions :is(#help-button, #sound-button) {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    padding: 0;
+    border-radius: 50%;
+    justify-content: center;
+    color: #655d7b;
+    background: #e2dfed;
+  }
   .header-actions .text-button svg {
     width: 20px;
     height: 20px;
@@ -1726,7 +1736,7 @@ a {
   .home .brand svg { width: 26px; height: 26px; }
   .home .visitor-home { font-size: 9px; }
   .home .visitor-home strong { font-size: 10px; }
-  .home .audience-rotating { width: 100px; }
+  .home .audience-rotating { width: 92px; }
   .playing .site-header {
     padding: 0 12px;
     gap: 10px;
@@ -1753,7 +1763,8 @@ a {
 @media (max-width: 760px) and (orientation: portrait) {
   #app.home {
     height: 100dvh;
-    min-height: 0;
+    /* Keep the text below a full screen even while mobile browser bars move. */
+    min-height: 100lvh;
     overflow: hidden;
   }
   .home .site-header {
