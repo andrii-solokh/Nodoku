@@ -34,16 +34,22 @@
       #app-loader.is-ready { opacity: 0; visibility: hidden; pointer-events: none; }
       .loader-content { position: relative; display: grid; justify-items: center; gap: 20px; }
       .loader-brand { display: flex; align-items: center; gap: 14px; font: 600 36px/1 Outfit, Arial, sans-serif; letter-spacing: -1.5px; }
-      .loader-mark { width: 52px; height: 52px; overflow: visible; }
-      .loader-mark path { stroke-dasharray: 53; stroke-dashoffset: 53; animation: loader-link 1.5s cubic-bezier(.5, 0, .2, 1) infinite; }
-      .loader-mark circle { transform-box: fill-box; transform-origin: center; animation: loader-node 1.5s cubic-bezier(.5, 0, .2, 1) infinite; }
-      .loader-mark circle:nth-of-type(2) { animation-delay: .08s; }
-      .loader-mark circle:nth-of-type(3) { animation-delay: .16s; }
-      .loader-mark circle:nth-of-type(4) { animation-delay: .24s; }
-      .loader-caption { color: #7c738f; font: 400 14px/1.3 Outfit, Arial, sans-serif; letter-spacing: .01em; }
-      @keyframes loader-link { 0%, 16% { stroke-dashoffset: 53; opacity: .32; } 46%, 82% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: -53; opacity: .32; } }
-      @keyframes loader-node { 0%, 14% { transform: scale(.72); opacity: .46; } 32%, 78% { transform: scale(1); opacity: 1; } 100% { transform: scale(.72); opacity: .46; } }
-      @media (prefers-reduced-motion: reduce) { #app-loader, .loader-mark path, .loader-mark circle { transition: none; animation: none; } .loader-mark path { stroke-dashoffset: 0; } }
+      .loader-mark { width: 56px; height: 56px; overflow: visible; filter: drop-shadow(0 4px 8px #675d8118); }
+      .loader-link { stroke-dasharray: 18; stroke-dashoffset: 18; animation: loader-link 2.1s cubic-bezier(.45, 0, .2, 1) infinite both; }
+      .loader-link--right { animation-delay: .14s; }
+      .loader-link--bottom { animation-delay: .28s; }
+      .loader-link--left { animation-delay: .42s; }
+      .loader-node, .loader-complete { transform-box: fill-box; transform-origin: center; }
+      .loader-node { animation: loader-node 2.1s cubic-bezier(.45, 0, .2, 1) infinite both; }
+      .loader-node--two { animation-delay: .14s; }
+      .loader-node--three { animation-delay: .28s; }
+      .loader-node--final { animation-delay: .42s; }
+      .loader-complete { animation: loader-complete 2.1s cubic-bezier(.45, 0, .2, 1) infinite; }
+      .loader-caption { color: #7c738f; font: 400 14px/1.3 Outfit, Arial, sans-serif; letter-spacing: .015em; }
+      @keyframes loader-link { 0%, 10% { stroke-dashoffset: 18; opacity: .18; } 32%, 80% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: .45; } }
+      @keyframes loader-node { 0%, 12% { transform: scale(.72); opacity: .42; } 32%, 80% { transform: scale(1); opacity: 1; } 100% { transform: scale(.86); opacity: .62; } }
+      @keyframes loader-complete { 0%, 48% { transform: scale(.56); opacity: 0; } 57% { transform: scale(1); opacity: .52; } 78%, 100% { transform: scale(1.7); opacity: 0; } }
+      @media (prefers-reduced-motion: reduce) { #app-loader, .loader-mark .loader-link, .loader-mark .loader-node, .loader-mark .loader-complete { transition: none; animation: none; } .loader-mark .loader-link { stroke-dashoffset: 0; } }
     </style>
     <script type="application/ld+json">
       {
@@ -84,10 +90,10 @@
     <div id="app-loader" role="status" aria-live="polite" aria-label="Loading Nodoku">
       <div class="loader-content">
         <div class="loader-brand" aria-hidden="true">
-          <svg class="loader-mark" viewBox="0 0 34 34"><path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3"/><g fill="#a9cbbd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g><circle cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/></svg>
+          <svg class="loader-mark" viewBox="0 0 34 34"><g fill="none" stroke="#8270bd" stroke-width="3" stroke-linecap="round"><path class="loader-link loader-link--top" d="M8 9h18"/><path class="loader-link loader-link--right" d="M26 9v17"/><path class="loader-link loader-link--bottom" d="M26 26H8"/><path class="loader-link loader-link--left" d="M8 26V9"/></g><circle class="loader-complete" cx="26" cy="26" r="7" fill="none" stroke="#8b74c4" stroke-width="1.2"/><g fill="#a9cbbd"><circle class="loader-node" cx="8" cy="9" r="4.7"/><circle class="loader-node loader-node--two" cx="26" cy="9" r="4.7"/><circle class="loader-node loader-node--three" cx="8" cy="26" r="4.7"/></g><circle class="loader-node loader-node--final" cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/></svg>
           <span>nodoku</span>
         </div>
-        <span class="loader-caption">Connecting the dots</span>
+        <span class="loader-caption">Connecting the nodes</span>
       </div>
     </div>
     <div id="app">
