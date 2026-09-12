@@ -1392,7 +1392,21 @@ a {
   .prerender-home { padding: 7vw; }
   .prerender-home h1 { font-size: 46px; letter-spacing: -2.5px; }
   .prerender-home p { font-size: 15px; }
-  .home .site-header { height: 112px; padding-bottom: 32px; }
+  .home .site-header { height: 80px; padding-bottom: 0; gap: 8px; }
+  .home .home-activity {
+    position: static;
+    transform: none;
+    margin-left: auto;
+    flex-shrink: 0;
+    max-width: none;
+  }
+  .home .header-actions { flex-shrink: 0; }
+  .home .visitor-home { font-size: 10px; line-height: 1.3; }
+  .home .visitor-home strong { font-size: 11px; }
+  .home .audience-link { flex-direction: column; align-items: flex-end; gap: 1px; }
+  .home .audience-rotating { width: 112px; justify-content: flex-end; }
+  .home .audience-divider,
+  .home .visitor-scope { display: none; }
   .site-header {
     height: 80px;
     padding: 0 6vw;
@@ -1695,6 +1709,12 @@ a {
   }
 }
 @media (max-width: 360px) {
+  .home .site-header { gap: 6px; }
+  .home .brand { font-size: 20px; gap: 5px; }
+  .home .brand svg { width: 26px; height: 26px; }
+  .home .visitor-home { font-size: 9px; }
+  .home .visitor-home strong { font-size: 10px; }
+  .home .audience-rotating { width: 100px; }
   .playing .site-header {
     padding: 0 12px;
     gap: 10px;
