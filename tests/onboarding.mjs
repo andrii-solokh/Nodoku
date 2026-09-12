@@ -33,6 +33,8 @@ try {
   const tutorial = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
   const mirror = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
   assert.equal(board.nodes.length, 9, 'The first lesson is a 3 by 3 board');
+  const tutorialCenterY = board.nodes.reduce((sum, node) => sum + node.screen.y, 0) / board.nodes.length;
+  assert.ok(Math.abs(tutorialCenterY - 425) < 8, 'The tutorial board is centered in the viewport, not only above the lesson copy');
   const [firstA, firstB] = tutorial.solution[0];
   const a = board.nodes.find(node => node.id === firstA);
   const b = board.nodes.find(node => node.id === firstB);

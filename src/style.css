@@ -457,6 +457,7 @@ a {
 }
 .onboarding-main {
   display: none;
+  --onboarding-board-offset: 118px;
   box-sizing: border-box;
   height: 100dvh;
   min-height: 0;
@@ -467,6 +468,7 @@ a {
 .onboarding-stage {
   height: 100%;
   min-height: 0;
+  transform: translateY(var(--onboarding-board-offset));
 }
 .onboarding-stage canvas { border-radius: 0; }
 .onboarding-turn-controls {
@@ -483,6 +485,7 @@ a {
   background: #e6e2eeeb;
   box-shadow: 0 10px 26px #44386614;
   backdrop-filter: blur(12px);
+  transform: translateY(var(--onboarding-board-offset));
 }
 .onboarding-turn-controls .icon-button {
   display: grid;
@@ -1195,7 +1198,10 @@ a {
   }
 }
 @media (max-height: 700px) {
-  .onboarding-main { padding-bottom: max(205px, calc(176px + env(safe-area-inset-bottom))); }
+  .onboarding-main {
+    --onboarding-board-offset: 102px;
+    padding-bottom: max(205px, calc(176px + env(safe-area-inset-bottom)));
+  }
   .onboarding-copy h2 { font-size: 28px; }
   .onboarding-copy p { font-size: 14px; margin-top: 6px; }
   .onboarding-next { margin-top: 12px; padding: 10px 16px; }
@@ -1675,7 +1681,7 @@ a {
   position: absolute;
   left: max(20px, env(safe-area-inset-left));
   top: calc(50% + 148px);
-  width: min(470px, calc(100% - 40px));
+  width: min(340px, calc(100% - 40px));
   margin: 0;
   font-size: 12px;
   line-height: 1.4;
@@ -1695,6 +1701,7 @@ a {
 }
 .onboarding-desktop-shortcuts > span { padding: 0 2px; }
 .onboarding-mobile-controls { display: none; }
+.onboarding-controls-active .onboarding-main { --onboarding-board-offset: 58px; }
 @media (max-width: 760px) and (orientation: portrait) {
   .onboarding-control-lesson .tools-group {
     top: auto;
@@ -1711,6 +1718,7 @@ a {
   }
   .onboarding-desktop-shortcuts { display: none; }
   .onboarding-mobile-controls { display: none; }
+  .onboarding-controls-active .onboarding-main { --onboarding-board-offset: 0px; }
   .onboarding-controls-active .onboarding-copy {
     bottom: max(132px, calc(116px + env(safe-area-inset-bottom)));
   }
