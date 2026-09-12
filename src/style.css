@@ -679,6 +679,11 @@ a {
   transform: translate(-50%, -50%);
   opacity: 0;
 }
+.completion-moment.is-tutorial { width: max-content; max-width: calc(100vw - 16px); text-align: center; }
+.completion-moment.is-tutorial.is-compact { display: flex; align-items: center; gap: 10px; }
+.completion-moment.is-tutorial.is-compact .completion-moment-emblem { width: 36px; height: 36px; flex-shrink: 0; }
+.completion-moment.is-tutorial.is-compact .completion-moment-emblem svg { width: 24px; height: 24px; }
+.completion-moment.is-tutorial.is-compact strong { font-size: 20px; letter-spacing: -.5px; }
 .completion-moment.is-active { animation: completion-moment-in 900ms cubic-bezier(.2, .8, .25, 1) both; }
 .completion-moment-glow {
   position: absolute;

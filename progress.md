@@ -1860,3 +1860,8 @@ TODO / Note
 - Fixed swipe rotation not completing tutorial checkpoints: the scene now reports committed directional swipes on release, and onboarding shares the keyboard/control-panel completion handler. Reports exclude tiny, cancelled and multi-touch gestures and do not alter existing camera movement.
 - Rotation instructions now mention dragging alongside keyboard/control-panel alternatives. Added a swipe-mode onboarding regression exercising mouse and real touch gestures, rejected gestures, all four directions, and the existing success-message sequence.
 - Verified build, 199 unit tests, complete swipe-mode onboarding (desktop horizontal gestures and mobile vertical gestures, including cancelled/short/wrong-direction attempts), exact success sequence, screenshots and web-game client.
+
+2026-09-12
+- Anchored tutorial success messages above the projected puzzle bounds, centered on the board and updated as nodes float or rotate. A compact horizontal checkmark/text layout fits shorter screens. Normal game completion retains its existing positioning.
+- Targeted browser placement checks cover desktop, mobile and short viewports; the visual capture holds the acknowledgement timer so screenshots remain reliable under load.
+- Build and targeted placement assertions/screenshots passed at 1200×850, 390×844 and 844×390; required web-game client ran. Full-flow screenshot timing proved unreliable under load, so the placement capture held the success timer without changing production timing.
