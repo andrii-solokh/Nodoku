@@ -17,6 +17,13 @@ try {
   await page.getByText('Tutorial visuals', { exact: true }).click();
   await page.getByRole('button', { name: 'Preview tutorial', exact: true }).click();
   assert.equal((await state()).mode, 'onboarding');
+  await page.locator('#admin-close').click();
+  for (const id of await page.locator('.onboarding-cue-node').evaluateAll(es => es.map(e => Number(e.dataset.nodeId)))) {
+    const node = (await state()).nodes.find(n => n.id === id);
+    await page.mouse.click(node.screen.x, node.screen.y);
+  }
+  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '2 of 10');
+  await page.locator('#admin-open').click();
   await control('color').fill('#cc4466');
   await control('ringWidth').fill('4');
   await control('ringScale').fill('1.2');
@@ -57,11 +64,11 @@ try {
   assert.equal(await page.locator('#admin-open').isVisible(), true, 'Studio can reopen during the tutorial');
   const ids = await page.locator('.onboarding-cue-node').evaluateAll(es => es.map(e => Number(e.dataset.nodeId)));
   let nodes = (await state()).nodes;
-  for (const id of ids) {
-    const node = nodes.find(n => n.id === id);
-    await page.mouse.click(node.screen.x, node.screen.y);
-  }
-  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '2 of 9');
+  await page.mouse.move(nodes.find(n => n.id === ids[0]).screen.x, nodes.find(n => n.id === ids[0]).screen.y);
+  await page.mouse.down();
+  await page.mouse.move(nodes.find(n => n.id === ids[1]).screen.x, nodes.find(n => n.id === ids[1]).screen.y, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '3 of 10');
   const edges = (await state()).edges;
   assert.ok((await state()).removalCue);
   await page.locator('#admin-open').click();
@@ -75,11 +82,11 @@ try {
   await control('enabled').check();
   await page.locator('#admin-close').click();
   nodes = (await state()).nodes;
-  for (const id of ids) {
-    const node = nodes.find(n => n.id === id);
-    await page.mouse.click(node.screen.x, node.screen.y);
-  }
-  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '3 of 9');
+  await page.mouse.move(nodes.find(n => n.id === ids[0]).screen.x, nodes.find(n => n.id === ids[0]).screen.y);
+  await page.mouse.down();
+  await page.mouse.move(nodes.find(n => n.id === ids[1]).screen.x, nodes.find(n => n.id === ids[1]).screen.y, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '4 of 10');
   await page.locator('#admin-open').click();
   await control('doubleTapCue').uncheck();
   assert.equal(await page.locator('#onboarding-cue').isVisible(), false);

@@ -62,13 +62,13 @@ async function fixture(openOnboarding = true) {
 try {
   const page = await fixture();
   assert.equal(await page.locator('.site-header').isVisible(), false, 'Onboarding hides the normal header');
-  assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 9');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 10');
   const board = await state(page);
   const tutorial = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
   const mirror = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
   assert.equal(board.nodes.length, 9, 'The first lesson is a 3 by 3 board');
   assert.equal(await page.locator('#onboarding-cue').isVisible(), true, 'The first lesson includes a visual gesture cue');
-  assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-drag')), true, 'The first cue demonstrates a drag between the highlighted nodes');
+  assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-select')), true, 'The first cue demonstrates selecting two neighboring nodes');
   const tutorialCenterY = board.nodes.reduce((sum, node) => sum + node.screen.y, 0) / board.nodes.length;
   assert.ok(Math.abs(tutorialCenterY - 425) < 8, 'The tutorial board is centered in the viewport, not only above the lesson copy');
   const [firstA, firstB] = tutorial.solution[0];
@@ -83,9 +83,28 @@ try {
   await tapLesson.mouse.click(tapA.screen.x, tapA.screen.y);
   await tapLesson.waitForFunction(nodeId => JSON.parse(window.render_game_to_text()).selected === nodeId, firstA);
   await tapLesson.mouse.click(tapB.screen.x, tapB.screen.y);
-  await tapLesson.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 9');
-  assert.equal((await state(tapLesson)).edges.length, 1, 'Selecting neighboring tutorial nodes makes the guided connection');
+  await tapLesson.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 10');
+  assert.equal((await state(tapLesson)).edges.length, 0, 'The practice connection resets for the drag lesson');
   await tapLesson.close();
+  await drag(page, a, b);
+  assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 10', 'Dragging cannot skip the selection lesson');
+  assert.equal((await state(page)).edges.length, 0);
+  const initialStageBounds = await page.locator('#onboarding-stage').boundingBox();
+  const pingTiming = await page.locator('.onboarding-cue-node').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).animationDelay));
+  assert.notEqual(pingTiming[0], pingTiming[1], 'The two selection pings play in sequence');
+  await page.mouse.click(a.screen.x, a.screen.y);
+  await page.waitForFunction(() => document.querySelector('#onboarding-cue').dataset.selected === 'true');
+  await page.screenshot({ path: 'output/web-game/onboarding-cues/select-second.png' });
+  await page.mouse.click(b.screen.x, b.screen.y);
+  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).tutorialSuccess === 'Connection made');
+  assert.equal((await state(page)).edges.length, 1, 'Selecting two neighbors makes a real connection');
+  await settleSuccess(page);
+  assert.equal(await page.locator('#onboarding-step').textContent(), '2 of 10');
+  assert.deepEqual(await page.locator('#onboarding-stage').boundingBox(), initialStageBounds, 'The selection-to-drag transition keeps the board stationary');
+  assert.equal((await state(page)).edges.length, 0);
+  await page.mouse.click(a.screen.x, a.screen.y);
+  await page.mouse.click(b.screen.x, b.screen.y);
+  assert.equal((await state(page)).edges.length, 0, 'The drag lesson requires dragging');
   await page.mouse.move(a.screen.x, a.screen.y);
   await page.mouse.down();
   // A small drag begins the tutorial stroke without reaching a neighbour.
@@ -98,10 +117,10 @@ try {
   await page.mouse.up();
   mirror.toggle(firstA, firstB);
   assert.equal((await state(page)).tutorialSuccess, 'Connection made');
-  assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 9', 'The next instruction waits for the success beat');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '2 of 10', 'The next instruction waits for the success beat');
   await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('#completion-moment')).opacity) > .9);
   await page.screenshot({ path: 'output/web-game/onboarding-cues/connection-success.png' });
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 9');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 10');
   assert.match(await page.locator('#onboarding-message').textContent(), /same linked pair again to remove it/);
   await page.waitForFunction(() => document.querySelector('#onboarding-cue')?.classList.contains('is-remove'));
   const trail = await page.locator('.onboarding-cue-hand').evaluate(async hand => {
@@ -142,7 +161,7 @@ try {
   assert.equal(await page.locator('#onboarding-next').isHidden(), true, 'The tutorial cannot jump to 3D before the 2D board is solved');
   await drag(page, a, b);
   mirror.toggle(firstA, firstB);
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 9');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '4 of 10');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Double-tap a node.');
   assert.match(await page.locator('#onboarding-message').textContent(), /Tap twice quickly.*double-click/);
   assert.equal((await state(page)).removalCue, null, 'The removal preview is cleared when the player removes the link');
@@ -184,7 +203,7 @@ try {
   const fillScreenNode = (await state(page)).nodes.find(node => node.id === fillNode.id);
   assert.ok(fillScreenNode, 'The node to fill is visible');
   await page.mouse.dblclick(fillScreenNode.screen.x, fillScreenNode.screen.y, { delay: 40 });
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '4 of 9');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '5 of 10');
   assert.match(await page.locator('#onboarding-message').textContent(), /until every dot is gone/);
   const secondFillNode = mirror.nodes.find(node => node.id !== fillNode.id && mirror.remaining(node.id) > 0);
   assert.ok(secondFillNode, 'The remaining tutorial board has another node to fill');
@@ -221,7 +240,7 @@ try {
   }
   assert.equal(await page.locator('#completion-moment').isVisible(), true, 'The solved 2D lesson gets a completion beat before changing scenes');
   await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/2d-completion-moment.png' });
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent.startsWith('5 of 9'));
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent.startsWith('6 of 10'));
   let transition = await state(page);
   assert.ok(transition.shapeTransition?.active, 'The flat tutorial board expands into the 3D lesson');
   assert.equal(transition.shapeTransition.fromDepth, 1);
@@ -302,7 +321,7 @@ try {
   await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-down-mobile.png' });
   if (swipeRotations) await swipeTurn(page, 'down', { touch: true });
   else await page.locator('[data-onboarding-rotate="down"]').click();
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '6 of 9');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '7 of 10');
   await device.send('Emulation.setTouchEmulationEnabled', { enabled: false });
   await device.detach();
   await page.setViewportSize({ width: 1200, height: 850 });
@@ -318,7 +337,7 @@ try {
   const target = source && threeD.nodes.find(node => node.screen?.pickable && adjacent(source, node));
   assert.ok(source && target, 'The 3D lesson has visible neighboring endpoints');
   await drag(page, source, target);
-  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '7 of 9');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '8 of 10');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Undo your move.');
   assert.deepEqual(await page.locator('#onboarding-stage').boundingBox(), connectionStageBounds,
     'Showing the tools and keyboard shortcut must not move or resize the puzzle');
@@ -351,7 +370,7 @@ try {
   const beforeUndo = (await state(page)).edges;
   await page.locator('#onboarding-undo').click();
   await settleSuccess(page);
-  assert.equal(await page.locator('#onboarding-step').textContent(), '8 of 9');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '9 of 10');
   assert.deepEqual(await page.locator('#onboarding-shortcut kbd').allTextContents(), [modifier, 'Shift', 'Z']);
   assert.ok((await state(page)).edges.length < beforeUndo.length, 'Undo removes the real connection');
   assert.equal(await page.locator('#onboarding-redo').isEnabled(), true);
@@ -360,7 +379,7 @@ try {
   await page.screenshot({ path: 'output/web-game/onboarding-controls/redo-mobile.png' });
   await page.keyboard.press('Control+Shift+z');
   await settleSuccess(page);
-  assert.equal(await page.locator('#onboarding-step').textContent(), '9 of 9');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '10 of 10');
   assert.deepEqual((await state(page)).edges, beforeUndo, 'Redo restores the same connection');
   assert.equal(await page.locator('#onboarding-hint.tutorial-tool-ping').count(), 1);
   assert.deepEqual(await page.locator('#onboarding-shortcut kbd').allTextContents(), ['H']);
@@ -374,7 +393,7 @@ try {
   assert.match(await page.locator('#onboarding-next').textContent(), /Finish tutorial/);
   // Restart provides a route back into the practice sequence.
   await page.locator('#onboarding-restart').click();
-  assert.equal(await page.locator('#onboarding-step').textContent(), '6 of 9');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '7 of 10');
   assert.equal((await state(page)).edges.length, 0);
   await page.setViewportSize({ width: 1200, height: 850 });
   await page.waitForTimeout(250);
@@ -385,16 +404,16 @@ try {
   await settleSuccess(page);
   await page.keyboard.press('Control+z');
   await settleSuccess(page);
-  assert.equal(await page.locator('#onboarding-step').textContent(), '8 of 9');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '9 of 10');
   assert.deepEqual(await page.locator('#onboarding-shortcut kbd').allTextContents(), [modifier, 'Shift', 'Z']);
   await page.locator('#onboarding-redo').click();
   await settleSuccess(page);
-  assert.equal(await page.locator('#onboarding-step').textContent(), '9 of 9');
+  assert.equal(await page.locator('#onboarding-step').textContent(), '10 of 10');
   await page.keyboard.press('h');
   await settleSuccess(page);
   assert.equal(await page.locator('#onboarding-title').textContent(), 'You’re ready.');
   assert.deepEqual(await page.evaluate(() => window.tutorialSuccessMessages), [
-    'Connection made', 'Connection removed', 'Neighbors connected', 'All connected',
+    'Connection made', 'Connection made', 'Connection removed', 'Neighbors connected', 'All connected',
     'Turned left', 'Turned right', 'Turned up', 'Turned down', '3D connection made',
     'Move undone', 'Move restored', 'Hint applied',
     '3D connection made', 'Move undone', 'Move restored', 'Hint applied',
@@ -422,7 +441,7 @@ try {
   });
   assert.ok(portraitLayout.scrollHeight <= portraitLayout.height + 1, 'portrait onboarding fits without vertical page scroll');
   assert.ok(portraitLayout.boardBottom <= portraitLayout.copyTop, 'portrait lesson copy stays below the visible board');
-  const cueBounds = await portrait.locator('#onboarding-cue .onboarding-cue-line').boundingBox();
+  const cueBounds = await portrait.locator('#onboarding-cue .onboarding-cue-start').boundingBox();
   assert.ok(cueBounds && cueBounds.x >= 0 && cueBounds.x + cueBounds.width <= 390, 'the visual cue realigns with the board after resizing to mobile');
   await portrait.close();
 

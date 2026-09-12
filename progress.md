@@ -1874,3 +1874,8 @@ TODO / Note
 2026-09-12
 - Moved the tutorial Turn down arrow to the puzzle's right side, preserving the up arrow on the left and per-frame alignment to floating node bounds. Clamped placement to the viewport.
 - Build and full onboarding walkthrough passed, including mobile right-side placement and viewport-bound assertions. Inspected the actual Turn down screenshot and required web-game client output.
+
+2026-09-12
+- Added a first tutorial lesson for selecting one node and then a neighbor, before the drag lesson. Two rings ping sequentially, follow floating nodes, and guide the second selection after the first; the selected node uses its normal game ring. Existing tutorial color/ring/cycle settings and reduced motion apply.
+- Each introduction requires the gesture it teaches. The first real connection gets a success acknowledgement and resets for drag practice without moving the board. Updated all lesson indexes, analytics names, tool gates and Studio double-tap preview for the 10-step sequence. Selection also remains usable in the free-solving lesson.
+- Build, full onboarding walkthrough and focused mouse/touch tests passed. Verified sequential ping timing, separate selections, rejected drag bypass, stationary transition, later tool/rotation progression, and static reduced-motion targets. Updated Studio walkthrough expectations. Inspected desktop/mobile screenshots and required web-game client output.
