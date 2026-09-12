@@ -1697,3 +1697,8 @@ TODO / Note
 - Expanded onboarding into a five-part flow: make one connection, remove that same connection, double-tap to fill a node's available neighbors, clear the 2D board, then turn the 3D board.
 - Restricted each guided action so accidental drags cannot skip the removal or double-tap lesson. The browser flow covers the whole sequence with actual input, including a filled node and a solvable final board.
 - Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding`, and the required Playwright web-game client run.
+
+2026-09-12 onboarding double-tap fix
+- Kept double-tap enabled after the introductory fill step so players can continue bulk-connecting nodes while clearing the tutorial board.
+- Added coverage for a second double-tap during the final 2D clear step.
+- Validation: `npm run build` and `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding` pass.
