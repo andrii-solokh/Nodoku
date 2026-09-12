@@ -138,6 +138,11 @@ try {
     await waitFor(() => view.requests.at(-1) === period, `Filter requests ${period}`);
     await waitFor(async () => await dialog.locator('#statistics-content').isVisible(), `Filter ${period} finishes loading`);
     assert.equal(await dialog.locator(`[data-period="${period}"]`).getAttribute('aria-pressed'), 'true');
+    assert.equal(await dialog.locator('#statistics-activity').isVisible(), period !== 'today', `${period} only shows activity charts when the period spans multiple days`);
+    if (period !== 'today') {
+      const boxes = await dialog.locator('.statistics-histogram').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().y));
+      assert.ok(boxes.every((top, index) => index === 0 || top > boxes[index - 1]), `${period} histograms stack one per row`);
+    }
   }
   assert.match(await dialog.locator('#statistics-chart-note').textContent(), /last 30 days/i);
   await dialog.locator('#statistics-chart-visitors .statistics-bar').first().focus();
@@ -198,7 +203,7 @@ try {
   assert.equal(await view.page.locator('[data-total=puzzlesSolved]').textContent(), '0', 'Real zero totals are shown');
   assert.match(await view.page.locator('#statistics-sizes').textContent(), /No completed puzzles/);
   assert.equal(await view.page.locator('.statistics-chart-empty').count(), 3);
-  assert.equal(await view.page.locator('#statistics-chart-empty-puzzlesSolved').isVisible(), true);
+  assert.equal(await view.page.locator('#statistics-activity').isVisible(), false, 'Today keeps the summary cards without duplicate charts');
   await view.page.close();
 
   assert.deepEqual(errors, [], 'No uncaught browser errors');
