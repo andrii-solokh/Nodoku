@@ -71,6 +71,36 @@ try {
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '3 of 7');
   assert.match(await page.locator('#onboarding-message').textContent(), /Double-tap a node/);
   assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-double-tap')), true, 'The fill lesson demonstrates the double-tap gesture');
+  for (const selector of ['.onboarding-cue-line', '.onboarding-cue-end', '.onboarding-cue-hand'])
+    assert.equal(await page.locator(`#onboarding-cue ${selector}`).isVisible(), false, 'Double tap shows only a ping on one sphere');
+  const samples = await page.evaluate(() => {
+    const ring = document.querySelector('.onboarding-cue-start');
+    const results = [];
+    for (const elapsed of [1, 700, 1000]) {
+      window.advanceTime(elapsed);
+      const board = JSON.parse(window.render_game_to_text());
+      const node = board.nodes.find(n => n.id === Number(ring.dataset.nodeId));
+      results.push({ x: parseFloat(ring.style.left), y: parseFloat(ring.style.top), node: node.screen });
+    }
+    return results;
+  });
+  for (const sample of samples) {
+    assert.ok(Math.abs(sample.x - sample.node.x) < .05 && Math.abs(sample.y - sample.node.y) < .05,
+      'The ping remains centered on the rendered sphere throughout floating motion');
+  }
+  assert.ok(Math.hypot(samples[0].x - samples[2].x, samples[0].y - samples[2].y) > .1,
+    'The check exercises a sphere that actually moves');
+  await page.locator('.onboarding-cue-start').evaluate(node => {
+    const animation = node.getAnimations()[0];
+    animation.pause();
+    animation.currentTime = 20;
+  });
+  await page.screenshot({ path: 'output/web-game/onboarding-cues/double-ping-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(100);
+  await page.screenshot({ path: 'output/web-game/onboarding-cues/double-ping-mobile.png' });
+  await page.setViewportSize({ width: 1200, height: 850 });
+  await page.waitForTimeout(100);
   const fillNode = mirror.nodes.find(node => node.required > 0);
   assert.ok(fillNode, 'The tutorial has a node to fill');
   const fillResult = mirror.toggleNode(fillNode.id);
@@ -177,7 +207,7 @@ try {
   });
   assert.ok(portraitLayout.scrollHeight <= portraitLayout.height + 1, 'portrait onboarding fits without vertical page scroll');
   assert.ok(portraitLayout.canvasBottom <= portraitLayout.copyTop, 'portrait lesson copy stays below the board');
-  const cueBounds = await portrait.locator('#onboarding-cue .onboarding-cue-start').boundingBox();
+  const cueBounds = await portrait.locator('#onboarding-cue .onboarding-cue-line').boundingBox();
   assert.ok(cueBounds && cueBounds.x >= 0 && cueBounds.x + cueBounds.width <= 390, 'the visual cue realigns with the board after resizing to mobile');
   await portrait.close();
 

@@ -80,6 +80,9 @@ const PREVIEW_TILT = { pitch: -.12, yaw: .18 };
 
 /** The scene owns rendering and gestures; all game rules live in Puzzle. */
 export class BoardScene {
+  onRender?: () => void;
+
+  get isViewMoving(): boolean { return this.motion !== null || this.shapeTransition !== null; }
   private renderer: THREE.WebGLRenderer;
   private gumMaterials: GumMaterials;
   private gumPulses = new Map<number, { elapsed: number; duration: number; strength?: number }>();
@@ -1763,6 +1766,26 @@ export class BoardScene {
     return hit?.object.userData.nodeId ?? null;
   }
 
+  // Lightweight projection for UI attached to a live sphere; no picking/raycasts.
+  projectNode(id: number) {
+    const mesh = this.nodeMeshes.get(id);
+    if (!mesh) return null;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const center = mesh.position.clone().project(this.camera);
+    const edge = mesh.position.clone().add(
+      new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion)
+        .multiplyScalar(RADIUS * mesh.scale.x),
+    ).project(this.camera);
+    const face = this.frontFace();
+    return {
+      id,
+      x: rect.left + (center.x + 1) * rect.width / 2,
+      y: rect.top + (1 - center.y) * rect.height / 2,
+      radius: Math.hypot((edge.x - center.x) * rect.width / 2, (edge.y - center.y) * rect.height / 2),
+      front: !face || this.onFace(id, face),
+    };
+  }
+
   getScreenNodes(): ScreenNode[] {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const face = this.frontFace();
@@ -2268,6 +2291,7 @@ export class BoardScene {
     this.advanceDrag(elapsed);
     this.renderDragStrand();
     this.renderer.render(this.scene, this.camera);
+    this.onRender?.();
   }
 
   dispose(): void {
