@@ -16,6 +16,9 @@ const click = (page, selector) => page.locator(selector).evaluate(element => ele
 async function ready(page) {
   await page.waitForFunction(() => typeof window.render_game_to_text === 'function', null, { polling: 25 });
   await page.locator('#admin-settings').waitFor();
+  // Fixtures freeze requestAnimationFrame so animation state can be advanced manually.
+  // Dismiss the production splash, whose normal two-frame exit cannot run in that mode.
+  await page.locator('#app-loader').evaluate(element => element.remove());
 }
 async function fixture({ style = 'glide', duration = 800, edges = [], reduced = false } = {}) {
   let savedConfig = structuredClone(originalConfig);
@@ -111,10 +114,13 @@ try {
     assert.equal(started.style, style);
     assert.equal(started.durationMs, 800);
     assert.equal(started.progress, 0);
+    assert.ok(s.musicNotes.length >= 2, 'each cleared dot becomes a visible music note');
+    assert.ok(s.musicNotes.every(note => ["♪", "♫", "♩", "♬"].includes(note.glyph) && note.progress === 0), 'particles use real note glyphs and start with the cleared dot');
     await advance(page, 400);
     s = await state(page);
     const mid = nodeDots(s, id);
     assert.ok(mid.active && mid.progress > 0 && mid.progress < 1);
+    assert.ok(s.musicNotes.length >= 2 && s.musicNotes.every(note => note.progress > 0 && note.progress < 1), 'notes rise while the dot transition plays');
     assert.notDeepEqual(canonical(mid), canonical(nodeDots(initial, id)), 'dots move/fade while redistributing');
     const initialDots = nodeDots(initial, id).dots;
     assert.ok(mid.dots.some(dot => {
@@ -128,6 +134,7 @@ try {
     await advance(page, 400);
     s = await state(page);
     settled(s);
+    assert.equal(s.musicNotes.length, 0, 'released notes clean up after their flight');
     finalStyles.push(canonical(nodeDots(s, id)));
     assert.equal(nodeDots(s, id).count, endpoints[0].remaining - 1);
     if (style === 'glide') {
@@ -163,6 +170,7 @@ try {
     await connect(page, endpoints);
     const s = await state(page);
     assert.equal(s.edges.length, 1);
+    assert.equal(s.musicNotes.length, 0, 'instant and reduced-motion transitions do not create note particles');
     settled(s);
     await page.close();
   }
@@ -218,5 +226,5 @@ try {
   assert.ok(await admin.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'mobile editor has no horizontal overflow');
   await admin.close();
   assert.deepEqual(errors, []);
-  console.log('Passed: immediate model updates, four dot styles and canonical settling, count decrease/increase, interruption continuity, final zero dots, initial/reload no entrance, reduced motion/zero duration, mocked admin live preview/export/save/reset/reload, mobile editor. No page errors.');
+  console.log('Passed: immediate model updates, musical-note particles, four dot styles and canonical settling, count decrease/increase, interruption continuity, final zero dots, initial/reload no entrance, reduced motion/zero duration, mocked admin live preview/export/save/reset/reload, mobile editor. No page errors.');
 } finally { await browser.close(); }

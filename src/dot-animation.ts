@@ -60,11 +60,11 @@ export class DotAnimation {
   get active(): boolean { return this.transitions.length > 0; }
   get dots(): readonly DotState[] { return this.current; }
 
-  retarget(count: number, options: Options): void {
+  retarget(count: number, options: Options): DotState[] {
     count = clampCount(count);
     if (count === this.count) {
       if (options.animate === false || options.durationMs <= 0) this.finish();
-      return;
+      return [];
     }
     this.count = count;
     this.style = options.style;
@@ -87,7 +87,11 @@ export class DotAnimation {
           : { ...dot, x: dot.x * .35, y: dot.y * .35 + .02, scale: this.style === "fade" ? dot.scale : 0, opacity: 0 },
       };
     });
+    const released = this.transitions
+      .filter(transition => transition.exiting && transition.from.opacity > .001 && transition.from.scale > .001)
+      .map(transition => ({ ...transition.from }));
     if (options.animate === false || this.duration <= 0) this.finish();
+    return released;
   }
 
   advance(ms: number): void {

@@ -1368,6 +1368,7 @@ Object.assign(window, {
       floating: scene.getFloatingState(),
       gum: scene.getGumState(),
       dotAnimations: scene.getDotAnimationState(),
+      musicNotes: scene.getMusicNoteState(),
       config: getConfig(),
       audio: { soundEnabled, musicAvailable: getConfig().sound.showAmbientMusic, musicEnabled: musicEnabled && getConfig().sound.showAmbientMusic, ambientTrack: "Moonlight — Scott Buckley" },
       melodyStep: mode === "home" ? (demo.puzzle?.edges.length ?? 0) : melodyStep,

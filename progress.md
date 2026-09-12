@@ -1719,3 +1719,9 @@ TODO / Note
 - Routed the onboarding solved-state check through both drag strokes and node double-taps, so clearing the final dots by double-tap now plays the completion moment and advances to the 3D lesson.
 - Updated the onboarding browser test to complete the flat board specifically with its final double-tap.
 - Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5173 npm run test:onboarding`, `TEST_URL=http://127.0.0.1:5173 npm run test:completion-moment`, `npm run test` (194 passing), and the required web-game client smoke run.
+
+2026-09-12 musical dot release
+- Added native Three.js musical-note particles for every cleared node dot. They begin at the cleared pip, rise and drift across the board while the connection melody plays, then fade and dispose. The effect is suppressed for the homepage preview, reduced-motion preference, and instant dot transitions; rapid batches are capped at 20 particles.
+- Exposed live note state through `render_game_to_text` and expanded the dot-animation browser coverage to verify launch, mid-flight, cleanup, and motion-policy behavior. The fixture now removes the production loading splash because it intentionally freezes requestAnimationFrame for deterministic animation stepping.
+- Reviewed both Flat and 3D game captures: `output/web-game/dot-animations/glide-mid.png` and `output/web-game/music-notes/notes-3d.png` show the notes clearly rising from a new connection.
+- Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:dot-animations`, `npm run test` (194 passing), `git diff --check`, and the required web-game Playwright client smoke run.
