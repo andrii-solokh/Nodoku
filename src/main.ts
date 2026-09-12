@@ -83,6 +83,12 @@ const tutorialDirections = ["left", "right", "up", "down"] as const;
 type TutorialDirection = typeof tutorialDirections[number];
 const pressedRotationKeys = new Set<string>();
 const tutorialKeys = { left: ["←", "A"], right: ["→", "D"], up: ["↑", "W"], down: ["↓", "S"] };
+const rotationKeyDirections: Record<string, TutorialDirection> = {
+  arrowleft: "left", a: "left", arrowright: "right", d: "right",
+  arrowup: "up", w: "up", arrowdown: "down", s: "down",
+};
+const rotationShortcut = (direction: TutorialDirection) =>
+  `<span class="rotation-shortcut" aria-hidden="true"><kbd data-key="arrow${direction}">${tutorialKeys[direction][0]}</kbd><span>or</span><kbd data-key="${tutorialKeys[direction][1].toLowerCase()}">${tutorialKeys[direction][1]}</kbd></span>`;
 const touchInput = window.matchMedia("(pointer: coarse)");
 let onboardingRotation = 0;
 let onboardingStep = 0;
@@ -209,7 +215,7 @@ app.innerHTML = `
       <button class="tool-button" id="restart-button" aria-keyshortcuts="Shift+R">${icon("restart")}Restart${toolShortcut(macKeyboard ? "⇧" : "Shift", "R")}</button>
       <button class="tool-button hint" id="hint-button" aria-keyshortcuts="H">${icon("hint")}Hint${toolShortcut("H")}</button>
     </div>
-    <div class="rotation-tools" role="group" aria-label="Board view"><button class="icon-button" data-rotate="left" aria-label="Rotate left">${icon("left")}</button><button class="icon-button" data-rotate="up" aria-label="Rotate up">${icon("up")}</button><button class="icon-button view-reset" id="view-button">${icon("cube")}Reset view</button><button class="icon-button" data-rotate="down" aria-label="Rotate down">${icon("down")}</button><button class="icon-button" data-rotate="right" aria-label="Rotate right">${icon("right")}</button></div>
+    <div class="rotation-tools" role="group" aria-label="Board view"><button class="icon-button" data-rotate="left" aria-label="Rotate left" aria-keyshortcuts="ArrowLeft A">${icon("left")}${rotationShortcut("left")}</button><button class="icon-button" data-rotate="up" aria-label="Rotate up" aria-keyshortcuts="ArrowUp W">${icon("up")}${rotationShortcut("up")}</button><button class="icon-button view-reset" id="view-button" aria-label="Reset view" aria-keyshortcuts="R">${icon("cube")}Reset view<span class="rotation-shortcut" aria-hidden="true"><kbd data-key="r">R</kbd></span></button><button class="icon-button" data-rotate="down" aria-label="Rotate down" aria-keyshortcuts="ArrowDown S">${icon("down")}${rotationShortcut("down")}</button><button class="icon-button" data-rotate="right" aria-label="Rotate right" aria-keyshortcuts="ArrowRight D">${icon("right")}${rotationShortcut("right")}</button></div>
   </div>
 </section>
 <section class="onboarding-main" aria-labelledby="onboarding-title">
@@ -227,13 +233,13 @@ app.innerHTML = `
   </div>
   <div class="onboarding-turn-controls" id="onboarding-turn-controls" role="group" aria-label="Turn the 3D puzzle" hidden>
     <span aria-hidden="true"></span>
-    <button class="icon-button" type="button" data-onboarding-rotate="up" aria-label="Turn up">${icon("up")}</button>
+    <button class="icon-button" type="button" data-onboarding-rotate="up" aria-label="Turn up" aria-keyshortcuts="ArrowUp W">${icon("up")}${rotationShortcut("up")}</button>
     <span aria-hidden="true"></span>
-    <button class="icon-button" type="button" data-onboarding-rotate="left" aria-label="Turn left">${icon("left")}</button>
+    <button class="icon-button" type="button" data-onboarding-rotate="left" aria-label="Turn left" aria-keyshortcuts="ArrowLeft A">${icon("left")}${rotationShortcut("left")}</button>
     <span class="onboarding-turn-center" aria-hidden="true">${icon("cube")}</span>
-    <button class="icon-button" type="button" data-onboarding-rotate="right" aria-label="Turn right">${icon("right")}</button>
+    <button class="icon-button" type="button" data-onboarding-rotate="right" aria-label="Turn right" aria-keyshortcuts="ArrowRight D">${icon("right")}${rotationShortcut("right")}</button>
     <span aria-hidden="true"></span>
-    <button class="icon-button" type="button" data-onboarding-rotate="down" aria-label="Turn down">${icon("down")}</button>
+    <button class="icon-button" type="button" data-onboarding-rotate="down" aria-label="Turn down" aria-keyshortcuts="ArrowDown S">${icon("down")}${rotationShortcut("down")}</button>
     <span aria-hidden="true"></span>
   </div>
   <section class="onboarding-copy" aria-live="polite">
@@ -964,7 +970,7 @@ function renderOnboarding() {
   const next = el<HTMLButtonElement>("onboarding-next");
   next.hidden = !copy.action;
   next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
-  el("onboarding-turn-controls").hidden = !touchInput.matches || (onboardingStep !== 5 && !isOnboardingPractice());
+  el("onboarding-turn-controls").hidden = onboardingStep !== 5 && !isOnboardingPractice();
   renderRotationGuidance();
   onboardingCue = onboardingCueForStep();
   scene.setRemovalCue(!onboardingCelebrating && onboardingStep === 2 && tutorialSettings.enabled && tutorialSettings.removalCue ? onboardingConnection : null);
@@ -992,7 +998,7 @@ function renderRotationGuidance() {
   });
 }
 function updateRotationKeyFeedback() {
-  el("onboarding-rotation-keys").querySelectorAll<HTMLElement>("kbd[data-key]").forEach(key => {
+  document.querySelectorAll<HTMLElement>("#onboarding-rotation-keys kbd[data-key], .rotation-shortcut kbd[data-key]").forEach(key => {
     key.classList.toggle("is-pressed", pressedRotationKeys.has(key.dataset.key!));
   });
 }
@@ -1698,33 +1704,22 @@ document.addEventListener("keydown", (event) => {
     event.target.closest("button, summary")
   )
     return;
-  if (mode === "onboarding" && onboardingStep === 5) {
+  if (puzzle.settings.depth !== 1 && (rotationKeyDirections[key] || (key === "r" && !event.shiftKey))) {
     pressedRotationKeys.add(key);
     updateRotationKeyFeedback();
   }
   if (mode === "onboarding" && onboardingCelebrating) return;
   if (mode === "onboarding" && !isOnboardingPractice()) {
-    const direction = ({ arrowleft: "left", a: "left", arrowright: "right", d: "right",
-      arrowup: "up", w: "up", arrowdown: "down", s: "down" } as Record<string, TutorialDirection>)[key];
+    const direction = rotationKeyDirections[key];
     if (onboardingStep === 5 && direction && !event.ctrlKey && !event.metaKey) {
       event.preventDefault();
       if (!event.repeat) rotateOnboarding(direction);
     }
     return;
   }
-  const rotations: Record<string, "left" | "right" | "up" | "down"> = {
-    arrowleft: "left",
-    a: "left",
-    arrowright: "right",
-    d: "right",
-    arrowup: "up",
-    w: "up",
-    arrowdown: "down",
-    s: "down",
-  };
-  if (rotations[key]) {
+  if (rotationKeyDirections[key]) {
     event.preventDefault();
-    if (puzzle.settings.depth !== 1) scene.rotate(rotations[key]);
+    if (puzzle.settings.depth !== 1) scene.rotate(rotationKeyDirections[key]);
   } else if (key === "z" && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();
     if (mode === "playing") {

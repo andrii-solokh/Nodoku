@@ -1874,8 +1874,43 @@ a {
   75%, 100% { opacity: 0; transform: scale(1.14); }
 }
 
-@media (pointer: fine) {
-  .rotation-tools { display: none; }
+.rotation-shortcut { display: none; }
+@media (pointer: fine) and (min-width: 761px) and (min-aspect-ratio: 1001/1000) {
+  .rotation-tools,
+  .onboarding-turn-controls {
+    grid-template-columns: repeat(3, 72px);
+    grid-template-rows: repeat(3, 56px);
+  }
+  .rotation-tools .icon-button,
+  .onboarding-turn-controls .icon-button {
+    width: 72px;
+    min-width: 72px;
+    height: 56px;
+    padding: 0;
+    flex: none;
+  }
+  .rotation-tools [data-rotate] svg,
+  .onboarding-turn-controls [data-onboarding-rotate] svg { display: none; }
+  .rotation-shortcut {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    color: #756881;
+    font: 400 10px/1.2 Outfit, sans-serif;
+  }
+  .rotation-shortcut kbd {
+    min-width: 22px;
+    padding: 4px;
+    border: 1px solid #c9bedf;
+    border-bottom-width: 3px;
+    border-radius: 6px;
+    background: #faf8ff;
+    color: #584484;
+    text-align: center;
+    font: 500 13px/1 Outfit, sans-serif;
+  }
+  .rotation-tools .view-reset { flex-direction: column; gap: 3px; }
 }
 
 .onboarding-shortcut {
@@ -1901,7 +1936,8 @@ a {
   color: #584484;
   font: 500 24px/1.2 Outfit, sans-serif;
 }
-.onboarding-shortcut kbd.is-pressed {
+.onboarding-shortcut kbd.is-pressed,
+.rotation-shortcut kbd.is-pressed {
   background: var(--purple);
   border-color: #63519f;
   color: white;

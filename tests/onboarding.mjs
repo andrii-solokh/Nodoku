@@ -43,20 +43,19 @@ async function fixture(openOnboarding = true) {
   await page.route('**/api/presence', route => route.fulfill({ json: { online: 1, scope: 'local' } }));
   await page.route('**/api/statistics?**', route => route.fulfill({ json: { period: 'all', scope: 'local', trackingSince: null, totals: { visitors: 1, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
   await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors: [] } }));
-  await page.addInitScript(() => {
-    window.tutorialSuccessMessages = [];
-    document.addEventListener('DOMContentLoaded', () => {
-      const moment = document.querySelector('#completion-moment');
-      let visible = false;
-      if (!moment) return;
-      new MutationObserver(() => {
-        if (!moment.hidden && !visible) window.tutorialSuccessMessages.push(moment.querySelector('strong').textContent);
-        visible = !moment.hidden;
-      }).observe(moment, { attributes: true, childList: true, subtree: true });
-    });
-  });
   await page.goto(openOnboarding ? `${url}?onboarding=1` : url);
-  await page.waitForFunction(expected => JSON.parse(window.render_game_to_text()).mode === expected, openOnboarding ? 'onboarding' : 'home');
+  await page.waitForFunction(expected => typeof window.render_game_to_text === 'function'
+    && JSON.parse(window.render_game_to_text()).mode === expected, openOnboarding ? 'onboarding' : 'home');
+  await page.locator('#app-loader').waitFor({ state: 'hidden' });
+  await page.evaluate(() => {
+    window.tutorialSuccessMessages = [];
+    const moment = document.querySelector('#completion-moment');
+    let visible = false;
+    new MutationObserver(() => {
+      if (!moment.hidden && !visible) window.tutorialSuccessMessages.push(moment.querySelector('strong').textContent);
+      visible = !moment.hidden;
+    }).observe(moment, { attributes: true, childList: true, subtree: true });
+  });
   return page;
 }
 try {
@@ -190,7 +189,8 @@ try {
       window.advanceTime(elapsed);
       const board = JSON.parse(window.render_game_to_text());
       const node = board.nodes.find(n => n.id === Number(ring.dataset.nodeId));
-      results.push({ x: parseFloat(ring.style.left), y: parseFloat(ring.style.top), node: node.screen });
+      const bounds = ring.getBoundingClientRect();
+      results.push({ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2, node: node.screen });
     }
     return results;
   });
@@ -266,7 +266,8 @@ try {
   assert.equal(transition.nodes.length, 8, 'The next lesson switches to a 2 by 2 by 2 cube');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Turn left.');
   assert.match(await page.locator('#onboarding-message').textContent(), /use either key below/);
-  assert.equal(await page.locator('#onboarding-turn-controls').isHidden(), true, 'Desktop rotation uses gestures and keys');
+  assert.equal(await page.locator('#onboarding-turn-controls').isVisible(), true, 'Desktop players can use the rotation controller alongside gestures and keys');
+  assert.equal(await page.locator('#onboarding-turn-controls .rotation-shortcut:visible').count(), 4);
   assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-turn')), true, 'The turn lesson shows an animated turning cue on the board');
   assert.equal(await page.locator('.rotation-arrow-head').count(), 1, 'Rotation uses a directional arrow');
   const arrow = page.locator('.onboarding-cue-turn');
