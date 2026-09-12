@@ -226,8 +226,8 @@ app.innerHTML = `
   <h2 id="completion-title">All connected.</h2>
   <p>You cleared every dot.<br>Invite a friend to find their own moment of calm.</p>
   <div id="completion-share"></div>
-  <button class="start-button" id="next-button" autofocus>Play today again${icon("play")}</button>
-  <button class="secondary-button" id="completion-home">Back to the beginning</button>
+  <button class="start-button" id="next-button" autofocus>Solve another puzzle${icon("play")}</button>
+  <button class="secondary-button" id="completion-home">Return home</button>
 </dialog>
 <dialog class="dialog music-dialog" id="music-dialog" aria-labelledby="music-title">
   <div class="dialog-header"><h2 id="music-title">Ambient music</h2><button class="icon-button close" data-close="music-dialog" aria-label="Close music and credits">${icon("close")}</button></div>
