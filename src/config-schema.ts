@@ -62,6 +62,7 @@ export interface GameConfig {
     doubleTapCue: boolean;
     removalCue: boolean;
     rotationCue: boolean;
+    toolCue: boolean;
     gestureCycleMs: number;
   };
   sponsors: { enabled: boolean; slots: number; showOnHome: boolean; showInGame: boolean };
@@ -81,7 +82,7 @@ const dragDefaults = {
 export const TUTORIAL_DEFAULTS: GameConfig["tutorial"] = {
   enabled: true, color: "#8870bd", focusCircles: true, ringWidth: 2,
   ringScale: 1.08, ringOpacity: .8, dragCue: true, doubleTapCue: true,
-  removalCue: true, rotationCue: true, gestureCycleMs: 2400,
+  removalCue: true, rotationCue: true, toolCue: true, gestureCycleMs: 2400,
 };
 export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tutorial", Record<string, Rule>> = {
   demo: {
@@ -204,6 +205,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     dragCue: { label: "Drag trail", kind: "boolean", description: "Show a moving dot between the highlighted nodes." },
     doubleTapCue: { label: "Double-tap pings", kind: "boolean", description: "Two quick pings on one sphere, followed by a pause." },
     removalCue: { label: "Removal preview", kind: "boolean", description: "Temporarily fade the link and show a minus sign. This does not change the puzzle." },
+    toolCue: { label: "Tool pings", kind: "boolean", description: "Highlight Undo, Redo and Hint in their tutorial steps." },
     rotationCue: { label: "Rotation cue", kind: "boolean" },
     gestureCycleMs: { ...milliseconds("Drag and removal cycle", 1200, 6000), description: "Duration of each repeating demonstration. Double-tap pings keep their quick tapping rhythm." },
   },

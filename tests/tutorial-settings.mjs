@@ -45,7 +45,7 @@ try {
     const node = nodes.find(n => n.id === id);
     await page.mouse.click(node.screen.x, node.screen.y);
   }
-  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '2 of 7');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '2 of 9');
   const edges = (await state()).edges;
   assert.ok((await state()).removalCue);
   await page.locator('#admin-open').click();
@@ -63,7 +63,7 @@ try {
     const node = nodes.find(n => n.id === id);
     await page.mouse.click(node.screen.x, node.screen.y);
   }
-  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '3 of 7');
+  await page.waitForFunction(() => document.querySelector('#onboarding-step').textContent === '3 of 9');
   await page.locator('#admin-open').click();
   await control('doubleTapCue').uncheck();
   assert.equal(await page.locator('#onboarding-cue').isVisible(), false);

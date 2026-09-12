@@ -68,6 +68,7 @@
     "doubleTapCue": true,
     "removalCue": true,
     "rotationCue": true,
-    "gestureCycleMs": 2400
+    "gestureCycleMs": 2400,
+    "toolCue": true
   }
 }

@@ -75,6 +75,7 @@ let puzzle: Puzzle | null = null;
 let selected: number | null = null;
 let mode: "home" | "playing" | "onboarding" = "home";
 let onboardingStep = 0;
+let onboardingToolsComplete = false;
 let onboardingConnection: [number, number] | null = null;
 let onboardingCue: OnboardingCue = { kind: "none" };
 let completionMomentTimer: ReturnType<typeof setTimeout> | undefined;
@@ -218,16 +219,16 @@ app.innerHTML = `
     <button class="icon-button" type="button" data-onboarding-rotate="down" aria-label="Turn down">${icon("down")}</button>
     <span aria-hidden="true"></span>
   </div>
-  <aside class="game-toolbar onboarding-toolbar" id="onboarding-control-lesson" aria-label="Puzzle controls" aria-hidden="true" hidden>
-    <div class="tools-group" aria-hidden="true">
-      <button class="tool-button" type="button" tabindex="-1" disabled>${icon("undo")}Undo</button>
-      <button class="tool-button" type="button" tabindex="-1" disabled>${icon("redo")}Redo</button>
-      <button class="tool-button" type="button" tabindex="-1">${icon("restart")}Restart</button>
-      <button class="tool-button hint" type="button" tabindex="-1">${icon("hint")}Hint</button>
+  <aside class="game-toolbar onboarding-toolbar" id="onboarding-control-lesson" aria-label="Puzzle controls" hidden>
+    <div class="tools-group">
+      <button class="tool-button" type="button" id="onboarding-undo">${icon("undo")}Undo</button>
+      <button class="tool-button" type="button" id="onboarding-redo">${icon("redo")}Redo</button>
+      <button class="tool-button" type="button" id="onboarding-restart">${icon("restart")}Restart</button>
+      <button class="tool-button hint" type="button" id="onboarding-hint">${icon("hint")}Hint</button>
     </div>
   </aside>
   <section class="onboarding-copy" aria-live="polite">
-    <span class="onboarding-step" id="onboarding-step">1 of 3</span>
+    <span class="onboarding-step" id="onboarding-step">1 of 9</span>
     <h2 id="onboarding-title">Make one connection.</h2>
     <p id="onboarding-message">Drag from one node to a neighboring node.</p>
     <button class="onboarding-next" id="onboarding-next" hidden>Show me 3D${icon("right")}</button>
@@ -365,7 +366,7 @@ subscribeConfig(config => {
     cycle: `${tutorial.gestureCycleMs}ms`,
   })) cues.style.setProperty(`--cue-${name}`, String(value));
   scene.setRemovalCue(mode === "onboarding" && onboardingStep === 1 && tutorial.enabled && tutorial.removalCue ? onboardingConnection : null);
-  requestAnimationFrame(renderOnboardingCue);
+  requestAnimationFrame(() => { renderOnboardingCue(); if (mode === "onboarding") renderOnboardingTools(); });
   demo.setConfig(config);
   gameAudio.setConfig(config.sound);
   ambientAudio.setVolume(config.sound.ambientVolume);
@@ -800,46 +801,59 @@ function renderOnboardingCue() {
 function renderOnboarding() {
   const copy = [
     {
-      step: "1 of 7",
+      step: "1 of 9",
       title: "Make one connection.",
       message: "Drag from one node to a neighboring node.",
       action: null,
     },
     {
-      step: "2 of 7",
+      step: "2 of 9",
       title: "Remove the link.",
       message: "Drag across the same linked pair again to remove it.",
       action: null,
     },
     {
-      step: "3 of 7",
+      step: "3 of 9",
       title: "Double-tap a node.",
       message: "Tap twice quickly to connect all available neighbors. With a mouse, double-click.",
       action: null,
     },
     {
-      step: "4 of 7",
+      step: "4 of 9",
       title: "Clear every dot.",
       message: "Drag or double-tap nodes until every dot is gone. Double-tap a cleared node to remove its links.",
       action: null,
     },
     {
-      step: "5 of 7",
+      step: "5 of 9",
       title: "Turn the puzzle.",
       message: "Swipe over the board, or use the direction controls, to look around.",
       action: null,
     },
     {
-      step: "6 of 7",
+      step: "6 of 9",
       title: "Make a 3D connection.",
       message: "Drag from one node to a neighboring node. Turn the puzzle whenever you need another side.",
       action: null,
     },
     {
-      step: "7 of 7",
-      title: "Use your tools.",
-      message: "Undo, redo, restart, or ask for a hint from the toolbar whenever you need one.",
-      action: "Finish tutorial",
+      step: "7 of 9",
+      title: "Undo your move.",
+      message: "Press Undo to remove your last connection. On desktop: Ctrl / ⌘ + Z.",
+      action: null,
+    },
+    {
+      step: "8 of 9",
+      title: "Redo your move.",
+      message: "Press Redo to restore that connection. On desktop: Ctrl / ⌘ + Shift + Z.",
+      action: null,
+    },
+    {
+      step: "9 of 9",
+      title: onboardingToolsComplete ? "You’re ready." : "Try a hint.",
+      message: onboardingToolsComplete ? "You’ve learned the tools. Finish the tutorial to choose a puzzle."
+        : "Press Hint to get help with a connection. On desktop: H.",
+      action: onboardingToolsComplete ? "Finish tutorial" : null,
     },
   ][onboardingStep];
   el("onboarding-step").textContent = copy.step;
@@ -849,15 +863,50 @@ function renderOnboarding() {
   next.hidden = !copy.action;
   next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
   el("onboarding-turn-controls").hidden = onboardingStep !== 4;
-  el("onboarding-control-lesson").hidden = onboardingStep !== 6;
-  app.classList.toggle("onboarding-controls-active", onboardingStep === 6);
+  el("onboarding-control-lesson").hidden = onboardingStep < 6;
+  app.classList.toggle("onboarding-controls-active", onboardingStep >= 6);
+  renderOnboardingTools();
   onboardingCue = onboardingCueForStep();
   scene.setRemovalCue(onboardingStep === 1 && tutorialSettings.enabled && tutorialSettings.removalCue ? onboardingConnection : null);
   requestAnimationFrame(renderOnboardingCue);
   captureAnalytics("onboarding_lesson_viewed", {
-    lesson: ["connection", "remove", "node_fill", "network", "rotation", "3d_connection", "controls"][onboardingStep],
+    lesson: ["connection", "remove", "node_fill", "network", "rotation", "3d_connection", "undo", "redo", "hint"][onboardingStep],
     step: onboardingStep + 1,
   });
+}
+function renderOnboardingTools() {
+  const toolbar = el("onboarding-control-lesson");
+  toolbar.style.setProperty("--tool-cue-color", tutorialSettings.color);
+  const expected = onboardingToolsComplete ? null : ["undo", "redo", "hint"][onboardingStep - 6];
+  for (const tool of ["undo", "redo", "restart", "hint"] as const) {
+    const button = el<HTMLButtonElement>(`onboarding-${tool}`);
+    button.disabled = !puzzle || (tool === "undo" && !puzzle.canUndo)
+      || (tool === "redo" && !puzzle.canRedo) || (tool === "hint" && onboardingStep < 8);
+    button.classList.toggle("tutorial-tool-ping", tutorialSettings.enabled && tutorialSettings.toolCue && tool === expected);
+  }
+}
+function useOnboardingTool(tool: "undo" | "redo" | "hint" | "restart") {
+  if (mode !== "onboarding" || onboardingStep < 6 || !puzzle) return;
+  scene.cancelPendingTap();
+  onStrokeEnd(false);
+  if (tool === "hint" && onboardingStep < 8) return;
+  if (tool === "restart") {
+    puzzle.reset();
+    onboardingStep = 5;
+    onboardingToolsComplete = false;
+  } else {
+    const hintResult = tool === "hint" ? puzzle.hint() : null;
+    const changed = hintResult ? hintResult.changed : tool !== "hint" && puzzle[tool]();
+    if (!changed) return;
+    if (hintResult?.edge) scene.focusNode(hintResult.edge[0]);
+    if (tool === "undo" && onboardingStep === 6) onboardingStep = 7;
+    else if (tool === "redo" && onboardingStep === 7) onboardingStep = 8;
+    else if (tool === "hint" && onboardingStep === 8) onboardingToolsComplete = true;
+    tone(tool === "undo" ? "disconnect" : "connect");
+  }
+  selectNode(null);
+  scene.refresh();
+  renderOnboarding();
 }
 function finishOnboarding(completed = false) {
   captureAnalytics(completed ? "onboarding_completed" : "onboarding_skipped", {
@@ -890,6 +939,7 @@ function startOnboarding() {
   puzzle = new Puzzle({ size: 3, depth: 1, difficulty: "easy", seed: 17 });
   selected = null;
   onboardingStep = 0;
+  onboardingToolsComplete = false;
   onboardingConnection = null;
   mode = "onboarding";
   app.className = "onboarding";
@@ -1315,9 +1365,11 @@ function startFresh() {
 }
 el("start-button").addEventListener("click", startFresh);
 el("resume-button").addEventListener("click", () => startGame(true));
+for (const tool of ["undo", "redo", "restart", "hint"] as const)
+  el(`onboarding-${tool}`).addEventListener("click", () => useOnboardingTool(tool));
 el("onboarding-skip").addEventListener("click", () => finishOnboarding());
 el("onboarding-next").addEventListener("click", () => {
-  if (onboardingStep === 6) finishOnboarding(true);
+  if (onboardingStep === 8 && onboardingToolsComplete) finishOnboarding(true);
 });
 document
   .querySelectorAll<HTMLElement>("[data-onboarding-rotate]")
@@ -1482,7 +1534,7 @@ document.querySelectorAll<HTMLElement>("[data-difficulty]").forEach((button) =>
   }),
 );
 document.addEventListener("keydown", (event) => {
-  if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]"))
+  if ((mode !== "playing" && mode !== "onboarding") || !puzzle || document.querySelector("dialog[open]"))
     return;
   if (event.target instanceof Element && event.target.closest("#admin-panel")) return;
   if (
@@ -1499,6 +1551,16 @@ document.addEventListener("keydown", (event) => {
     event.target.closest("button, summary")
   )
     return;
+  if (mode === "onboarding") {
+    if (onboardingStep >= 6 && (event.ctrlKey || event.metaKey) && key === "z") {
+      event.preventDefault();
+      if (!event.repeat) useOnboardingTool(event.shiftKey ? "redo" : "undo");
+    } else if (onboardingStep >= 6 && key === "h" && !event.ctrlKey && !event.metaKey) {
+      event.preventDefault();
+      if (!event.repeat) useOnboardingTool("hint");
+    }
+    return;
+  }
   const rotations: Record<string, "left" | "right" | "up" | "down"> = {
     arrowleft: "left",
     a: "left",

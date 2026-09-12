@@ -1820,3 +1820,8 @@ TODO / Note
 2026-09-12
 - Replaced the onboarding orbit badge with a curved directional swipe arrow above the 3D puzzle, anchored to live rendered sphere bounds. A traveling highlight demonstrates the direction; reduced motion leaves the static arrow.
 - Retained Studio rotation visibility and cue color. Build, full onboarding flow, desktop/mobile arrow placement screenshots, and required web-game client passed.
+
+2026-09-12
+- Replaced the non-interactive tutorial toolbar with real Undo, Redo, Restart and Hint actions. Three separate lessons now require undoing the last 3D connection, restoring it, then applying a hint before Finish tutorial appears.
+- Expected tool pulses in the shared toolbar layout. Added Studio Tool pings toggle; global cue visibility/color and reduced motion apply. Desktop shortcuts work without intercepting admin/form inputs; Restart returns to the 3D practice step.
+- Build, 196 unit tests, full onboarding browser flow (buttons, shortcuts, real edge changes, replay after Restart), desktop/mobile screenshots and web-game client passed.
