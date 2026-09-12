@@ -1807,12 +1807,25 @@ a {
   .onboarding-practice .onboarding-copy {
     top: calc(100% - var(--onboarding-copy-space) - 28px);
   }
-  .onboarding-practice .onboarding-turn-controls {
+  .onboarding .onboarding-turn-controls {
     right: 12px;
     bottom: max(12px, env(safe-area-inset-bottom));
     transform: none;
   }
+  .onboarding-rotation-lesson .onboarding-copy {
+    top: auto;
+    bottom: max(152px, calc(140px + env(safe-area-inset-bottom)));
+  }
   .onboarding-practice .onboarding-next { padding: 10px 8px; font-size: 12px; gap: 4px; }
+}
+@media (max-width: 760px) and (max-height: 800px) and (orientation: portrait) {
+  .onboarding-rotation-lesson .onboarding-copy {
+    left: 16px;
+    width: calc(100% - 172px);
+    bottom: max(12px, env(safe-area-inset-bottom));
+    transform: none;
+    text-align: left;
+  }
 }
 .tutorial-tool-ping { position: relative; }
 .tutorial-tool-ping::after {
