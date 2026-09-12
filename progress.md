@@ -1672,3 +1672,8 @@ TODO / Note
 - Centered the active puzzle title and progress in the portrait mobile header.
 - Moved the Online/Visitors activity link to the upper-right edge below the header controls, preserving its Statistics destination.
 - Verified the iPhone game view has centered puzzle information, a right-aligned activity link, and no browser errors; ran the required web-game smoke check.
+
+## 2026-09-12 — Mobile online-only activity
+- Simplified the mobile game activity link to show only the live Online count.
+- Kept the link clickable so the complete visitor, puzzle, connection, and dot totals remain available in Statistics.
+- Verified the iPhone game header hides the rotating metric and divider, then ran the required web-game smoke check.
