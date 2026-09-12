@@ -105,20 +105,30 @@ try {
   assert.equal(await page.locator('#onboarding-step').textContent(), '2 of 10');
   assert.deepEqual(await page.locator('#onboarding-stage').boundingBox(), initialStageBounds, 'The selection-to-drag transition keeps the board stationary');
   assert.equal((await state(page)).edges.length, 0);
-  await page.mouse.click(a.screen.x, a.screen.y);
-  await page.mouse.click(b.screen.x, b.screen.y);
+  const bottomNodes = (await state(page)).nodes.sort((a, b) => b.screen.y - a.screen.y).slice(0, 2).sort((a, b) => a.screen.x - b.screen.x);
+  const [dragA, dragB] = bottomNodes;
+  assert.ok(![firstA, firstB].includes(dragA.id) && ![firstA, firstB].includes(dragB.id), 'Drag uses a different pair from the tap lesson');
+  assert.match(await page.locator('#onboarding-message').textContent(), /two bottom nodes/);
+  for (const [selector, node] of [['.onboarding-cue-start', dragA], ['.onboarding-cue-end', dragB]]) {
+    const ring = await page.locator(selector).boundingBox();
+    assert.ok(Math.abs(ring.x + ring.width / 2 - node.screen.x) < 8 && Math.abs(ring.y + ring.height / 2 - node.screen.y) < 8,
+      'Drag guide targets the bottom spheres');
+  }
+  await page.screenshot({ path: 'output/web-game/onboarding-cues/drag-bottom-desktop.png' });
+  await page.mouse.click(dragA.screen.x, dragA.screen.y);
+  await page.mouse.click(dragB.screen.x, dragB.screen.y);
   assert.equal((await state(page)).edges.length, 0, 'The drag lesson requires dragging');
-  await page.mouse.move(a.screen.x, a.screen.y);
+  await page.mouse.move(dragA.screen.x, dragA.screen.y);
   await page.mouse.down();
   // A small drag begins the tutorial stroke without reaching a neighbour.
-  await page.mouse.move(a.screen.x + 8, a.screen.y, { steps: 2 });
+  await page.mouse.move(dragA.screen.x + 8, dragA.screen.y, { steps: 2 });
   await page.waitForFunction(nodeId => {
     const tutorialState = JSON.parse(window.render_game_to_text());
     return tutorialState.selected === nodeId && tutorialState.floating.selection?.nodeId === nodeId;
-  }, a.id);
-  await page.mouse.move(b.screen.x, b.screen.y, { steps: 8 });
+  }, dragA.id);
+  await page.mouse.move(dragB.screen.x, dragB.screen.y, { steps: 8 });
   await page.mouse.up();
-  mirror.toggle(firstA, firstB);
+  mirror.toggle(dragA.id, dragB.id);
   assert.equal((await state(page)).tutorialSuccess, 'Connection made');
   assert.equal(await page.locator('#onboarding-step').textContent(), '2 of 10', 'The next instruction waits for the success beat');
   await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('#completion-moment')).opacity) > .9);
@@ -140,8 +150,8 @@ try {
     animation.play();
     return { from, to };
   });
-  assert.ok((trail.to.x - trail.from.x) * (b.screen.x - a.screen.x)
-    + (trail.to.y - trail.from.y) * (b.screen.y - a.screen.y) < 0, 'Removal trail travels opposite the original connection');
+  assert.ok((trail.to.x - trail.from.x) * (dragB.screen.x - dragA.screen.x)
+    + (trail.to.y - trail.from.y) * (dragB.screen.y - dragA.screen.y) < 0, 'Removal trail travels opposite the original connection');
   const removal = await page.evaluate(() => {
     const initial = JSON.parse(window.render_game_to_text());
     window.advanceTime((1900 - initial.removalCue.elapsed + 2400) % 2400);
@@ -162,8 +172,8 @@ try {
   await page.screenshot({path: 'output/web-game/onboarding-cues/remove-desktop.png'});
 
   assert.equal(await page.locator('#onboarding-next').isHidden(), true, 'The tutorial cannot jump to 3D before the 2D board is solved');
-  await drag(page, a, b);
-  mirror.toggle(firstA, firstB);
+  await drag(page, dragA, dragB);
+  mirror.toggle(dragA.id, dragB.id);
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '4 of 10');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Double-tap a node.');
   assert.match(await page.locator('#onboarding-message').textContent(), /Tap twice quickly.*double-click/);
