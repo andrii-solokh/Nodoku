@@ -75,6 +75,7 @@ let puzzle: Puzzle | null = null;
 let selected: number | null = null;
 let mode: "home" | "playing" | "onboarding" = "home";
 let onboardingStep = 0;
+let onboardingConnection: [number, number] | null = null;
 let toastTimer: ReturnType<typeof setTimeout>;
 let completionShown = false;
 let keyboardIndex = -1;
@@ -281,8 +282,8 @@ try {
         captureAnalytics("puzzle_rotated", puzzleAnalyticsProperties());
         trackPuzzleAction("rotate", "gesture");
       }
-      if (mode === "onboarding" && onboardingStep === 2) {
-        onboardingStep = 3;
+      if (mode === "onboarding" && onboardingStep === 4) {
+        onboardingStep = 5;
         renderOnboarding();
       }
     },
@@ -509,8 +510,18 @@ function onNode(id: number) {
   updateGame();
 }
 function onDoubleTap(id: number) {
-  if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]"))
+  if (!puzzle || document.querySelector("dialog[open]"))
     return;
+  if (mode === "onboarding") {
+    if (onboardingStep !== 2) return;
+    const result = puzzle.toggleNode(id);
+    if (!result.changed || result.removed) return;
+    onboardingStep = 3;
+    scene.refresh();
+    renderOnboarding();
+    return;
+  }
+  if (mode !== "playing") return;
   const result = puzzle.toggleNode(id);
   el("toast").textContent = "";
   selectNode(null);
@@ -536,19 +547,31 @@ function onDoubleTap(id: number) {
 function renderOnboarding() {
   const copy = [
     {
-      step: "1 of 3",
+      step: "1 of 5",
       title: "Make one connection.",
       message: "Drag from one node to a neighboring node.",
       action: null,
     },
     {
-      step: "2 of 3",
-      title: "Clear every dot.",
-      message: "Each link clears one dot from both nodes. Double-tap a node to connect every available neighboring node at once.",
+      step: "2 of 5",
+      title: "Remove that connection.",
+      message: "Drag across the same linked pair again to remove it.",
       action: null,
     },
     {
-      step: "3 of 3",
+      step: "3 of 5",
+      title: "Fill a node.",
+      message: "Double-tap a node to connect every available neighboring node at once.",
+      action: null,
+    },
+    {
+      step: "4 of 5",
+      title: "Clear every dot.",
+      message: "Keep connecting neighboring nodes until every dot is gone.",
+      action: null,
+    },
+    {
+      step: "5 of 5",
       title: "2D complete.",
       message: "You cleared every dot. Now turn the 3D puzzle to see another side.",
       action: null,
@@ -567,7 +590,7 @@ function renderOnboarding() {
   next.hidden = !copy.action;
   next.innerHTML = copy.action ? `${copy.action}${icon("right")}` : "";
   captureAnalytics("onboarding_lesson_viewed", {
-    lesson: ["connection", "network", "rotation", "ready"][onboardingStep],
+    lesson: ["connection", "remove", "node_fill", "network", "rotation", "ready"][onboardingStep],
     step: onboardingStep + 1,
   });
 }
@@ -600,6 +623,7 @@ function startOnboarding() {
   puzzle = new Puzzle({ size: 3, depth: 1, difficulty: "easy", seed: 17 });
   selected = null;
   onboardingStep = 0;
+  onboardingConnection = null;
   mode = "onboarding";
   app.className = "onboarding";
   moveCanvas("onboarding-stage");
@@ -609,8 +633,8 @@ function startOnboarding() {
   renderOnboarding();
 }
 function showOnboarding3d() {
-  if (mode !== "onboarding" || onboardingStep !== 1) return;
-  onboardingStep = 2;
+  if (mode !== "onboarding" || onboardingStep !== 3) return;
+  onboardingStep = 4;
   puzzle = new Puzzle({ size: 3, depth: 3, difficulty: "easy", seed: 17 });
   scene.setPuzzle(puzzle);
   scene.setInteractive(true);
@@ -622,7 +646,7 @@ function onStrokeStart(id: number) {
   if (mode === "onboarding") {
     // The 3D lesson is about turning the board. A drag that begins on a node
     // must still rotate, because nodes cover much of the small tutorial board.
-    if (onboardingStep > 1) return false;
+    if (onboardingStep === 2 || onboardingStep > 3) return false;
     onStrokeEnd(false);
     strokePuzzle = puzzle;
     strokeChanged = false;
@@ -657,11 +681,21 @@ function onStrokeEdge(a: number, b: number): boolean {
     return true;
   }
   const count = puzzle.edges.length;
+  if (mode === "onboarding") {
+    if (onboardingStep === 0 && onboardingConnection) return false;
+    if (
+      onboardingStep === 1 &&
+      (!onboardingConnection || edgeKey(...onboardingConnection) !== key)
+    )
+      return false;
+  }
   const result = puzzle.toggle(a, b);
   if (!result.changed) return false;
   strokeEdges.add(key);
   strokeChanged = true;
   if (mode === "onboarding") {
+    if (onboardingStep === 0 && puzzle.edges.length > count)
+      onboardingConnection = [a, b];
     scene.refresh();
     return true;
   }
@@ -692,7 +726,22 @@ function onStrokeEnd(showCompletion = true) {
         onboardingStep = 1;
         renderOnboarding();
       }
-      if (active.solved && onboardingStep === 1) {
+      const tutorialConnection = onboardingConnection;
+      if (
+        changed &&
+        onboardingStep === 1 &&
+        tutorialConnection &&
+        !active.edges.some(
+          edge =>
+            edgeKey(...edge) ===
+            edgeKey(tutorialConnection[0], tutorialConnection[1]),
+        )
+      ) {
+        onboardingConnection = null;
+        onboardingStep = 2;
+        renderOnboarding();
+      }
+      if (active.solved && onboardingStep === 3) {
         captureAnalytics("onboarding_2d_completed", {
           connections: active.edges.length,
         });
@@ -973,7 +1022,7 @@ el("start-button").addEventListener("click", startFresh);
 el("resume-button").addEventListener("click", () => startGame(true));
 el("onboarding-skip").addEventListener("click", () => finishOnboarding());
 el("onboarding-next").addEventListener("click", () => {
-  if (onboardingStep === 3) finishOnboarding(true);
+  if (onboardingStep === 5) finishOnboarding(true);
 });
 el("home-button").addEventListener("click", () => {
   if (mode === "playing") goHome();
