@@ -1897,3 +1897,7 @@ TODO / Note
 2026-09-12
 - Disabled browser text selection, Safari touch callouts, and native image/SVG dragging across the site to prevent selection handles during play. Kept text selection available in editable fields.
 - Build passed; Chromium browser check confirmed dragging tutorial text selects nothing and Skip tutorial remains clickable. Inspected mobile screenshot and ran the web-game client. WebKit browser is not installed locally, so physical Safari behavior was not directly tested.
+
+2026-09-12
+- Hints now use the existing connection framing routine, choosing a shared face and checking both endpoints and the connection span for occlusion. Applied to normal play and onboarding; flat boards retain their orientation.
+- Build and full onboarding walkthrough passed, including a new two-endpoint visibility assertion after the Hint lesson. Added desktop/mobile browser coverage for hint additions and removals in flat and 3D puzzles.

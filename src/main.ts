@@ -1037,7 +1037,7 @@ function useOnboardingTool(tool: "undo" | "redo" | "hint" | "restart") {
     const hintResult = tool === "hint" ? puzzle.hint() : null;
     const changed = hintResult ? hintResult.changed : tool !== "hint" && puzzle[tool]();
     if (!changed) return;
-    if (hintResult?.edge) scene.focusNode(hintResult.edge[0]);
+    if (hintResult?.edge) scene.focusConnection(...hintResult.edge);
     tone(tool === "undo" ? "disconnect" : "connect");
     const expected = !onboardingToolsComplete && ["undo", "redo", "hint"][onboardingStep - 7] === tool;
     if (expected) {
@@ -1503,7 +1503,7 @@ function hint() {
   }
   selectNode(null);
   if (result.edge) {
-    scene.focusNode(result.edge[0]);
+    scene.focusConnection(...result.edge);
   }
   trackFirstConnection("hint");
   trackPuzzleAction("hint", "hint", 1, result.removed ? 0 : 1, result.removed ? 1 : 0);
