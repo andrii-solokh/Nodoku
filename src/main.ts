@@ -511,7 +511,7 @@ function renderOnboarding() {
     {
       step: "2 of 3",
       title: "Clear every dot.",
-      message: "Join every node into one network. Every dot needs a connection, so use every available connection.",
+      message: "Join every node into one network. Every dot needs a connection, so use every available connection. Double-tap a node to connect every available neighbor.",
       action: "Show me 3D",
     },
     {

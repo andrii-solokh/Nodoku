@@ -1606,3 +1606,8 @@ TODO / Note
 - Disabled sponsorship globally in the saved game configuration, which hides placements on the landing page and during play and hides the private placement report in Statistics.
 - Retained the other sponsor settings for a later admin re-enable.
 - Verified the built landing page and Statistics view; ran the web-game interaction smoke test, `npm test` (192 passing), and `npm run build`.
+
+## 2026-09-12 — Onboarding double-tap shortcut
+- Added the double-tap shortcut to the connection-goal lesson: double-tap a node to connect every available neighbor.
+- Covered the instruction in the first-run onboarding browser test.
+- Verified with `npm test` (192 passing), `npm run build`, the onboarding browser flow, and the web-game interaction smoke test.
