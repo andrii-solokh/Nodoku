@@ -1979,3 +1979,8 @@ TODO / Note
 - Added compact keyboard labels beside desktop Undo, Redo, Restart and Hint, using Mac/Windows modifier labels. Labels stay hidden on touch devices and compact toolbar layouts; accessible button names remain unchanged.
 - Added Shift+R for Restart through the existing button confirmation flow, with keyboard help and aria-keyshortcuts. Plain R still resets the view.
 - Build and focused Chromium/WebKit checks passed for all four shortcuts, restart confirmation, Mac/Windows labels and hidden phone/tablet labels in portrait/landscape. Ran the web-game client and inspected the desktop toolbar screenshot.
+
+2026-09-12
+- Restored desktop rotation controls in normal 3D games and onboarding. Desktop buttons show arrow/WASD alternatives and R for the game's reset view; phones/tablets retain icon-only controls and flat games keep rotation hidden.
+- Shared held-key feedback with tutorial keycaps, highlighting individual keys on press and clearing on release/blur/visibility loss. Consolidated direction mappings so labels and rotation input agree.
+- Production build, full onboarding walkthrough and focused Chromium/WebKit controller checks passed (clicks, every arrow/WASD key, reset feedback, cleanup, tutorial progression and mobile rendering). Updated stale walkthrough assumptions for asynchronous startup and ring bounds from earlier fixes. Ran the web-game client and inspected the controller screenshot.
