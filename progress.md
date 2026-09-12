@@ -1737,3 +1737,9 @@ TODO / Note
 - The score is screen-aligned during 3D turns, is hidden in the landing demo, clears when a new puzzle begins, and respects reduced-motion and instant transition settings.
 - Exposed staff state in `render_game_to_text` and strengthened the dot-animation browser test to verify black-dot launch, flight, and final note landing. Reviewed `output/web-game/music-score/landed-note-3d.png`.
 - Validation: `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:dot-animations`, `npm run test` (194 passing), required web-game client run, and 3D visual inspection.
+
+## 2026-09-12 — Onboarding selection feedback
+- Restored the accent selection ring in onboarding by routing guided node taps and drags through the shared node-selection path.
+- Kept the rotation lesson free of node selection so swipes remain dedicated to turning the 3D board.
+- Added browser coverage that holds a guided drag on a node and verifies both the selected state and rendered ring.
+- Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, `npm run test` (194 passing), and a visual screenshot at `output/web-game/onboarding-selection/selection-ring.png`.

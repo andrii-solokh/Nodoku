@@ -37,7 +37,16 @@ try {
   const a = board.nodes.find(node => node.id === firstA);
   const b = board.nodes.find(node => node.id === firstB);
   assert.ok(a && b, 'The tutorial solution has visible endpoints');
-  await drag(page, a, b);
+  await page.mouse.move(a.screen.x, a.screen.y);
+  await page.mouse.down();
+  // A small drag begins the tutorial stroke without reaching a neighbour.
+  await page.mouse.move(a.screen.x + 8, a.screen.y, { steps: 2 });
+  await page.waitForFunction(nodeId => {
+    const tutorialState = JSON.parse(window.render_game_to_text());
+    return tutorialState.selected === nodeId && tutorialState.floating.selection?.nodeId === nodeId;
+  }, a.id);
+  await page.mouse.move(b.screen.x, b.screen.y, { steps: 8 });
+  await page.mouse.up();
   mirror.toggle(firstA, firstB);
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '2 of 6');
   assert.match(await page.locator('#onboarding-message').textContent(), /same linked pair again to remove it/);
