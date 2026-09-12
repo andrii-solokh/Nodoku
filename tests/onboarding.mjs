@@ -402,6 +402,11 @@ try {
   await page.locator('#onboarding-hint').click();
   await settleSuccess(page);
   assert.notDeepEqual((await state(page)).edges, beforeUndo, 'Hint changes the real puzzle');
+  const afterHint = await state(page);
+  const hintedEdge = afterHint.edges.find(edge => !beforeUndo.some(previous => previous.join(':') === edge.join(':')));
+  assert.ok(hintedEdge, 'Tutorial hint adds a connection');
+  for (const id of hintedEdge)
+    assert.equal(afterHint.nodes.find(node => node.id === id).screen.visible, true, 'Tutorial hint reveals both endpoints');
   assert.equal(await page.locator('.tutorial-tool-ping').count(), 0);
   assert.equal(await page.locator('#onboarding-shortcut').isHidden(), true);
   assert.match(await page.locator('#onboarding-next').textContent(), /Finish tutorial/);

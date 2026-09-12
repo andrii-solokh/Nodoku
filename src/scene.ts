@@ -1433,7 +1433,7 @@ export class BoardScene {
     this.animateTo(best.quaternion, true);
   }
 
-  /** Present a surface edge without changing the gameplay focus behavior. */
+  /** Present both endpoints and the space between them without occlusion. */
   focusConnection(a: number, b: number, maxDurationMs?: number): void {
     if (this.shapeTransition) return;
     const start = this.positions.get(a), end = this.positions.get(b);
