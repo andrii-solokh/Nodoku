@@ -1767,3 +1767,8 @@ TODO / Note
 - Matched its desktop middle-left column and icon-only lower-left mobile panel; removed mobile copy that overlapped the tutorial CTA.
 - Verified desktop and portrait screenshots in `output/web-game/onboarding-controls/`.
 - Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, and `npm run test` (194 passing).
+
+## 2026-09-12 — Onboarding completion label
+- Renamed the last onboarding action to “Finish tutorial”; it exits onboarding to the home screen instead of implying it starts a game.
+- Added browser coverage for the final label and preserved the existing completion-to-home flow check.
+- Verified with `npm run build`, `TEST_URL=http://127.0.0.1:5175 npm run test:onboarding`, `npm run test` (194 passing), and browser screenshots.
