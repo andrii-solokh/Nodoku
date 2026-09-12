@@ -463,8 +463,13 @@ function playCompletionMoment(onComplete: () => void, message = "All connected",
   clearCompletionMoment();
   const revision = completionMomentRevision;
   const moment = el("completion-moment");
+  moment.classList.toggle("is-tutorial", mode === "onboarding");
+  moment.classList.remove("is-compact");
+  moment.style.removeProperty("top");
+  moment.style.removeProperty("left");
   moment.querySelector("strong")!.textContent = message;
   moment.hidden = false;
+  positionTutorialSuccess();
   requestAnimationFrame(() => {
     if (revision === completionMomentRevision) moment.classList.add("is-active");
   });
@@ -778,8 +783,25 @@ function onboardingCueForStep(): OnboardingCue {
   return { kind: "none" };
 }
 
+function positionTutorialSuccess() {
+  const moment = el("completion-moment");
+  if (mode !== "onboarding" || moment.hidden || !puzzle) return;
+  const nodes = puzzle.nodes.map(node => scene.projectNode(node.id)).filter(node => node !== null);
+  if (!nodes.length) return;
+  const top = Math.min(...nodes.map(node => node.y - node.radius));
+  const left = Math.min(...nodes.map(node => node.x - node.radius));
+  const right = Math.max(...nodes.map(node => node.x + node.radius));
+  moment.classList.toggle("is-compact", top < 160);
+  const height = moment.offsetHeight;
+  const halfWidth = moment.offsetWidth / 2;
+  moment.style.left = `${Math.max(halfWidth + 8, Math.min(innerWidth - halfWidth - 8, (left + right) / 2))}px`;
+  // Allow for the animation's lowest position (translateY(-46%)).
+  moment.style.top = `${Math.max(8 + height * .54, top - 24 - height * .54)}px`;
+}
+
 function renderOnboardingCue() {
   if (mode !== "onboarding") return;
+  positionTutorialSuccess();
   const cue = el<HTMLElement>("onboarding-cue");
   const line = cue.querySelector<HTMLElement>(".onboarding-cue-line")!;
   const hand = cue.querySelector<HTMLElement>(".onboarding-cue-hand")!;
