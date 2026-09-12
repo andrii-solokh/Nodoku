@@ -53,6 +53,14 @@ try {
   await page.mouse.dblclick(fillScreenNode.screen.x, fillScreenNode.screen.y, { delay: 40 });
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '4 of 5');
   assert.match(await page.locator('#onboarding-message').textContent(), /until every dot is gone/);
+  const secondFillNode = mirror.nodes.find(node => node.id !== fillNode.id && mirror.remaining(node.id) > 0);
+  assert.ok(secondFillNode, 'The remaining tutorial board has another node to fill');
+  const secondFillResult = mirror.toggleNode(secondFillNode.id);
+  assert.equal(secondFillResult.changed, true, 'Double-tap remains available while clearing the board');
+  const secondFillScreenNode = (await state(page)).nodes.find(node => node.id === secondFillNode.id);
+  assert.ok(secondFillScreenNode, 'The second node to fill is visible');
+  await page.mouse.dblclick(secondFillScreenNode.screen.x, secondFillScreenNode.screen.y, { delay: 40 });
+  await page.waitForFunction(expectedEdges => JSON.parse(window.render_game_to_text()).edges.length === expectedEdges, mirror.edges.length);
   while (!mirror.solved) {
     const hint = mirror.hint();
     assert.equal(hint.changed, true, 'The tutorial board remains solvable after filling a node');

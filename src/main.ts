@@ -513,10 +513,11 @@ function onDoubleTap(id: number) {
   if (!puzzle || document.querySelector("dialog[open]"))
     return;
   if (mode === "onboarding") {
-    if (onboardingStep !== 2) return;
+    if (onboardingStep !== 2 && onboardingStep !== 3) return;
     const result = puzzle.toggleNode(id);
-    if (!result.changed || result.removed) return;
-    onboardingStep = 3;
+    if (!result.changed) return;
+    if (onboardingStep === 2 && result.removed) return;
+    if (onboardingStep === 2) onboardingStep = 3;
     scene.refresh();
     renderOnboarding();
     return;
