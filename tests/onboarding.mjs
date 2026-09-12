@@ -253,12 +253,19 @@ try {
   transition = await state(page);
   assert.equal(transition.nodes.length, 8, 'The next lesson switches to a 2 by 2 by 2 cube');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Turn left.');
-  assert.match(await page.locator('#onboarding-message').textContent(), /press ← \/ A on your keyboard/);
-  assert.equal(await page.locator('#onboarding-turn-controls').isVisible(), true, 'The turn lesson exposes direction controls');
+  assert.match(await page.locator('#onboarding-message').textContent(), /use either key below/);
+  assert.equal(await page.locator('#onboarding-turn-controls').isHidden(), true, 'Desktop rotation uses gestures and keys');
   assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-turn')), true, 'The turn lesson shows an animated turning cue on the board');
   assert.equal(await page.locator('.rotation-arrow-head').count(), 1, 'Rotation uses a directional arrow');
   const arrow = page.locator('.onboarding-cue-turn');
   const assertArrowDirection = async direction => {
+    if (!await page.evaluate(() => matchMedia('(pointer: coarse)').matches)) {
+      const expected = { left: ['←', 'A'], right: ['→', 'D'], up: ['↑', 'W'], down: ['↓', 'S'] }[direction];
+      assert.deepEqual(await page.locator('#onboarding-rotation-keys kbd').allTextContents(), expected,
+        'Only the current direction has keyboard guidance');
+      assert.equal(await page.locator('#onboarding-rotation-keys').evaluate(node => node.classList.contains('onboarding-shortcut')), true,
+        'Rotation reuses the Undo and Redo keycap styling');
+    }
     const delta = await arrow.locator('.rotation-arrow-track').evaluate(path => {
       const matrix = path.getScreenCTM();
       const start = path.getPointAtLength(0).matrixTransform(matrix);
@@ -321,6 +328,7 @@ try {
   await page.waitForTimeout(250);
   assert.match(await page.locator('#onboarding-message').textContent(), /tap the up arrow in the control panel/);
   assert.equal(await page.locator('#onboarding-rotation-keys').isHidden(), true);
+  assert.equal(await page.locator('#onboarding-turn-controls').isVisible(), true, 'Touch players keep the rotation controller');
   assert.equal(await page.locator('[data-onboarding-rotate="up"].tutorial-tool-ping').count(), 1);
   const upArrow = await arrow.boundingBox();
   assert.ok(upArrow.x >= 0 && upArrow.y >= 0 && upArrow.x + upArrow.width <= 390);
@@ -330,6 +338,14 @@ try {
   await settleSuccess(page);
   assert.equal((await state(page)).tutorialRotation, 'down');
   await assertArrowDirection('down');
+  await device.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+  await page.setViewportSize({ width: 1200, height: 850 });
+  await page.waitForFunction(() => !document.querySelector('#onboarding-rotation-keys').hidden);
+  await assertArrowDirection('down');
+  await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-down-desktop.png' });
+  await device.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForFunction(() => !document.querySelector('#onboarding-turn-controls').hidden);
   assert.equal(await page.locator('[data-onboarding-rotate="down"].tutorial-tool-ping').count(), 1);
   const downArrow = await arrow.boundingBox();
   const downBoardRight = Math.max(...(await state(page)).nodes.map(node => node.screen.x + node.screen.radius));

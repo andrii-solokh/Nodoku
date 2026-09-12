@@ -1842,11 +1842,9 @@ a {
   75%, 100% { opacity: 0; transform: scale(1.14); }
 }
 
-.onboarding-rotation-keys { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
-.onboarding-rotation-keys[hidden] { display: none; }
-.onboarding-rotation-keys kbd { padding: 6px 10px; border: 1px solid #dcd6e8; border-radius: 8px; font: inherit; font-size: 13px; opacity: .5; }
-.onboarding-rotation-keys .current { opacity: 1; border-color: #8870bd; background: #e7e0f3; }
-.onboarding-rotation-keys .done { opacity: .8; background: #dfece6; }
+@media (pointer: fine) {
+  .rotation-tools { display: none; }
+}
 
 .onboarding-shortcut {
   display: flex;

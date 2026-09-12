@@ -1922,3 +1922,7 @@ TODO / Note
 2026-09-12
 - Fixed portrait mobile tutorial rotation controls overlapping the lesson caption. Anchored the panel above the bottom safe area; tall phones place the caption above it, while phones up to 800px tall place the caption to its left. The scene sizing and position stay independent of the caption.
 - Build and rotation-layout assertions passed at 390×844, 390×667, and 320×568; inspected screenshots at all three sizes. Added these checks to the onboarding walkthrough and made its transient selection-success assertion atomic. The full walkthrough later failed on the free-play repeated double-tap assertion; it is not reported as fully passing.
+
+2026-09-12
+- Hid the rotation controller for desktop mouse input in both onboarding and normal play, preserving it for touch input. Rotation lessons now show only the current direction's arrow key or WASD alternative, using the shared Undo/Redo keycap styling and a shorter instruction.
+- Build and focused onboarding-through-rotation walkthrough passed: checked all four desktop key pairs, touch/desktop switching, mobile controller layout at three sizes, controller visibility in normal play, keyboard rotation, and no page errors. Inspected desktop up/down screenshots. Updated onboarding regression expectations for the new guidance.
