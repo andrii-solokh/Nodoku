@@ -663,6 +663,10 @@ a {
 .rotation-tools [data-rotate="down"] {
   grid-area: 3 / 2;
 }
+.flat-playing .rotation-tools,
+.flat-playing .shortcut-rotation {
+  display: none;
+}
 .status-toast {
   position: fixed;
   bottom: 110px;
