@@ -1993,3 +1993,7 @@ TODO / Note
 2026-09-12
 - Simplified desktop rotation controls into a 152px square directional pad with one arrow and a small WASD label per button. Removed repeated “or” text and nested keycap boxes; reset uses the same compact layout. The whole button highlights on keyboard press or mouse press. Shared with onboarding; mobile remains icon-only.
 - Build and focused Chromium/WebKit checks passed for every rotation shortcut, reset, held-key/release/blur feedback, tutorial progression, control clicks and mobile layout. Initial fixed-delay color assertions sampled CSS transitions too early under rendering load; rerun passed. Ran the web-game client and inspected normal/pressed desktop screenshots.
+
+2026-09-12
+- Added Ctrl-click and Cmd-click as mouse alternatives to double-click for node fill/clear. Reuses existing tutorial rules, sound queue and grouped undo; records modifier_click as its own analytics input and documents the shortcut in Keyboard controls. Suppresses the native Control-click menu over interactive nodes.
+- Production build and Chromium/WebKit checks passed for both modifiers in flat/3D, fill/clear, grouped undo, double-click parity, normal selection, right-click and modified drags. Tests compare graph contents independent of history insertion order and exercise native right-click last so its menu does not consume the next simulated click. Ran the web-game client and inspected filled-board screenshots.

@@ -283,6 +283,7 @@ app.innerHTML = `
       </div>
     </div>
     <dl class="shortcut-list">
+      <div><dt>Fill / clear node</dt><dd><kbd>${modifierLabel}</kbd><span class="shortcut-join">+</span><kbd>Click</kbd></dd></div>
       <div><dt>Undo</dt><dd><kbd>Ctrl / <span aria-hidden="true">⌘</span><span class="sr-only">Command</span></kbd><span class="shortcut-join">+</span><kbd>Z</kbd></dd></div>
       <div><dt>Redo</dt><dd><kbd>Ctrl / <span aria-hidden="true">⌘</span><span class="sr-only">Command</span></kbd><span class="shortcut-join">+</span><kbd>Shift</kbd><span class="shortcut-join">+</span><kbd>Z</kbd></dd></div>
       <div><dt>Restart puzzle</dt><dd><kbd>Shift</kbd><span class="shortcut-join">+</span><kbd>R</kbd></dd></div>
@@ -710,7 +711,7 @@ function onNode(id: number) {
   selectNode(null);
   updateGame();
 }
-function onDoubleTap(id: number) {
+function onDoubleTap(id: number, input: "double_tap" | "modifier_click" = "double_tap") {
   if (!puzzle || document.querySelector("dialog[open]"))
     return;
   if (mode === "onboarding") {
@@ -734,10 +735,10 @@ function onDoubleTap(id: number) {
   el("toast").textContent = "";
   selectNode(null);
   if (result.changed) {
-    trackFirstConnection("double_tap");
+    trackFirstConnection(input);
     trackPuzzleAction(
       "node_fill",
-      "double_tap",
+      input,
       result.count,
       result.removed ? 0 : result.count,
       result.removed ? result.count : 0,
@@ -1300,7 +1301,7 @@ function puzzleProgressProperties() {
   };
 }
 type PuzzleAction = "connection" | "connection_stroke" | "node_fill" | "hint" | "undo" | "redo" | "rotate";
-type PuzzleInput = "tap" | "drag" | "double_tap" | "hint" | "toolbar" | "gesture";
+type PuzzleInput = "tap" | "drag" | "double_tap" | "modifier_click" | "hint" | "toolbar" | "gesture";
 function trackPuzzleAction(
   action: PuzzleAction,
   input: PuzzleInput,
@@ -1335,7 +1336,7 @@ function trackPuzzleSession(event: "puzzle_session_completed" | "puzzle_session_
     reason,
   });
 }
-function trackFirstConnection(input: "tap" | "drag" | "double_tap" | "hint") {
+function trackFirstConnection(input: "tap" | "drag" | "double_tap" | "modifier_click" | "hint") {
   if (mode !== "playing" || firstConnectionTracked) return;
   firstConnectionTracked = true;
   captureAnalytics("puzzle_first_connection", { input, ...puzzleAnalyticsProperties() });
