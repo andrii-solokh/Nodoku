@@ -295,6 +295,10 @@ try {
   await settleSuccess(page);
   assert.equal((await state(page)).tutorialRotation, 'down');
   assert.equal(await page.locator('[data-onboarding-rotate="down"].tutorial-tool-ping').count(), 1);
+  const downArrow = await arrow.boundingBox();
+  const downBoardRight = Math.max(...(await state(page)).nodes.map(node => node.screen.x + node.screen.radius));
+  assert.ok(downArrow.x + downArrow.width / 2 > downBoardRight, 'The turn-down arrow sits to the right of the puzzle');
+  assert.ok(downArrow.x + downArrow.width <= 390, 'The turn-down arrow stays inside the mobile viewport');
   await page.screenshot({ path: 'output/web-game/onboarding-cues/rotation-down-mobile.png' });
   if (swipeRotations) await swipeTurn(page, 'down', { touch: true });
   else await page.locator('[data-onboarding-rotate="down"]').click();

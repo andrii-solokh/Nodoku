@@ -1870,3 +1870,7 @@ TODO / Note
 - Removed the tool-lesson-specific board offsets that moved the puzzle upward when Undo/Redo/Hint instructions appeared. Tutorial sizing now reserves space for the tallest lesson from the start and keeps the board center independent of text and shortcuts.
 - Anchored captions to a consistent top edge. Short landscape screens place instructions alongside the board with separate space for controls.
 - Build and full onboarding walkthrough passed, including regression assertions for unchanged stage bounds and caption position when the tool lesson appears. Checked desktop, portrait mobile, small mobile and landscape geometry/screenshots; all caption variants stay clear of nodes and fit the viewport. Required web-game client ran and its screenshot was inspected.
+
+2026-09-12
+- Moved the tutorial Turn down arrow to the puzzle's right side, preserving the up arrow on the left and per-frame alignment to floating node bounds. Clamped placement to the viewport.
+- Build and full onboarding walkthrough passed, including mobile right-side placement and viewport-bound assertions. Inspected the actual Turn down screenshot and required web-game client output.
