@@ -31,7 +31,9 @@ export function startAnalytics(): void {
       instance.init(config.projectApiKey, {
         api_host: config.apiHost,
         autocapture: false,
-        capture_pageview: true,
+        // Capture one explicit pageview once our Nodoku visitor ID and app label are
+        // registered. This keeps Web Analytics and replay sessions on the same identity.
+        capture_pageview: false,
         capture_pageleave: true,
         person_profiles: "identified_only",
         // The puzzle is rendered by Three.js, so DOM-only replay would otherwise
@@ -51,6 +53,7 @@ export function startAnalytics(): void {
       // This UUID is created locally by Nodoku and contains no profile data.
       instance.identify(getVisitorId());
       instance.register({ app: "nodoku" });
+      instance.capture("$pageview");
       initialized = true;
       for (const queued of queuedEvents) send(queued.event, queued.properties);
       queuedEvents.length = 0;
