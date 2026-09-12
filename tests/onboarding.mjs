@@ -244,8 +244,8 @@ try {
       break;
     }
     const hint = mirror.hint();
-    assert.equal(hint.changed, true, 'The tutorial board remains solvable after filling a node');
     assert.ok(hint.edge, 'Every tutorial hint supplies a connection');
+    assert.equal(mirror.toggle(...hint.edge).changed, true, 'The tutorial board remains solvable after filling a node');
     const current = await state(page);
     const source = current.nodes.find(node => node.id === hint.edge[0]);
     const target = current.nodes.find(node => node.id === hint.edge[1]);

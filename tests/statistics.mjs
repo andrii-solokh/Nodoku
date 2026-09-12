@@ -1,3 +1,4 @@
+import { followHint } from './helpers/follow-hint.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -62,7 +63,7 @@ try {
     return route.fulfill({ json: { recorded } });
   });
   await page.goto(url);
-  await page.locator('#hint-button').click();
+  await followHint(page);
   await page.locator('#completion-dialog').waitFor();
   await waitFor(() => completions.length === 1, 'A real solve records a completion');
   assert.equal(completions[0].attemptId, attemptId);
@@ -93,7 +94,7 @@ try {
     return route.fulfill({ json: { recorded: true } });
   });
   await offline.page.goto(url);
-  await offline.page.locator('#hint-button').click();
+  await followHint(offline.page);
   await offline.page.locator('#completion-dialog').waitFor();
   await waitFor(() => offline.page.evaluate(id => localStorage.getItem(`nodoku.completion.pending.v1.${id}`) !== null, attemptId), 'Failed completions are durably queued');
   await offline.page.locator('#next-button').click();
@@ -109,12 +110,14 @@ try {
   let demoCompletions = 0;
   await home.page.route('**/api/completions', route => { demoCompletions++; return route.fulfill({ json: { recorded: true } }); });
   await home.page.goto(url);
+  await home.page.waitForFunction(() => typeof window.advanceTime === 'function');
   await home.page.evaluate(() => window.advanceTime(60_000));
   assert.equal(demoCompletions, 0, 'Home auto-solving never records player achievements');
   await home.page.close();
 
   const view = await fixture({ settings, screen: 'playing', game, attemptId });
   await view.page.goto(url);
+  await view.page.waitForFunction(() => typeof window.advanceTime === 'function');
   await view.page.evaluate(() => window.advanceTime(1000));
   const original = await state(view.page);
   await view.page.locator('.visitor-game .audience-link').click();

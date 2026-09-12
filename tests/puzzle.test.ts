@@ -128,27 +128,32 @@ test("toggle enforces adjacency and available degrees, allows removing full edge
   assert.equal(puzzle.progress, 0);
 });
 
-test("hints remove incompatible edges, support undo, and always reach a solution", () => {
+test("hints suggest connections and removals without changing the board or history", () => {
   const puzzle = new Puzzle(settings);
   const solutionKeys = new Set(keys(puzzle.solution));
-  const wrong = puzzle.nodes
-    .flatMap((node) =>
-      puzzle.neighbors(node.id).map((id) => [node.id, id] as Edge),
-    )
-    .find((edge) => !solutionKeys.has(edgeKey(...edge)))!;
+  const wrong = puzzle.nodes.flatMap(node => puzzle.neighbors(node.id).map(id => [node.id, id] as Edge))
+    .find(edge => !solutionKeys.has(edgeKey(...edge)))!;
   puzzle.toggle(...wrong);
+  const before = puzzle.serialize();
   const hint = puzzle.hint();
-  assert.equal(hint.changed, true);
-  assert.equal(hint.removed, true);
+  assert.equal(hint.remove, true);
   assert.equal(edgeKey(...hint.edge!), edgeKey(...wrong));
-  assert.equal(puzzle.edges.length, 0);
+  assert.deepEqual(puzzle.serialize(), before);
+  assert.deepEqual(puzzle.hint(), hint, "repeated hints keep the same suggestion");
+  // Only the player's move changes the board.
+  assert.equal(puzzle.toggle(...hint.edge!).changed, true);
   assert.equal(puzzle.undo(), true);
   assert.deepEqual(keys(puzzle.edges), [edgeKey(...wrong)]);
   let hints = 0;
-  while (!puzzle.solved && hints++ <= puzzle.solution.length + 1)
-    assert.equal(puzzle.hint().changed, true);
+  while (!puzzle.solved && hints++ <= puzzle.solution.length + 1) {
+    const snapshot = puzzle.serialize();
+    const next = puzzle.hint();
+    assert.deepEqual(puzzle.serialize(), snapshot);
+    assert.ok(next.edge);
+    assert.equal(puzzle.toggle(...next.edge).changed, true);
+  }
   assert.equal(puzzle.solved, true);
-  assert.equal(puzzle.hint().changed, false);
+  assert.equal(puzzle.hint().edge, undefined);
   assert.equal(puzzle.undo(), true);
   assert.equal(puzzle.solved, false);
 });
@@ -181,8 +186,10 @@ test("redo restores both additions and removals, and new moves discard the redo 
   assert.equal(puzzle.canRedo, false);
   assert.equal(puzzle.redo(), false);
   puzzle.undo();
+  const beforeHint = puzzle.serialize();
   puzzle.hint();
-  assert.equal(puzzle.canRedo, false);
+  assert.deepEqual(puzzle.serialize(), beforeHint);
+  assert.equal(puzzle.canRedo, true);
   puzzle.undo();
   puzzle.reset();
   assert.equal(puzzle.canRedo, false);
@@ -438,7 +445,7 @@ test("victory is based on degrees and connectivity, accepting alternative soluti
   assert.equal(puzzle.disconnected, false);
   assert.equal(puzzle.connectionGroups.length, 1);
   assert.notDeepEqual(keys(puzzle.edges), keys(puzzle.solution));
-  assert.equal(puzzle.hint().changed, false);
+  assert.equal(puzzle.hint().edge, undefined);
 });
 
 test("serialization preserves state and undo without aliasing", () => {

@@ -1,3 +1,4 @@
+import { followHint } from './helpers/follow-hint.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -60,7 +61,7 @@ async function complete(page, last) {
     await page.mouse.click(b.screen.x, b.screen.y);
   } else {
     // A hidden cube edge remains reachable through the existing hint control.
-    await page.locator('#hint-button').click();
+    await followHint(page);
   }
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).dialog === 'completion-dialog');
   assert.equal((await state(page)).solved, true, 'Real gameplay opens completion');
@@ -136,7 +137,7 @@ async function solveNext(page) {
   assert.equal(next.dialog, null);
   assert.equal(next.edges.length, 0, 'Another puzzle starts a fresh board');
   const total = new Puzzle(next.settings).solution.length;
-  for (let index = 0; index < total; index++) await page.locator('#hint-button').click();
+  for (let index = 0; index < total; index++) await followHint(page);
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).dialog === 'completion-dialog');
   return payload(page);
 }

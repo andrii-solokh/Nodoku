@@ -1984,3 +1984,8 @@ TODO / Note
 - Restored desktop rotation controls in normal 3D games and onboarding. Desktop buttons show arrow/WASD alternatives and R for the game's reset view; phones/tablets retain icon-only controls and flat games keep rotation hidden.
 - Shared held-key feedback with tutorial keycaps, highlighting individual keys on press and clearing on release/blur/visibility loss. Consolidated direction mappings so labels and rotation input agree.
 - Production build, full onboarding walkthrough and focused Chromium/WebKit controller checks passed (clicks, every arrow/WASD key, reset feedback, cleanup, tutorial progression and mobile rendering). Updated stale walkthrough assumptions for asynchronous startup and ring bounds from earlier fixes. Ran the web-game client and inspected the controller screenshot.
+
+2026-09-12
+- Made Hint a read-only suggestion: two rings and a dashed guide highlight the next connection (or a conflicting link to remove), while camera framing reveals both endpoints. Clicking Hint or pressing H leaves graph, dots, progress and undo/redo history unchanged; a player move clears the guide. Hint analytics no longer count a played connection or trigger its sound.
+- Updated solving fixtures to explicitly click the suggested endpoints. Production build, 204 unit tests and Chromium/WebKit hint checks passed on desktop/mobile in flat/3D, including repeat hints and guide cleanup. Ran the web-game client and inspected the screenshot.
+- Statistics integration passed actual player completion recording, deduplication and offline delivery after a non-mutating hint, then timed out initializing its later statistics-view page at line 120. The broader suite did not finish.

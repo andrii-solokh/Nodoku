@@ -355,24 +355,25 @@ export class Puzzle {
     this.batchDepth = 0;
   }
 
-  hint(): Change & { edge?: Edge; removed?: boolean } {
+  /** Suggest a move without changing connections, progress or history. */
+  hint(): { edge?: Edge; remove?: boolean; reason?: string } {
     if (this.solved)
-      return { changed: false, reason: "This network is complete." };
+      return { reason: "This network is complete." };
     const solutionKeys = new Set(this.solution.map((edge) => edgeKey(...edge)));
     const incompatible = this.edges.find(
       (edge) => !solutionKeys.has(edgeKey(...edge)),
     );
     if (incompatible) {
       const edge: Edge = [...incompatible];
-      return { ...this.toggle(...edge), edge, removed: true };
+      return { edge, remove: true };
     }
     const currentKeys = new Set(this.edges.map((edge) => edgeKey(...edge)));
     const missing = this.solution.find(
       (edge) => !currentKeys.has(edgeKey(...edge)),
     );
-    if (!missing) return { changed: false, reason: "No hint available." };
+    if (!missing) return { reason: "No hint available." };
     const edge: Edge = [...missing];
-    return { ...this.toggle(...edge), edge, removed: false };
+    return { edge, remove: false };
   }
 
   get progress(): number {
