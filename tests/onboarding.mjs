@@ -74,6 +74,8 @@ try {
     await drag(page, source, target);
     await page.waitForTimeout(20);
   }
+  assert.equal(await page.locator('#completion-moment').isVisible(), true, 'The solved 2D lesson gets a completion beat before changing scenes');
+  await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/2d-completion-moment.png' });
   await page.waitForFunction(() => document.querySelector('#onboarding-step')?.textContent === '5 of 6');
   assert.equal((await state(page)).nodes.length, 26, 'The next lesson switches to a 3D board');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Turn the puzzle.');

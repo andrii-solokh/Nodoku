@@ -553,6 +553,61 @@ a {
   font-size: 13px;
 }
 .onboarding-skip:hover { color: #5f4c92; background: #e5e1ef; }
+.completion-moment {
+  position: fixed;
+  z-index: 20;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  color: var(--ink);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+}
+.completion-moment.is-active { animation: completion-moment-in 900ms cubic-bezier(.2, .8, .25, 1) both; }
+.completion-moment-glow {
+  position: absolute;
+  z-index: -1;
+  width: 172px;
+  height: 172px;
+  border-radius: 50%;
+  background: #c9e1d6aa;
+  filter: blur(24px);
+  transform: scale(.35);
+}
+.completion-moment.is-active .completion-moment-glow { animation: completion-glow 900ms ease-out both; }
+.completion-moment-emblem {
+  display: grid;
+  width: 66px;
+  height: 66px;
+  place-items: center;
+  border: 1px solid #cfe0d7;
+  border-radius: 50%;
+  background: #e0ebe5;
+  color: #719884;
+  box-shadow: 0 12px 32px #6d8c7a2b;
+  transform: scale(.5) rotate(-12deg);
+}
+.completion-moment.is-active .completion-moment-emblem { animation: completion-emblem 760ms cubic-bezier(.16, .9, .28, 1) both; }
+.completion-moment-emblem svg { width: 38px; height: 38px; }
+.completion-moment strong { font-size: clamp(24px, 3vw, 34px); font-weight: 500; letter-spacing: -1.2px; }
+@keyframes completion-moment-in {
+  0%, 8% { opacity: 0; transform: translate(-50%, -46%); }
+  23%, 72% { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, -54%); }
+}
+@keyframes completion-emblem {
+  0%, 10% { transform: scale(.45) rotate(-12deg); }
+  38% { transform: scale(1.1) rotate(3deg); }
+  60%, 100% { transform: scale(1) rotate(0); }
+}
+@keyframes completion-glow {
+  0%, 10% { opacity: 0; transform: scale(.25); }
+  40% { opacity: .8; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.22); }
+}
 .game-header-info {
   display: flex;
   align-items: center;
