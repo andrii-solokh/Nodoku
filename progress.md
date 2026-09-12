@@ -1637,3 +1637,9 @@ TODO / Note
 - Locked Flat boards to their face-on view: pointer drags, keyboard turns, toolbar turns, and legacy saved in-plane rotations no longer rotate them.
 - Hid the unavailable rotation controls and rotation shortcut in Flat mode.
 - Verified with `npm run build`, `npm test` (193 passing), `npm run test:camera`, and the web-game Playwright smoke check.
+
+## 2026-09-12 — Guided How to play
+- Made How to play launch the full skippable onboarding tutorial instead of the static help dialog.
+- Preserved an in-progress puzzle before opening the tutorial, so it remains available to continue afterward.
+- Made the completion action create a fresh puzzle, matching its “Solve another puzzle” label.
+- Verified with `npm run build`, `npm test` (193 passing), and `npm run test:onboarding`.

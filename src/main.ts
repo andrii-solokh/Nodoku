@@ -566,6 +566,12 @@ function finishOnboarding(completed = false) {
   el("start-button").focus({ preventScroll: true });
 }
 function startOnboarding() {
+  if (mode === "playing" && puzzle && !puzzle.solved) {
+    onStrokeEnd(false);
+    savedPuzzle = puzzle;
+    savedView = scene.serializeView();
+    savedSelection = selected;
+  }
   if (demoFrame) cancelAnimationFrame(demoFrame);
   demoFrame = 0;
   demo.stop();
@@ -732,7 +738,11 @@ function maybeComplete() {
     el<HTMLDialogElement>("completion-dialog").showModal();
   }
 }
-function startGame(resume = false) {
+function startGame(
+  resume = false,
+  seed = dailyPuzzleSeed(),
+  puzzleType: "daily" | "new" = "daily",
+) {
   if (demoFrame) cancelAnimationFrame(demoFrame);
   demoFrame = 0;
   demo.stop();
@@ -745,7 +755,7 @@ function startGame(resume = false) {
   puzzle =
     resumedPuzzle
       ? resumedPuzzle
-      : new Puzzle({ ...settings, seed: dailyPuzzleSeed() });
+      : new Puzzle({ ...settings, seed });
   if (!resumedPuzzle) melodyStep = 0;
   savedPuzzle = null;
   savedView = null;
@@ -770,7 +780,7 @@ function startGame(resume = false) {
   updateGame();
   captureAnalytics("puzzle_started", {
     ...puzzleAnalyticsProperties(),
-    puzzle_type: "daily",
+    puzzle_type: puzzleType,
     resumed: !!resumedPuzzle,
   });
   if (!document.querySelector("dialog[open]"))
@@ -872,7 +882,11 @@ el("onboarding-next").addEventListener("click", () => {
 el("home-button").addEventListener("click", () => {
   if (mode === "playing") goHome();
 });
-for (const name of ["help", "keyboard", "music"])
+el("help-button").addEventListener("click", () => {
+  scene.cancelPendingTap();
+  startOnboarding();
+});
+for (const name of ["keyboard", "music"])
   el(`${name}-button`).addEventListener("click", () => {
     if (name === "music" && !getConfig().sound.showAmbientMusic) return;
     scene.cancelPendingTap();
@@ -981,7 +995,7 @@ el("confirm-button").addEventListener("click", () => {
 el("next-button").addEventListener("click", () => {
   if (puzzle) settings = { ...puzzle.settings };
   el<HTMLDialogElement>("completion-dialog").close();
-  startGame();
+  startGame(false, Math.floor(Math.random() * 0x7fffffff) || 1, "new");
 });
 el("completion-home").addEventListener("click", goHome);
 document

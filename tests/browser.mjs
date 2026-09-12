@@ -104,9 +104,10 @@ try {
   assert.equal((await state(page)).mode, "home");
   assert.equal(await page.locator('#keyboard-button').isVisible(), false, 'Keyboard controls stay out of the home header');
   await page.locator("#help-button").click();
-  assert.equal((await state(page)).dialog, "help-dialog");
-  await page.keyboard.press("Escape");
-  assert.equal((await state(page)).dialog, null);
+  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'onboarding');
+  assert.equal(await page.locator('#help-dialog').isVisible(), false, 'How to play opens the guided tutorial');
+  await page.locator('#onboarding-skip').click();
+  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');
   assert.equal(
     await page.locator("#sound-button").getAttribute("aria-pressed"),
     "true",
@@ -175,9 +176,9 @@ try {
     await focusInput();
     await ignoredShortcuts(keys, expected, "editable input");
     await removeInput();
-    await page.locator("#help-button").click();
-    await ignoredShortcuts(keys, expected, "open help dialog");
-    assert.equal((await state(page)).dialog, "help-dialog");
+    await page.locator("#keyboard-button").click();
+    await ignoredShortcuts(keys, expected, "open keyboard dialog");
+    assert.equal((await state(page)).dialog, "keyboard-dialog");
     await page.keyboard.press("Escape");
   }
   await page.keyboard.press("Control+Shift+z");
@@ -345,8 +346,12 @@ try {
     "mobile controls fit viewport",
   );
   await mobile.locator("#help-button").tap();
-  await mobile.screenshot({ path: `${out}/help-mobile.png`, fullPage: true });
-  await mobile.keyboard.press("Escape");
+  await mobile.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'onboarding');
+  await mobile.screenshot({ path: `${out}/onboarding-mobile.png`, fullPage: true });
+  await mobile.locator('#onboarding-skip').tap();
+  await mobile.waitForFunction(() => JSON.parse(window.render_game_to_text()).mode === 'home');
+  await mobile.locator('#resume-button').tap();
+  await settle(mobile);
   await mobile.setViewportSize({ width: 844, height: 390 });
   await settle(mobile);
   await checkGameLayout(mobile, "mobile landscape");
