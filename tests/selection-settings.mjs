@@ -17,8 +17,8 @@ try {
   await page.getByRole('button', { name: 'Preview selection', exact: true }).click();
   let current = await state();
   const saved = current.config.selection;
-  assert.equal(current.selected, 4);
-  assert.equal(current.selectionVisuals.guides.count, 4);
+  assert.equal(current.selected, 0);
+  assert.equal(current.selectionVisuals.guides.count, 2);
   const edges = current.edges;
   await field('ringColor').fill('#cc4466');
   await field('ringSize').fill('1.5');
@@ -49,7 +49,7 @@ try {
   await page.evaluate(() => window.advanceTime(800));
   current = await state();
   assert.notDeepEqual(current.floating.selection.position, first);
-  assert.deepEqual(current.floating.selection.position, current.floating.nodes.find(n => n.nodeId === 4).visual,
+  assert.deepEqual(current.floating.selection.position, current.floating.nodes.find(n => n.nodeId === 0).visual,
     'selection follows the floating node');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(200);

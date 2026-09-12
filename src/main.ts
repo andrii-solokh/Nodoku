@@ -755,9 +755,11 @@ function firstAvailableConnection(): [number, number] | null {
 function onboardingCueForStep(): OnboardingCue {
   if (!puzzle) return { kind: "none" };
   if (onboardingStep === 0 || onboardingStep === 1) {
+    const example = puzzle.solution[0] ?? [];
     const [start, end] = onboardingStep === 0 && selected !== null
-      ? [selected, puzzle.neighbors(selected).find(id => puzzle!.remaining(id) > 0)]
-      : puzzle.solution[0] ?? [];
+      ? [selected, example.includes(selected) ? example.find(id => id !== selected)
+        : puzzle.neighbors(selected).find(id => puzzle!.remaining(id) > 0)]
+      : example;
     return Number.isInteger(start) && Number.isInteger(end)
       ? { kind: onboardingStep === 0 ? "select" : "drag", start, end }
       : { kind: "none" };
@@ -1066,7 +1068,7 @@ function startOnboarding() {
   if (demoFrame) cancelAnimationFrame(demoFrame);
   demoFrame = 0;
   demo.stop();
-  puzzle = new Puzzle({ size: 3, depth: 1, difficulty: "easy", seed: 17 });
+  puzzle = new Puzzle({ size: 2, depth: 1, difficulty: "easy", seed: 17 });
   selected = null;
   onboardingStep = 0;
   onboardingRotation = 0;
@@ -1077,13 +1079,13 @@ function startOnboarding() {
   moveCanvas("onboarding-stage");
   scene.setPuzzle(puzzle);
   scene.setInteractive(true);
-  captureAnalytics("onboarding_started", { grid_size: 3, depth: 1 });
+  captureAnalytics("onboarding_started", { grid_size: 2, depth: 1 });
   renderOnboarding();
 }
 function showOnboarding3d() {
   if (mode !== "onboarding" || onboardingStep !== 4) return;
   onboardingStep = 5;
-  puzzle = new Puzzle({ size: 3, depth: 3, difficulty: "easy", seed: 17 });
+  puzzle = new Puzzle({ size: 2, depth: 2, difficulty: "easy", seed: 17 });
   // Let the completed flat board open into the first 3D puzzle rather than
   // replacing the scene in a single frame.
   scene.setPuzzle(puzzle, false, true);
@@ -1833,7 +1835,7 @@ if (new URLSearchParams(location.search).has("admin")) {
   void import("./admin").then(({ mountAdmin }) => mountAdmin(startOnboarding, () => {
     startOnboarding();
     onboardingCue = { kind: "none" };
-    selectNode(4);
+    selectNode(puzzle!.nodes[0].id);
   }, () => {
     startOnboarding();
     onboardingStep = 3;

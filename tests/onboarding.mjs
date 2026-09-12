@@ -64,9 +64,9 @@ try {
   assert.equal(await page.locator('.site-header').isVisible(), false, 'Onboarding hides the normal header');
   assert.equal(await page.locator('#onboarding-step').textContent(), '1 of 10');
   const board = await state(page);
-  const tutorial = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
-  const mirror = new Puzzle({ size: 3, depth: 1, difficulty: 'easy', seed: 17 });
-  assert.equal(board.nodes.length, 9, 'The first lesson is a 3 by 3 board');
+  const tutorial = new Puzzle({ size: 2, depth: 1, difficulty: 'easy', seed: 17 });
+  const mirror = new Puzzle({ size: 2, depth: 1, difficulty: 'easy', seed: 17 });
+  assert.equal(board.nodes.length, 4, 'The first lesson is a 2 by 2 board');
   assert.equal(await page.locator('#onboarding-cue').isVisible(), true, 'The first lesson includes a visual gesture cue');
   assert.equal(await page.locator('#onboarding-cue').evaluate(node => node.classList.contains('is-select')), true, 'The first cue demonstrates selecting two neighboring nodes');
   const tutorialCenterY = board.nodes.reduce((sum, node) => sum + node.screen.y, 0) / board.nodes.length;
@@ -244,11 +244,11 @@ try {
   let transition = await state(page);
   assert.ok(transition.shapeTransition?.active, 'The flat tutorial board expands into the 3D lesson');
   assert.equal(transition.shapeTransition.fromDepth, 1);
-  assert.equal(transition.shapeTransition.toDepth, 3);
+  assert.equal(transition.shapeTransition.toDepth, 2);
   await page.screenshot({ path: 'output/web-game/onboarding-auto-3d/flat-to-3d-transition.png' });
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).shapeTransition === null);
   transition = await state(page);
-  assert.equal(transition.nodes.length, 26, 'The next lesson switches to a 3D board');
+  assert.equal(transition.nodes.length, 8, 'The next lesson switches to a 2 by 2 by 2 cube');
   assert.equal(await page.locator('#onboarding-title').textContent(), 'Turn left.');
   assert.match(await page.locator('#onboarding-message').textContent(), /press ← \/ A on your keyboard/);
   assert.equal(await page.locator('#onboarding-turn-controls').isVisible(), true, 'The turn lesson exposes direction controls');
@@ -477,7 +477,7 @@ try {
   await howToPlay.locator('#onboarding-skip').click();
   await howToPlay.close();
   assert.deepEqual(errors, []);
-  console.log('Passed: skippable first-run 3 by 3 connection lesson, goal explanation, 3D rotation lesson, How to play entry, and persisted completion.');
+  console.log('Passed: skippable first-run 2 by 2 connection lesson, goal explanation, 3D rotation lesson, How to play entry, and persisted completion.');
 } finally {
   await browser.close();
 }

@@ -38,7 +38,7 @@ function validSettings(value: unknown): value is PuzzleSettings {
   const s = value as PuzzleSettings;
   return (
     Number.isInteger(s.size) &&
-    s.size >= 3 &&
+    s.size >= 2 &&
     s.size <= 7 &&
     (s.depth === 1 || s.depth === s.size) &&
     ["easy", "medium", "hard"].includes(s.difficulty) &&
