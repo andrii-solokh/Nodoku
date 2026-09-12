@@ -2,7 +2,8 @@
 .statistics-page::backdrop { background: var(--paper); }
 .statistics-shell { max-width: 1112px; padding: 28px 36px 72px; margin: 0 auto; }
 .statistics-header { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; width: calc(100vw - 11vw); min-height: 60px; margin: 0 0 50px calc(50% - 50vw + 5.5vw); }
-.statistics-brand { justify-self: start; color: var(--ink); cursor: default; pointer-events: none; }
+.statistics-brand { justify-self: start; color: var(--ink); text-decoration: none; }
+.statistics-brand:hover { color: var(--ink); }
 .statistics-header-title { color: #796c87; font-size: 14px; font-weight: 500; }
 .statistics-back { justify-self: end; display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 8px; padding: 10px 0; color: #71647f; font-size: 14px; }
 .statistics-back > span:last-child { font-size: 21px; line-height: 1; }

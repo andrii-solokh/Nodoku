@@ -120,6 +120,7 @@ try {
   await view.page.locator('.visitor-game .audience-link').click();
   const dialog = view.page.locator('#statistics-dialog');
   await dialog.waitFor();
+  assert.equal(await dialog.locator('.statistics-brand').getAttribute('href'), '/', 'Statistics logo returns to Nodoku');
   await waitFor(async () => await dialog.locator('[data-total=puzzlesSolved]').textContent() === '213', 'Statistics loads server aggregates');
   assert.equal(await dialog.locator('[data-total=dotsCleared]').textContent(), '16,320');
   assert.equal(await dialog.locator('[data-total=visitors]').textContent(), '1,529');
