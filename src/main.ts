@@ -76,6 +76,7 @@ let selected: number | null = null;
 let mode: "home" | "playing" | "onboarding" = "home";
 let onboardingStep = 0;
 let onboardingConnection: [number, number] | null = null;
+let onboardingCue: OnboardingCue = { kind: "none" };
 let completionMomentTimer: ReturnType<typeof setTimeout> | undefined;
 let completionMomentRevision = 0;
 let toastTimer: ReturnType<typeof setTimeout>;
@@ -716,13 +717,22 @@ function onboardingCueForStep(): OnboardingCue {
 }
 
 function renderOnboardingCue() {
+  if (mode !== "onboarding") return;
   const cue = el<HTMLElement>("onboarding-cue");
   const line = cue.querySelector<HTMLElement>(".onboarding-cue-line")!;
   const hand = cue.querySelector<HTMLElement>(".onboarding-cue-hand")!;
   const startRing = cue.querySelector<HTMLElement>(".onboarding-cue-start")!;
   const endRing = cue.querySelector<HTMLElement>(".onboarding-cue-end")!;
   const turn = cue.querySelector<HTMLElement>(".onboarding-cue-turn")!;
-  const gesture = onboardingCueForStep();
+  if (puzzle?.solved || scene.isViewMoving) {
+    cue.hidden = true;
+    return;
+  }
+  // Keep the chosen target stable, but choose a new visible pair after a turn.
+  if (onboardingStep === 5 && (onboardingCue.kind === "none" ||
+      !scene.projectNode(onboardingCue.start!)?.front || !scene.projectNode(onboardingCue.end!)?.front))
+    onboardingCue = onboardingCueForStep();
+  const gesture = onboardingCue;
   cue.className = `onboarding-cue is-${gesture.kind}`;
   cue.hidden = gesture.kind === "none";
   if (gesture.kind === "none") return;
@@ -733,29 +743,33 @@ function renderOnboardingCue() {
     turn.style.top = `${stage.top + stage.height / 2}px`;
     return;
   }
-  const nodes = new Map(scene.getScreenNodes().map(node => [node.id, node]));
-  const start = nodes.get(gesture.start!);
-  const end = nodes.get(gesture.end!);
+  const start = scene.projectNode(gesture.start!);
+  const end = scene.projectNode(gesture.end!);
   if (!start || !end) {
     cue.hidden = true;
     return;
   }
   const distance = Math.hypot(end.x - start.x, end.y - start.y);
   const angle = Math.atan2(end.y - start.y, end.x - start.x) * 180 / Math.PI;
-  const ringSize = Math.max(38, start.radius * 2 + 18);
   for (const [ring, node] of [[startRing, start], [endRing, end]] as const) {
+    ring.dataset.nodeId = String(node.id);
     ring.style.left = `${node.x}px`;
     ring.style.top = `${node.y}px`;
-    ring.style.width = ring.style.height = `${ringSize}px`;
+    ring.style.width = ring.style.height = `${node.radius * 2 + 3}px`;
   }
-  line.style.left = `${start.x}px`;
-  line.style.top = `${start.y}px`;
-  line.style.width = `${distance}px`;
+  const dx = (end.x - start.x) / (distance || 1);
+  const dy = (end.y - start.y) / (distance || 1);
+  const fromX = start.x + dx * start.radius;
+  const fromY = start.y + dy * start.radius;
+  const length = Math.max(0, distance - start.radius - end.radius);
+  line.style.left = `${fromX}px`;
+  line.style.top = `${fromY}px`;
+  line.style.width = `${length}px`;
   line.style.transform = `rotate(${angle}deg)`;
-  hand.style.left = `${start.x}px`;
-  hand.style.top = `${start.y}px`;
-  hand.style.setProperty("--cue-dx", `${end.x - start.x}px`);
-  hand.style.setProperty("--cue-dy", `${end.y - start.y}px`);
+  hand.style.left = `${fromX}px`;
+  hand.style.top = `${fromY}px`;
+  hand.style.setProperty("--cue-dx", `${dx * length}px`);
+  hand.style.setProperty("--cue-dy", `${dy * length}px`);
 }
 
 function renderOnboarding() {
@@ -812,6 +826,7 @@ function renderOnboarding() {
   el("onboarding-turn-controls").hidden = onboardingStep !== 4;
   el("onboarding-control-lesson").hidden = onboardingStep !== 6;
   app.classList.toggle("onboarding-controls-active", onboardingStep === 6);
+  onboardingCue = onboardingCueForStep();
   requestAnimationFrame(renderOnboardingCue);
   captureAnalytics("onboarding_lesson_viewed", {
     lesson: ["connection", "remove", "node_fill", "network", "rotation", "3d_connection", "controls"][onboardingStep],
@@ -989,7 +1004,7 @@ function onStrokeEnd(showCompletion = true) {
         onboardingStep = 2;
         renderOnboarding();
       }
-      completeOnboarding2dIfSolved();
+      if (!completeOnboarding2dIfSolved() && changed && onboardingStep === 3) renderOnboarding();
       if (changed && onboardingStep === 5) {
         onboardingStep = 6;
         renderOnboarding();
@@ -1571,6 +1586,7 @@ Object.assign(window, {
     }
   },
 });
+scene.onRender = renderOnboardingCue;
 updateSound();
 updateMusic();
 if (document.hidden) ambientAudio.suspend();

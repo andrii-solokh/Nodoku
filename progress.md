@@ -1792,3 +1792,8 @@ TODO / Note
 2026-09-12
 - Replaced the tutorial-only controls replica with the shared game-toolbar component. It now uses the same responsive positioning, button treatment, and fresh-game disabled undo/redo state; removed redundant tutorial shortcut text.
 - Validated build, full onboarding flow, and visual desktop/mobile output.
+
+2026-09-12
+- Used Astra for the requested onboarding cue design review. Replaced oversized halos and cursor with a fine rim-to-rim drag trail/glint; double tap now shows only two brief pings on one sphere, separated by a quiet pause.
+- Cues track current mesh positions and per-sphere sizes after every scene render through lightweight projection (no per-frame picking). Hide during view transitions and select a visible pair when turns settle.
+- Added regression checks for single-sphere double-tap cues and alignment across actual floating motion; reviewed desktop/mobile screenshots.
