@@ -534,6 +534,7 @@ function limitNewPuzzleSize() {
     settings = { ...settings, size, depth: flat ? 1 : size };
 }
 function updateOptions(animateShape = false) {
+  gameAudio.stop();
   limitNewPuzzleSize();
   document
     .querySelectorAll<HTMLButtonElement>("[data-size]")
@@ -700,7 +701,8 @@ function onDoubleTap(id: number) {
     if (onboardingStep === 3) {
       celebrateOnboarding("Neighbors connected", () => { onboardingStep = 4; });
     } else if (isOnboardingPractice()) {
-      tone(result.removed ? "disconnect" : "connect", result.count);
+      tone(result.removed ? "disconnect" : "connect", result.count,
+        result.removed ? undefined : getConfig().demo.tempoBpm);
       refreshOnboardingPractice();
     } else if (!completeOnboarding2dIfSolved()) renderOnboarding();
     return;
@@ -1051,6 +1053,7 @@ function startOnboarding(step = 0, rotation = 0) {
   if (demoFrame) cancelAnimationFrame(demoFrame);
   demoFrame = 0;
   demo.stop();
+  gameAudio.stop();
   puzzle = new Puzzle({ size: 2, depth: step >= 5 ? 2 : 1, difficulty: "easy", seed: 17 });
   selected = null;
   onboardingStep = step;
@@ -1357,6 +1360,7 @@ function startGame(
   demoFrame = 0;
   demo.stop();
   onStrokeEnd();
+  gameAudio.stop();
   const resumedPuzzle = resume ? savedPuzzle : null;
   if (!resumedPuzzle) limitNewPuzzleSize();
   if (!resumedPuzzle || !attemptId) attemptId = restoreAttemptId(null);
@@ -1582,6 +1586,7 @@ el("restart-button").addEventListener("click", () => {
   onStrokeEnd();
   if (!puzzle?.edges.length) {
     puzzle?.reset();
+    gameAudio.stop();
     scene.resetView();
     melodyStep = 0;
     selectNode(null);
@@ -1594,6 +1599,7 @@ el("restart-button").addEventListener("click", () => {
     "Restart puzzle",
     () => {
       puzzle?.reset();
+      gameAudio.stop();
       melodyStep = 0;
       selectNode(null);
       updateGame();

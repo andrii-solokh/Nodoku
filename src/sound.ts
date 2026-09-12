@@ -27,7 +27,7 @@ const MAX_BURST = 6;
 const melodyIndex = (options: SoundOptions) => Number.isSafeInteger(options.melodyIndex) && options.melodyIndex! >= 0 ? options.melodyIndex! : 0;
 const scoreTempo = (value?: number) => Number.isFinite(value) ? Math.max(40, Math.min(180, value!)) : undefined;
 
-/** Small game sounds. Only gesture-unlocked, current events are played. */
+/** Gesture-unlocked game sounds with ordered connection phrases. */
 export class GameAudio {
   private context?: AudioContext;
   private rotationSample?: AudioBuffer;
@@ -43,7 +43,7 @@ export class GameAudio {
   private lastPlayed: Partial<Record<GameSound, number>> = {};
   private nextMelodyAt = 0;
   private lastConnectionAt = -Infinity;
-  private connectionSequence: { voice: Voice; end: number } | null = null;
+  private connectionSequence: { voice: Voice; end: number; tempo: number } | null = null;
   private config: EffectsConfig = {
     connectionMelody: "odeToJoy", noteDurationMs: 320, melodyVolume: .7,
     completionSound: true, completionNoteIntervalMs: 240,
@@ -217,7 +217,7 @@ export class GameAudio {
     if (kind === "rotate" && !rotationSample) return;
     if (kind === "connect" && (!count || this.config.melodyVolume <= 0)) return;
     if (kind === "complete" && [...this.voices].some(voice => voice.kind === "complete")) return;
-    if ((kind === "connect" || kind === "disconnect") && this.connectionSequence) {
+    if (kind === "disconnect" && this.connectionSequence) {
       const previous = this.connectionSequence;
       this.cancelVoices(voice => voice === previous.voice);
       this.connectionSequence = null;
@@ -226,21 +226,25 @@ export class GameAudio {
       delete this.lastPlayed[kind];
     }
     if (kind === "connect" && this.config.connectionMelody !== "classic") {
-      const sequenceTempo = scoreTempo(options.sequenceTempoBpm);
+      const pending = this.connectionSequence && this.connectionSequence.end > now ? this.connectionSequence : null;
+      if (!pending) this.connectionSequence = null;
+      const sequenceTempo = pending?.tempo ?? scoreTempo(options.sequenceTempoBpm);
       if (sequenceTempo !== undefined) {
-        // A fill is one cancellable phrase, not a backlog of input events.
-        this.cancelVoices(voice => voice.kind === "connect" && voice.start > now);
-        this.nextMelodyAt = 0;
-        const voice = this.createVoice(kind, now);
+        // Append each move to the same scored phrase. Reusing its voice keeps
+        // rapid fills from evicting earlier notes through the voice limit.
+        const phraseStart = Math.max(now, this.nextMelodyAt, pending?.end ?? 0);
+        const voice = pending && this.voices.has(pending.voice)
+          ? pending.voice : this.createVoice(kind, phraseStart);
         let elapsedMs = 0;
         for (let offset = 0; offset < count; offset++) {
-          const start = now + elapsedMs / 1000;
+          const start = phraseStart + elapsedMs / 1000;
           const frequency = midiToFrequency(melodyNote(this.config.connectionMelody, index + offset));
           this.melodyTone(voice, start, frequency, this.noteDurationMs(index + offset, sequenceTempo));
           this.lastConnectionAt = start;
           elapsedMs += this.noteStepMs(index + offset, sequenceTempo);
         }
-        this.connectionSequence = { voice, end: now + elapsedMs / 1000 };
+        this.nextMelodyAt = phraseStart + elapsedMs / 1000;
+        this.connectionSequence = { voice, end: this.nextMelodyAt, tempo: sequenceTempo };
         return;
       }
       for (let offset = 0; offset < count; offset++) {

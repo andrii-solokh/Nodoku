@@ -144,11 +144,12 @@ async function silentTurns(page) {
   }
   assert.deepEqual(await page.evaluate(() => window.__audio.decodes), [], 'Manual turns never decode a rotation recording');
 }
-function assertScoredFill(events, index, count, tempo, label) {
+function assertScoredFill(events, index, count, tempo, label, queuedStart) {
   const notes = melodySources(events);
   assert.equal(notes.length, count, `${label}: one melody note per added connection`);
   assert.deepEqual(notes.map(note => round(note.frequency)), Array.from({ length: count }, (_, offset) => round(midiToFrequency(melodyNote('odeToJoy', index + offset)))), `${label}: pitches continue from the actual player index`);
-  assert.ok(Math.abs(notes[0].when - notes[0].now) < .05, `${label}: the first note starts immediately`);
+  if (queuedStart === undefined) assert.ok(Math.abs(notes[0].when - notes[0].now) < .05, `${label}: the first note starts immediately`);
+  else assert.ok(Math.abs(notes[0].when - queuedStart) < 1e-6, `${label}: notes wait for the previous phrase's last beat`);
   let elapsed = 0;
   for (let offset = 0; offset < notes.length; offset++) {
     assert.ok(Math.abs(notes[offset].when - notes[0].when - elapsed) < 1e-6, `${label}: note ${offset + 1} follows the score at the configured tempo`);
@@ -184,7 +185,6 @@ async function doubleTapRhythm() {
   const output = 'output/web-game/double-tap-rhythm';
   await mkdir(output, { recursive: true });
   await writeFile(`${output}/filled-state.json`, JSON.stringify(current, null, 2));
-  await page.screenshot({ path: `${output}/filled-board.png` });
   const far = current.nodes.find(node => node.id === 15);
   const beforeSelection = await page.evaluate(() => window.__audio.stops.length);
   await page.mouse.click(far.screen.x, far.screen.y);
@@ -192,6 +192,7 @@ async function doubleTapRhythm() {
   assert.equal((await state(page)).edges.length, 4);
   assert.equal(await page.evaluate(() => window.__audio.stops.length), beforeSelection, 'Selection does not cancel the fill melody');
   await assertFutureCanceled(page, firstFill, () => page.locator('#sound-button').click(), 'Mute');
+  await page.screenshot({ path: `${output}/filled-board.png` });
   assert.equal((await storage(page)).melodyStep, 16, 'Muting does not consume or rewind notes');
   await page.keyboard.press('Escape');
   await enable(page);
@@ -210,13 +211,27 @@ async function doubleTapRhythm() {
   const secondFill = assertScoredFill((await sounds(page)).slice(before.length), 16, 4, tempo, 'Second fill');
   assert.equal((await storage(page)).melodyStep, 20);
   current = await state(page);
-  const [a, b] = [0, 1].map(id => current.nodes.find(node => node.id === id));
+  const nextNode = current.nodes.find(node => node.id === 15);
   before = await sounds(page);
-  await assertFutureCanceled(page, secondFill, () => pairClick(page, a, b), 'A later connection');
-  assert.equal((await state(page)).edges.length, 5, 'A later connection is applied without waiting for the fill audio');
-  const next = assertScoredFill((await sounds(page)).slice(before.length), 20, 1, tempo, 'Next manual move');
-  assert.equal((await storage(page)).melodyStep, 21, 'A later connection advances once from the completed fill count');
-  await writeFile(`${output}/native-audio.json`, JSON.stringify({ tempo, firstFill, secondFill, next, melodyStep: 21 }, null, 2));
+  const stopsBeforeQueue = await page.evaluate(() => window.__audio.stops.length);
+  await page.mouse.dblclick(nextNode.screen.x, nextNode.screen.y);
+  const afterFill = await state(page);
+  const added = afterFill.edges.length - current.edges.length;
+  assert.ok(added > 0, 'Another double tap changes the board immediately');
+  const secondEnd = secondFill.at(-1).when + melodyStepMs('odeToJoy', 19, tempo) / 1000;
+  const queuedFill = assertScoredFill((await sounds(page)).slice(before.length), 20, added, tempo, 'Queued fill', secondEnd);
+  assert.ok(queuedFill[0].when > queuedFill[0].now, 'The real second gesture occurs before the previous phrase finishes');
+  const newStops = await page.evaluate(before => window.__audio.stops.slice(before), stopsBeforeQueue);
+  assert.ok(secondFill.every(note => !newStops.some(stop => stop.sourceId === note.sourceId)), 'Appending a fill never cuts off earlier notes');
+  const [a, b] = [0, 1].map(id => afterFill.nodes.find(node => node.id === id));
+  before = await sounds(page);
+  await pairClick(page, a, b);
+  assert.equal((await state(page)).edges.length, afterFill.edges.length + 1, 'A later connection is applied without waiting for the fill audio');
+  const queuedEnd = queuedFill.at(-1).when + melodyStepMs('odeToJoy', 19 + added, tempo) / 1000;
+  const next = assertScoredFill((await sounds(page)).slice(before.length), 20 + added, 1, tempo, 'Next manual move', queuedEnd);
+  assert.equal((await storage(page)).melodyStep, 21 + added);
+  await writeFile(`${output}/native-audio.json`, JSON.stringify({ tempo, firstFill, secondFill, queuedFill, next, melodyStep: 21 + added }, null, 2));
+  await assertFutureCanceled(page, [...queuedFill, ...next], () => restart(page), 'Restart');
   await page.close();
 }
 try {
@@ -437,7 +452,7 @@ try {
   assert.deepEqual(rotationRequests, [], 'No rotation-pop recording is fetched');
   assert.deepEqual(errors, []);
   console.log(doubleTapSmoke
-    ? 'Passed: native double-click fills update four links immediately, follow dotted score timing at the saved melody index, persist the full count, cancel future sources on mute/new moves, keep selection responsive, and retain the falling removal effect.'
+    ? 'Passed: native double-click fills update four links immediately, follow dotted score timing at the saved melody index, persist the full count, queue subsequent fills and manual moves, cancel future sources on mute/restart, keep selection responsive, and retain the falling removal effect.'
     : completionSmoke
     ? 'Passed: continuation through the next phrase ending, configured spacing, exact-cadence silence with its last-note tail preserved, no replay or player-index consumption, and mute cancellation.'
     : rotationSmoke

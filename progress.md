@@ -1947,3 +1947,8 @@ TODO / Note
 2026-09-12
 - Preserved the link established by selecting two nodes when the tutorial advances to dragging. The drag cue prefers the bottom pair, with an available-pair fallback when the player already connected that pair. Direct flat-lesson links also retain the selection connection.
 - Build, full onboarding walkthrough and eight-step navigation checks passed. Verified the alternate bottom-first selection path on desktop/touch, ran the web-game client and inspected the retained top link beside the bottom drag guide.
+
+2026-09-12
+- Changed scored connection fills from replacement to an ordered phrase: subsequent fills and single connections append at the existing tempo while the board responds immediately. Reuses an active voice to preserve earlier batches, retains silent score beats after oscillator cleanup, and hands completion over after all queued notes.
+- Clears pending audio on puzzle changes/restart as well as existing mute/suspension/configuration cleanup; tutorial free-play fills use the same scoring. Removal retains its immediate falling effect and cancels the fill queue.
+- Build and 202 unit tests passed. Native Web Audio double-click checks verified immediate links, queued follow-up fills/single moves, unchanged first phrase, and mute/restart cancellation; completion browser checks passed. Ran the web-game client and inspected its screenshot and the filled-board capture. Kept tempo steady; no automatic acceleration.

@@ -167,43 +167,75 @@ test("scored fills preserve Elise rest intervals, wrap pitches, and retain a ful
   }
 });
 
-test("a new scored fill supersedes queued rapid notes without cutting the already audible connection", t => {
+test("a scored fill follows queued rapid notes without cancelling them", t => {
   const { audio, context } = setup(t);
   audio.play("connect", { melodyIndex: 0, count: 3 });
   const previous = fundamentals(context());
   context().advance(.02);
   audio.play("connect", { melodyIndex: 3, count: 2, sequenceTempoBpm: 96 });
-  assert.equal(previous[0].stopTimes.length, 1, "The current short tone can finish naturally");
-  assert.ok(previous.slice(1).every(source => source.stopTimes.at(-1)! <= .028), "Future rapid-input notes cannot overlap the new phrase");
+  assert.ok(previous.every(source => source.stopTimes.length === 1));
   const fill = fundamentals(context()).slice(3);
-  assert.deepEqual(fill.map(source => source.startTime), [.02, .645]);
+  assert.ok(Math.abs(fill[0].startTime - .225) < 1e-9);
+  assert.ok(Math.abs(fill[1].startTime - .85) < 1e-9);
 });
 
-test("repeated fills replace their pending phrase, and later single connections or removals sound immediately", t => {
+test("rapid fills and single connections append every note at the existing tempo", t => {
   const { audio, context } = setup(t);
-  for (let index = 0; index < 40; index++) {
-    const previous = context()?.oscillators.slice(-12) ?? [];
-    audio.play("connect", { melodyIndex: index, count: 6, sequenceTempoBpm: 40 });
-    if (previous.length) assert.ok(previous.every(source => source.stopTimes.at(-1)! <= context().currentTime + .008));
-    const current = context().oscillators.slice(-12);
-    assert.equal(current[0].startTime, context().currentTime);
-    assert.ok(current.every(source => source.stopTimes.length === 1), "The newest complete batch always survives");
+  let end = 0;
+  for (let batch = 0; batch < 20; batch++) {
+    const index = batch * 4;
+    audio.play("connect", { melodyIndex: index, count: 4, sequenceTempoBpm: batch === 0 ? 96 : 140 });
+    const notes = fundamentals(context()).slice(index);
+    for (let offset = 0; offset < 4; offset++) {
+      assert.ok(Math.abs(notes[offset].startTime - end) < 1e-9, "Queued notes retain the original tempo and order");
+      assert.equal(notes[offset].frequency.events[0].value, midiToFrequency(melodyNote("odeToJoy", index + offset)));
+      end += melodyStepMs("odeToJoy", index + offset, 96) / 1000;
+    }
+    context().advance(.02);
   }
-  const sequence = context().oscillators.slice(-12);
+  audio.play("connect", { melodyIndex: 80 });
+  assert.ok(Math.abs(fundamentals(context()).at(-1)!.startTime - end) < 1e-9, "A single connection joins the pending melody");
+  assert.ok(context().oscillators.every(source => source.stopTimes.length === 1), "No earlier fill is cut off, even beyond the voice limit");
+  context().advance(end + 1);
+  assert.ok(context().oscillators.every(source => source.ended));
+  audio.play("connect", { melodyIndex: 81, count: 2, sequenceTempoBpm: 96 });
+  assert.equal(fundamentals(context()).at(-2)!.startTime, context().currentTime, "A drained queue starts immediately");
+});
+
+test("a later standalone connection controls completion after a fill queue drains", t => {
+  const { audio, context } = setup(t);
+  audio.play("connect", { melodyIndex: 0, count: 2, sequenceTempoBpm: 96 });
+  context().advance(2);
+  audio.play("connect", { melodyIndex: 24 });
+  audio.play("complete", { melodyIndex: 25 });
+  assert.equal(fundamentals(context())[3].startTime, 2.24, "Completion follows the new connection, not the old queue end");
+});
+
+test("removal cancels pending fills and clears their reserved beats", t => {
+  const { audio, context } = setup(t);
+  audio.play("connect", { melodyIndex: 0, count: 4, sequenceTempoBpm: 96 });
+  audio.play("connect", { melodyIndex: 4, count: 4, sequenceTempoBpm: 96 });
+  const queued = [...context().oscillators];
   context().advance(.02);
-  audio.play("connect", { melodyIndex: 46 });
-  assert.ok(sequence.every(source => source.stopTimes.at(-1)! <= .028));
-  assert.equal(context().oscillators.at(-2)!.startTime, .02);
-  assert.equal(context().oscillators.at(-2)!.frequency.events[0].value, midiToFrequency(melodyNote("odeToJoy", 46)));
   audio.play("disconnect");
+  assert.ok(queued.every(source => source.stopTimes.at(-1)! <= .028));
   context().advance(.01);
-  audio.play("connect", { melodyIndex: 47, count: 4, sequenceTempoBpm: 96 });
-  const second = context().oscillators.slice(-8);
-  context().advance(.01);
-  audio.play("disconnect");
-  assert.ok(second.every(source => source.stopTimes.at(-1)! <= .048));
-  assert.equal(context().oscillators.at(-2)!.frequency.events[0].value, 466.16, "A removal replacing a fill is not swallowed by the earlier disconnect cooldown");
-  assert.equal(context().oscillators.at(-2)!.startTime, .04);
+  audio.play("connect", { melodyIndex: 8, count: 4, sequenceTempoBpm: 96 });
+  assert.equal(fundamentals(context()).at(-4)!.startTime, .03);
+});
+
+test("queued fill completion waits for all batches and preserves silent beats", t => {
+  const { audio, context } = setup(t);
+  audio.setConfig({ ...config, noteDurationMs: 100 });
+  audio.play("connect", { melodyIndex: 24, count: 1, sequenceTempoBpm: 96 });
+  context().advance(.2);
+  assert.ok(context().oscillators.every(source => source.ended));
+  audio.play("connect", { melodyIndex: 25, count: 3, sequenceTempoBpm: 96 });
+  assert.equal(fundamentals(context())[1].startTime, .625, "Keep the rest of the beat after the oscillator ends");
+  const duration = audio.getCompletionDurationMs({ melodyIndex: 28 });
+  audio.play("complete", { melodyIndex: 28 });
+  assert.equal(fundamentals(context())[4].startTime, 2.8125);
+  assert.ok(context().currentTime + duration / 1000 > fundamentals(context()).at(-1)!.stopTimes[0]);
 });
 
 test("completion preserves the scored fill and waits its full last beat before fixed-paced continuation", t => {
@@ -262,7 +294,8 @@ test("scored fill tails cancel on mute, stop, suspension, configuration changes,
     audio.setConfig(config);
     audio.unlock();
     audio.play("connect", { melodyIndex: 12, count: 6, sequenceTempoBpm: 40, unlock: false });
-    const scheduled = context().oscillators.slice(-12);
+    audio.play("connect", { melodyIndex: 18, count: 4, sequenceTempoBpm: 40, unlock: false });
+    const scheduled = context().oscillators.slice(-20);
     if (cancel === "mute") audio.setEnabled(false);
     if (cancel === "stop") audio.stop();
     if (cancel === "suspend") context().suspend();
