@@ -1,3 +1,4 @@
+import { timeoutSignal } from "./timeout";
 const RECEIPT_KEY = "nodoku.ad-free.receipt.v1";
 const REQUEST_KEY = "nodoku.ad-free.request.v1";
 const SESSION = /^cs_(?:test_|live_)?[A-Za-z0-9]{8,240}$/;
@@ -5,7 +6,7 @@ const SESSION = /^cs_(?:test_|live_)?[A-Za-z0-9]{8,240}$/;
 async function request(path: string, body?: unknown) {
   const response = await fetch(path, {
     ...(body ? { method: "POST", body: JSON.stringify(body) } : {}),
-    headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(15000),
+    headers: { "Content-Type": "application/json" }, signal: timeoutSignal(15000),
   });
   const result = await response.json();
   if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Could not check your purchase. Please retry.");

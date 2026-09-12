@@ -1961,3 +1961,8 @@ TODO / Note
 - Matched mobile How to play and sound buttons with 42px circular backgrounds, including muted sound. Reduced the narrowest activity block slightly to keep the header aligned.
 - Reserved 100lvh for the portrait landing page before descriptive text; the setup area continues using the visible dynamic viewport so Start remains onscreen as browser bars move.
 - Build and focused layout checks passed at 320/360/390/430/760px portrait, mobile landscape and desktop. Checked button dimensions/backgrounds, header boundaries, text starting below the viewport, Start visibility and tutorial entry; inspected mobile screenshots and the web-game client capture.
+
+2026-09-12
+- Reproduced an endless startup loader on origin/main when AbortSignal.timeout is unavailable: optional analytics threw synchronously before finishLoading. Added an AbortController deadline fallback shared by client requests and contained synchronous analytics failures inside its promise chain.
+- Added an explicit Safari 15.4 build target and catchable dynamic startup. A bundle failure or 20-second startup stall now shows a reload action; late successful initialization can still open the game.
+- Build and 204 unit tests passed. Chromium and WebKit passed normal startup, missing-timeout and synchronous analytics-failure scenarios, each including touch tutorial connections, starting a game and restoring it. Both engines passed download/evaluation/stall recovery checks. Ran the game client and inspected gameplay/recovery screenshots. Actual iPad version is unknown; device confirmation remains with the user.
