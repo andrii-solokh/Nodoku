@@ -1618,3 +1618,8 @@ TODO / Note
 - Sent server-verified puzzle completions to PostHog, preserving the game's existing completion deduplication.
 - Configured the production Pages `POSTHOG_PROJECT_API_KEY` secret and documented local and production setup.
 - Verified with `npm test` (193 passing), `npm run build`, onboarding and sharing browser flows, and the web-game smoke test.
+
+## 2026-09-12 — Center statistics histogram labels
+- Centered each Popular grids and Popular difficulties label beneath its bar while retaining the count at the bar’s right edge.
+- Added browser layout coverage for label-to-bar center alignment.
+- Verified with `npm test`, `npm run build`, and the web-game Playwright smoke check.
