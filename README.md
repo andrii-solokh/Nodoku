@@ -18,6 +18,27 @@ npm run build
 npm run preview
 ```
 
+## Tutorial links
+
+Open `/?onboarding=1&step=3` to jump directly to a lesson. Steps are numbered 1–10:
+
+| Step | Lesson |
+| --- | --- |
+| 1 | Select two nodes |
+| 2 | Drag between the bottom nodes |
+| 3 | Remove a connection |
+| 4 | Double-tap a node |
+| 5 | Clear every dot |
+| 6 | Rotate the cube |
+| 7 | Make a 3D connection |
+| 8 | Undo |
+| 9 | Redo |
+| 10 | Hint, then finish the cube |
+
+For a specific rotation lesson, add `&direction=left`, `right`, `up`, or `down`, for example `/?onboarding=1&step=6&direction=up`. Add `&admin=1` to keep Studio available locally.
+
+Each direct link starts a fresh lesson with its prerequisite connections and undo/redo history prepared. The URL follows lesson progress without adding browser history entries; reload restarts that lesson. Exiting the tutorial removes its URL parameters. Invalid steps start at step 1.
+
 ## Play
 
 Choose a flat board (sizes 4 or 5) or a 3D cube (sizes 3, 4 or 5), and a complexity level. Each dot on a node represents one remaining connection. Select two orthogonal neighbors to add or remove a link. Use every dot and join the board into one network to finish. Any valid solution is accepted.

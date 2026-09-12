@@ -1930,3 +1930,7 @@ TODO / Note
 2026-09-12
 - Moved the onboarding drag demonstration to the two bottom nodes, separate from the top pair used by the selection lesson. Updated the instruction to name the bottom pair; removal continues to reverse the connection the player just dragged.
 - Production build and focused selection → bottom-pair drag → removal walkthrough passed. Verified guide circles match the bottom spheres, the pair differs from the selection example, and removal advances correctly; inspected the drag screenshot.
+
+2026-09-12
+- Added direct onboarding links with `?onboarding=1&step=1` through `step=10`, plus `direction=left|right|up|down` for step 6. Direct entries prepare the correct flat/cube puzzle and prerequisite connections/history for removal, clearing, Undo and Redo. Tutorial progress replaces the URL; exit removes tutorial parameters while preserving other query values.
+- Documented lesson numbers in README and added `npm run test:onboarding-navigation`. Build and navigation browser checks passed for all ten lessons, tool actions, four rotation directions, reload, exit, parameter preservation and invalid values. Inspected the direct rotation screenshot.
