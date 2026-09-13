@@ -43,7 +43,7 @@
     "completedColor": "#a9cbbd"
   },
   "sound": {
-    "connectionMelody": "odeToJoy",
+    "connectionMelody": "library",
     "noteDurationMs": 1000,
     "melodyVolume": 1,
     "completionSound": true,

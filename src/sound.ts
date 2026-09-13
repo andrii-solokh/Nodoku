@@ -1,10 +1,10 @@
 import type { GameConfig } from "./config";
-import { MELODIES, melodyCompletionCount, melodyNote, melodyStepMs, midiToFrequency } from "./melodies";
+import { MELODIES, resolveMelody, type ConnectionMelody, melodyCompletionCount, melodyNote, melodyStepMs, midiToFrequency } from "./melodies";
 
 export type GameSound = "rotate" | "connect" | "disconnect" | "complete";
 export type SoundOptions = { unlock?: boolean; melodyIndex?: number; count?: number; rhythmTempoBpm?: number; sequenceTempoBpm?: number; sequenceNoteIntervalMs?: number };
 export const FILL_NOTE_INTERVAL_MS = 100;
-type EffectsConfig = Pick<GameConfig["sound"], "connectionMelody" | "noteDurationMs" | "melodyVolume" | "completionSound" | "completionNoteIntervalMs">;
+type EffectsConfig = Pick<GameConfig["sound"], "noteDurationMs" | "melodyVolume" | "completionSound" | "completionNoteIntervalMs"> & { connectionMelody: ConnectionMelody };
 
 type Voice = {
   gain: GainNode;
@@ -81,9 +81,9 @@ export class GameAudio {
     } catch { /* The other sounds still work if this recording cannot decode. */ }
   }
 
-  setConfig(config: EffectsConfig): void {
+  setConfig(config: Omit<EffectsConfig, "connectionMelody"> & Pick<GameConfig["sound"], "connectionMelody">): void {
     const next: EffectsConfig = {
-      connectionMelody: ["odeToJoy", "furElise", "classic"].includes(config.connectionMelody) ? config.connectionMelody : "odeToJoy",
+      connectionMelody: config.connectionMelody === "library" || config.connectionMelody === "classic" || Object.hasOwn(MELODIES, config.connectionMelody) ? resolveMelody(config.connectionMelody) : "odeToJoy",
       noteDurationMs: Number.isFinite(config.noteDurationMs) ? Math.max(100, Math.min(1000, config.noteDurationMs)) : 320,
       melodyVolume: Number.isFinite(config.melodyVolume) ? Math.max(0, Math.min(1, config.melodyVolume)) : .7,
       completionSound: config.completionSound !== false,

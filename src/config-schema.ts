@@ -1,3 +1,5 @@
+import { MELODIES, type MelodySelection } from "./melodies";
+
 export interface GameConfig {
   version: 1;
   demo: {
@@ -43,7 +45,7 @@ export interface GameConfig {
     completedColor: string;
   };
   sound: {
-    connectionMelody: "odeToJoy" | "furElise" | "classic";
+    connectionMelody: MelodySelection;
     noteDurationMs: number;
     melodyVolume: number;
     completionSound: boolean;
@@ -211,7 +213,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
   sound: {
     connectionMelody: {
       label: "Connection melody", kind: "choice",
-      options: { odeToJoy: "Ode to Joy", furElise: "Für Elise", classic: "Original connection sound" },
+      options: { library: "Melody library · varies by puzzle", ...Object.fromEntries(Object.entries(MELODIES).map(([key, melody]) => [key, `${melody.title} · ${melody.composer}`])), classic: "Original connection sound" },
       description: "Each successful connection plays the next note. Your moves set the rhythm; sound must be enabled to hear it.",
     },
     noteDurationMs: { ...milliseconds("Note duration", 100, 1000), description: "Length of each synthesized melody note." },
@@ -222,7 +224,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     },
     completionNoteIntervalMs: {
       ...milliseconds("Completion note interval", 80, 1000),
-      description: "Base pace for completion melodies: one quarter note in Ode to Joy or one sixteenth note in Für Elise. Short notes, held beats, and pauses follow the score. Lower values play faster. Home Melody rhythm uses its tempo instead.",
+      description: "Base pace for the first note of each completion melody. Short notes, held beats, and pauses follow the score. Lower values play faster. Home Melody rhythm uses its tempo instead.",
     },
     showAmbientMusic: { label: "Show ambient music", kind: "boolean", description: "Show the music button and let players listen to Moonlight. Hidden by default; turning this off also stops ambient playback." },
     ambientVolume: { label: "Ambient music volume", kind: "number", min: 0, max: 1, step: .01, description: "Volume of Moonlight, controlled separately from sound effects. Set to 0 to silence background music." },

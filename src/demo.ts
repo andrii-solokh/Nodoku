@@ -1,6 +1,6 @@
 import { Puzzle, type Edge, type PuzzleSettings } from "./puzzle";
 import { getConfig, type GameConfig } from "./config";
-import { melodyStepMs, type ConnectionMelody } from "./melodies";
+import { melodyStepMs, resolveMelody, type ConnectionMelody } from "./melodies";
 
 type DemoDelay = Exclude<keyof GameConfig["demo"], "timingMode" | "tempoBpm">;
 
@@ -21,7 +21,7 @@ export class HomeDemo {
   private remaining = 900;
   private index = 0;
   private config = getConfig().demo;
-  private melody: ConnectionMelody = getConfig().sound.connectionMelody;
+  private melody: ConnectionMelody = resolveMelody(getConfig().sound.connectionMelody);
   private waitKey: DemoDelay = "initialDelayMs";
   private completionSoundPending = false;
   private completionCueMs: number | null = null;
@@ -36,7 +36,7 @@ export class HomeDemo {
     const oldDuration = this.waitDuration(this.waitKey);
     const oldBeat = this.beatDuration();
     this.config = { ...config.demo };
-    this.melody = config.sound.connectionMelody;
+    this.melody = resolveMelody(config.sound.connectionMelody);
     if (this.completionSoundPending) {
       if (this.usesMelodyRhythm) {
         const fraction = this.completionCueMs !== null && oldBeat > 0 ? Math.min(1, this.completionCueMs / oldBeat) : 1;

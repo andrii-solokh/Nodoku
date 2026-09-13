@@ -13,7 +13,7 @@ import { HomeDemo } from "./demo";
 import { mountSponsorship, setSponsorshipConfig } from "./sponsorship";
 import { getConfig, subscribeConfig } from "./config";
 import { FILL_NOTE_INTERVAL_MS, GameAudio } from "./sound";
-import { MELODIES } from "./melodies";
+import { MELODIES, resolveMelody } from "./melodies";
 import { AmbientAudio } from "./ambient";
 import moonlightUrl from "./assets/moonlight-scott-buckley.mp3?url";
 import { mountCompletionShare } from "./share";
@@ -208,7 +208,7 @@ app.innerHTML = `
   <div class="home-stage-wrap"><div id="home-stage" class="stage home-stage"></div></div>
 </section>
 <section class="game-main" aria-label="Puzzle board">
-  <div class="puzzle-melody" aria-label="Selected melody">${icon("music")}<span id="puzzle-melody-name"></span></div>
+  <div class="puzzle-melody" aria-label="Selected melody">${icon("music")}<a class="puzzle-melody-credit" href="/music-credits.html" target="_blank" rel="noopener" aria-label="About this melody"><span id="puzzle-melody-name"></span><span id="puzzle-melody-composer"></span></a></div>
   <div id="game-stage" class="stage game-stage"></div>
   <div id="game-tip" class="game-tip" aria-label="Gameplay tip" hidden></div>
   <aside class="network-status" id="network-status" aria-label="Network status" hidden>
@@ -383,6 +383,17 @@ const demo = new HomeDemo(scene, kind => {
   }
 }, () => soundEnabled && !demoSuspended() ? gameAudio.getCompletionDurationMs(demoSoundOptions("complete")) : 0);
 let activeMelody = getConfig().sound.connectionMelody;
+function updatePuzzleMelody(seed = 0) {
+  const sound = getConfig().sound;
+  const selected = resolveMelody(sound.connectionMelody, seed);
+  gameAudio.setConfig({ ...sound, connectionMelody: selected });
+  const melody = selected === "classic" ? null : MELODIES[selected];
+  el("puzzle-melody-name").textContent = melody?.title ?? "Classic tones";
+  el("puzzle-melody-composer").textContent = melody?.composer ?? "Nodoku";
+  const credit = document.querySelector<HTMLAnchorElement>(".puzzle-melody-credit")!;
+  credit.href = `/music-credits.html#${selected}`;
+  credit.setAttribute("aria-label", melody ? `${melody.title} by ${melody.composer}. About this melody` : "About Nodoku sounds");
+}
 let tutorialSettings = getConfig().tutorial;
 const doubleTapStyle = document.createElement("style");
 document.head.appendChild(doubleTapStyle);
@@ -418,9 +429,7 @@ subscribeConfig(config => {
   scene.setRemovalCue(mode === "onboarding" && !onboardingCelebrating && onboardingStep === 2 && tutorial.enabled && tutorial.removalCue ? onboardingConnection : null);
   requestAnimationFrame(() => { renderOnboardingCue(); if (mode === "onboarding") { renderRotationGuidance(); } });
   demo.setConfig(config);
-  gameAudio.setConfig(config.sound);
-  el("puzzle-melody-name").textContent = config.sound.connectionMelody === "classic"
-    ? "Classic tones" : MELODIES[config.sound.connectionMelody].title;
+  updatePuzzleMelody(mode === "playing" ? puzzle?.settings.seed : 0);
   ambientAudio.setVolume(config.sound.ambientVolume);
   updateMusic();
   if (activeMelody !== config.sound.connectionMelody) {
@@ -571,6 +580,7 @@ function limitNewPuzzleSize() {
 }
 function updateOptions(animateShape = false) {
   gameAudio.stop();
+  updatePuzzleMelody();
   limitNewPuzzleSize();
   document
     .querySelectorAll<HTMLButtonElement>("[data-size]")
@@ -1105,6 +1115,7 @@ function startOnboarding(step = 0, rotation = 0) {
   demoFrame = 0;
   demo.stop();
   gameAudio.stop();
+  updatePuzzleMelody();
   puzzle = new Puzzle({ size: 2, depth: step >= 5 ? 2 : 1, difficulty: "easy", seed: 17 });
   selected = null;
   onboardingStep = step;
@@ -1438,6 +1449,7 @@ function startGame(
     resumedPuzzle
       ? resumedPuzzle
       : new Puzzle({ ...settings, seed });
+  updatePuzzleMelody(puzzle.settings.seed);
   prepareRankedAttempt(puzzle, attemptId!);
   if (!resumedPuzzle) melodyStep = 0;
   savedPuzzle = null;
@@ -1877,6 +1889,7 @@ Object.assign(window, {
       musicScore: scene.getMusicScoreState(),
       config: getConfig(),
       audio: { soundEnabled, musicAvailable: getConfig().sound.showAmbientMusic, musicEnabled: musicEnabled && getConfig().sound.showAmbientMusic, ambientTrack: "Moonlight — Scott Buckley" },
+      melody: resolveMelody(getConfig().sound.connectionMelody, mode === "playing" ? puzzle?.settings.seed : 0),
       melodyStep: mode === "home" ? (demo.puzzle?.edges.length ?? 0) : melodyStep,
       gameplayTip: el("game-tip").hidden ? null : el("game-tip").textContent,
       nodes:

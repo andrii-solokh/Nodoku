@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { MELODIES, melodyNote, melodyStepMs, melodyCompletionCount, type MelodyName } from "../src/melodies.ts";
+import { MELODIES, melodyNote, melodyStepMs, melodyCompletionCount, type MelodyName, resolveMelody, MELODY_ROTATION } from "../src/melodies.ts";
 
 test("score onset intervals cover every pitch and the complete phrase lengths", () => {
   for (const [name, count, quarterBeats] of [["odeToJoy", 62, 64], ["furElise", 35, 12]] as const) {
@@ -110,4 +110,38 @@ test("invalid completion indices use the same opening fallback as pitches and rh
     for (const next of [-1, .5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])
       assert.equal(melodyCompletionCount(name, next), melodyCompletionCount(name, 0));
   }
+});
+
+
+test("every published excerpt has credits, matched rhythm and a bounded ending", () => {
+  assert.equal(Object.keys(MELODIES).length, 10);
+  for (const [name, melody] of Object.entries(MELODIES)) {
+    assert.ok(melody.composer.length > 3);
+    assert.match(melody.source, /^https:\/\/www\.mutopiaproject\.org\//);
+    assert.equal(melody.notes.length, melody.beats.length, name);
+    assert.ok(melody.notes.every(note => Number.isInteger(note) && note >= 48 && note <= 96));
+    assert.ok(melody.beats.every(beat => Number.isFinite(beat) && beat > 0));
+    assert.equal(melody.phraseEnds.at(-1), melody.notes.length - 1);
+    assert.deepEqual([...melody.phraseEnds].sort((a,b) => a-b), [...melody.phraseEnds]);
+    assert.ok(melody.phraseEnds.every(end => end >= 0 && end < melody.notes.length));
+  }
+});
+
+test("new excerpts preserve characteristic scored rhythms and rests", () => {
+  assert.deepEqual(MELODIES.entertainer.beats.slice(0, 8), [.25, .25, .25, .5, .25, .5, .25, 1.5]);
+  assert.deepEqual(MELODIES.tangoTrifle.notes.slice(0, 4), [60, 70, 60, 69]);
+  assert.deepEqual(MELODIES.tangoTrifle.beats.slice(0, 4), [1.5, .5, 1, 1]);
+  assert.deepEqual(MELODIES.septemberSong.beats.slice(0, 4), [1, 2, 1, 4]);
+  assert.equal(MELODIES.summerGarden.beats.at(-1), 6);
+  assert.equal(MELODIES.gymnopedie.beats.at(-1), 13);
+});
+
+test("library selection covers every tune, is repeatable, and respects fixed choices", () => {
+  assert.deepEqual(Array.from({length: 10}, (_, seed) => resolveMelody("library", seed)), MELODY_ROTATION);
+  for (const seed of [0, 43, 20260913, -123]) {
+    assert.equal(resolveMelody("library", seed), resolveMelody("library", seed));
+    assert.equal(resolveMelody("furElise", seed), "furElise");
+    assert.equal(resolveMelody("classic", seed), "classic");
+  }
+  assert.equal(resolveMelody("library", NaN), "odeToJoy");
 });

@@ -760,6 +760,7 @@ a {
 }
 .puzzle-melody {
   position: absolute;
+  z-index: 2;
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
@@ -768,12 +769,15 @@ a {
   justify-content: center;
   gap: 8px;
   width: calc(100% - 40px);
-  height: 28px;
+  min-height: 36px;
   color: #81768f;
   font-size: 14px;
   pointer-events: none;
 }
-.puzzle-melody svg { width: 16px; height: 16px; }
+.puzzle-melody svg { width: 16px; height: 16px; flex-shrink: 0; }
+.puzzle-melody-credit { display: flex; flex-direction: column; align-items: center; gap: 2px; color: inherit; text-decoration: none; pointer-events: auto; line-height: 1.25; text-align: center; }
+.puzzle-melody-credit:hover #puzzle-melody-name { text-decoration: underline; text-underline-offset: 3px; }
+#puzzle-melody-composer { font-size: 12px; font-weight: 400; }
 .game-tip {
   position: absolute;
   bottom: max(24px, env(safe-area-inset-bottom));
