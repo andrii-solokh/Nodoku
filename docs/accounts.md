@@ -39,9 +39,9 @@ Leave `APP_ORIGIN` empty locally so the API uses the current localhost address. 
 1. Configure the [migration/deployment workflow](migrations.md). It records a D1
    recovery point and runs `npm run db:migrate:production` before deployment,
    including the initial account tables and player links.
-2. Set `GOOGLE_CLIENT_ID` in the production Pages runtime variables. Keep `APP_ORIGIN=https://nodoku.solokh.com`.
-3. Deploy the tested build and Pages Functions. Leave `ACCOUNTS_ENABLED=false` until configuration and sign-in testing are complete.
-4. Set `ACCOUNTS_ENABLED=true` to expose account/leaderboard navigation and enable the APIs. This server-controlled rollout flag works independently of PostHog availability. Disabling it hides the feature and preserves stored accounts/results.
+2. Production `wrangler.jsonc` declares the public `GOOGLE_CLIENT_ID`, `ACCOUNTS_ENABLED=true`, and `APP_ORIGIN=https://nodoku.solokh.com`. The preview environment leaves these unset. The Google client secret is not needed and must not be committed.
+3. Deploy the tested build and Pages Functions. CI verifies that production returns an enabled account configuration with the expected client ID and a working public leaderboard.
+4. The server-controlled `ACCOUNTS_ENABLED` flag works independently of PostHog. To intentionally disable accounts, set it to `false` in the configuration and update the deployment expectation in the same change. This hides the controls and preserves stored accounts/results.
 
 Do not use the production D1 database for automated tests. The migrations do not modify historical visitor/completion statistics. Account tables are additive, and old anonymous history cannot be claimed by presenting a browser visitor ID.
 

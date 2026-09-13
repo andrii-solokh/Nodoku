@@ -104,3 +104,17 @@ jobs:
         run: |
           curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors https://nodoku.solokh.com/ --output /dev/null
           curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors https://nodoku.solokh.com/api/visitors --output /dev/null
+      - name: Check production accounts and leaderboard
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          const base = 'https://nodoku.solokh.com';
+          const config = await fetch(`${base}/api/auth/config`, { signal: AbortSignal.timeout(15000) });
+          assert.ok(config.ok, 'Account configuration must load');
+          const { enabled, clientId } = await config.json();
+          assert.equal(enabled, true, 'Production account controls must be enabled');
+          assert.equal(clientId, '753823719328-khvnlpnb0e0o3ao59g6l8h6u7svdn932.apps.googleusercontent.com');
+          const ranking = await fetch(`${base}/api/leaderboard?period=all&perspective=3d&size=3&difficulty=easy`, { signal: AbortSignal.timeout(15000) });
+          assert.ok(ranking.ok, 'Public leaderboard must load');
+          assert.ok(Array.isArray((await ranking.json()).entries), 'Leaderboard must return entries');
+          JS
