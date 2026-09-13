@@ -30,7 +30,13 @@
 .player-profile { display: grid; gap: 16px; margin-top: 16px; }
 .player-status { margin-bottom: 0; }
 .player-status:empty { display: none; }
-.completion-account { margin-top: 12px; width: 100%; font-size: 13px; }
+.completion-account { display: grid; align-content: center; gap: 6px; min-height: 102px; margin: 0 0 16px; width: 100%; font-size: 12px; color: #7d718e; }
+.completion-rank-caption { margin-bottom: 2px; }
+.completion-rank-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 6px 10px; border: 0; border-radius: 10px; background: #eee9f5; color: #69549f; font: inherit; cursor: pointer; }
+.completion-rank-row strong { font-weight: 500; font-variant-numeric: tabular-nums; }
+.completion-rank-row.is-improved { background: #e2eee7; color: #426b59; }
+.completion-rank-row:hover { filter: brightness(.97); }
+.completion-rank-row:focus-visible { outline: 2px solid #7966bd; outline-offset: 2px; }
 @media (max-width: 600px) {
   .account-header .icon-button { width: 36px; height: 36px; }
   .player-popup { padding: 16px; }

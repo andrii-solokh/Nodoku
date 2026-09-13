@@ -2,7 +2,7 @@ import { timeoutSignal } from "./timeout";
 import { Puzzle } from "./puzzle";
 import { getVisitorId } from "./visitor";
 import { getAnalyticsSessionId } from "./analytics";
-import { getRankedTicket, forgetRankedTicket } from "./accounts";
+import { getRankedTicket, forgetRankedTicket, refreshCompletionRanking } from "./accounts";
 
 const PREFIX = "nodoku.completion.pending.v1.";
 const UUID = /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i;
@@ -64,6 +64,7 @@ async function flush(): Promise<void> {
         }
         pending.delete(id);
         sent.add(id);
+        void refreshCompletionRanking(id);
         forgetRankedTicket(id);
         try { localStorage.removeItem(PREFIX + id); } catch { /* Server deduplication also covers reloads. */ }
         window.dispatchEvent(new Event("nodoku:statistics-updated"));
@@ -76,7 +77,9 @@ async function flush(): Promise<void> {
 }
 
 export function recordCompletion(puzzle: Puzzle, attemptId: string): void {
-  if (!puzzle.solved || sent.has(attemptId) || pending.has(attemptId)) return;
+  if (!puzzle.solved) return;
+  if (sent.has(attemptId)) { void refreshCompletionRanking(attemptId); return; }
+  if (pending.has(attemptId)) return;
   const sessionId = getAnalyticsSessionId();
   const payload: Completion = {
     visitorId: getVisitorId(), attemptId,

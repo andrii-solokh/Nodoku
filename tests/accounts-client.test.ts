@@ -14,11 +14,13 @@ test('ranked client keeps original tickets on reload and refreshes account befor
   let playerId = 'player-a', issues = 0;
   const runtime = () => {
     const context = createContext({
+      URLSearchParams,
       timeoutSignal: () => undefined,
       localStorage: { getItem: (key: string) => storage.get(key), setItem: (key: string, value: string) => storage.set(key, value), removeItem: (key: string) => storage.delete(key) },
       fetch: async (url: string) => {
         if (url === '/api/auth/config') return Response.json({ enabled: true });
         if (url === '/api/auth/me') return Response.json({ player: { id: playerId } });
+        if (url.startsWith('/api/leaderboard?')) return Response.json({ entries: [], me: { rank: null } });
         assert.equal(url, '/api/ranked-attempts'); issues++;
         return Response.json({ ticket: (playerId === 'player-a' ? 'a' : 'b').repeat(64), playerId });
       },
@@ -50,4 +52,80 @@ test('ranked client keeps original tickets on reload and refreshes account befor
   assert.equal(storage.has(prefix + 'attempt-a'), false);
   storage.set(prefix + 'expired', JSON.stringify({ ticket: 'a'.repeat(64), expires: 0 }));
   assert.equal(await reloaded.getRankedTicket('expired'), undefined);
+});
+
+function rankRuntime(storage = new Map<string, string>()) {
+  let now = 1000;
+  let ranks: { solved: number | null; time: number | null } = { solved: 18, time: 42 };
+  let playerId = 'player-a';
+  let failing = false;
+  const context = createContext({
+    URLSearchParams, Event, Date: { now: () => now }, timeoutSignal: () => undefined,
+    window: { dispatchEvent: () => {} },
+    localStorage: { getItem: (key: string) => storage.get(key), setItem: (key: string, value: string) => storage.set(key, value), removeItem: (key: string) => storage.delete(key) },
+    fetch: async (url: string) => {
+      if (url === '/api/auth/config') return Response.json({ enabled: true });
+      if (url === '/api/auth/me') return Response.json({ player: { id: playerId } });
+      if (url === '/api/ranked-attempts') return Response.json({ ticket: 'a'.repeat(64), playerId });
+      const params = new URL(url, 'https://nodoku.test').searchParams;
+      assert.equal(params.get('perspective'), '3d');
+      assert.equal(params.get('size'), '3');
+      assert.equal(params.get('difficulty'), 'easy');
+      if (failing) throw new Error('Offline');
+      return Response.json({ entries: [], me: { rank: ranks[params.get('metric') as 'solved' | 'time'] } });
+    },
+  });
+  runInContext(source, context);
+  return {
+    context, storage,
+    setRanks: (next: typeof ranks) => { ranks = next; now += 1000; },
+    switchPlayer: () => { playerId = 'player-b'; },
+    fail: () => { failing = true; },
+    state: () => JSON.parse(runInContext('JSON.stringify(completionRank)', context)),
+    async start() {
+      context.prepareRankedAttempt(new Puzzle({ ...settings, depth: 3 }), 'rank-attempt');
+      await context.getRankedTicket('rank-attempt');
+      await runInContext("rankBaselines.get('rank-attempt')", context);
+    },
+    async finish() {
+      context.showCompletionRanking({ ...settings, depth: 3 }, 'rank-attempt');
+      const done = context.refreshCompletionRanking('rank-attempt');
+      context.forgetRankedTicket('rank-attempt');
+      await done;
+    },
+  };
+}
+
+test('completion compares both category ranks and preserves the starting snapshot on reload', async () => {
+  const first = rankRuntime(); await first.start();
+  const reloaded = rankRuntime(first.storage); await reloaded.start();
+  reloaded.setRanks({ solved: 15, time: 42 });
+  await reloaded.finish();
+  assert.deepEqual(reloaded.state().before, { solved: 18, time: 42 });
+  assert.deepEqual(reloaded.state().after, { solved: 15, time: 42 });
+  assert.equal(reloaded.state().pending, false);
+});
+
+test('completion distinguishes first ranking, unchanged ranking and a worse rank', async () => {
+  const runtime = rankRuntime(); runtime.setRanks({ solved: null, time: null }); await runtime.start();
+  runtime.setRanks({ solved: 10001, time: 80 }); await runtime.finish();
+  assert.deepEqual(runtime.state().before, { solved: null, time: null });
+  assert.deepEqual(runtime.state().after, { solved: 10001, time: 80 });
+  const worse = rankRuntime(); await worse.start(); worse.setRanks({ solved: 19, time: 42 }); await worse.finish();
+  assert.deepEqual(worse.state().after, { solved: 19, time: 42 });
+});
+
+test('failed ranking fetch or switched account never publishes a misleading change', async () => {
+  for (const change of ['fail', 'switchPlayer'] as const) {
+    const runtime = rankRuntime(); await runtime.start(); runtime.setRanks({ solved: 1, time: 1 });
+    runtime[change](); await runtime.finish();
+    assert.equal(runtime.state().after, undefined);
+    assert.equal(runtime.state().pending, false);
+  }
+});
+
+test('a snapshot captured at completion is not presented as the earlier ranking', async () => {
+  const runtime = rankRuntime(); await runtime.start(); await runtime.finish();
+  assert.equal(runtime.state().before, undefined);
+  assert.deepEqual(runtime.state().after, { solved: 18, time: 42 });
 });
