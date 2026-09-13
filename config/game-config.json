@@ -47,7 +47,7 @@
     "noteDurationMs": 1000,
     "melodyVolume": 1,
     "completionSound": true,
-    "completionNoteIntervalMs": 240,
+    "completionNoteIntervalMs": 200,
     "showAmbientMusic": false,
     "ambientVolume": 0.18
   },
