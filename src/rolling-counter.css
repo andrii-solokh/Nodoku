@@ -1,0 +1,8 @@
+.rolling-counter { font-variant-numeric: tabular-nums; }
+.rolling-counter-value { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.rolling-counter-reels { display: inline-flex; vertical-align: -.08em; line-height: 1; }
+.rolling-counter-reel { display: inline-block; height: 1em; overflow: hidden; }
+.rolling-counter-reel.is-digit { width: 1ch; text-align: center; }
+.rolling-counter-strip { display: block; }
+.rolling-counter-strip > span { display: block; height: 1em; line-height: 1; }
+.rolling-counter-strip > span::before { content: attr(data-digit); }

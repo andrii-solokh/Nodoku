@@ -37,7 +37,7 @@ async function fixture({ duration = 800, reduced = false, mobile = false, size =
   await page.route('**/api/visitors', route => route.fulfill({ json: { count: 1, scope: 'local' } }));
   await page.route('**/api/statistics?**', route => route.fulfill({ json: {
     scope: 'local', period: 'all', trackingSince: '2026-09-10T00:00:00Z',
-    totals: { visitors: 1, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [],
+    totals: { visitors: 1, puzzlesSolved: 0, nodesFilled: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [],
   } }));
   await page.goto(`${url}/?admin=1#admin-token=${'a'.repeat(64)}`);
   await page.waitForFunction(() => typeof window.render_game_to_text === 'function', null, { polling: 25 });

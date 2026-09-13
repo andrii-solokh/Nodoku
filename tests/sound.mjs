@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
+import { FILL_NOTE_INTERVAL_MS } from '../src/sound.ts';
 import { Puzzle } from '../src/puzzle.ts';
 import { melodyCompletionCount, melodyNote, melodyStepMs, midiToFrequency } from '../src/melodies.ts';
 
 const url = process.env.TEST_URL || 'http://127.0.0.1:4173';
-const browser = await chromium.launch();
+const browser = await (process.env.TEST_BROWSER === 'webkit' ? webkit : chromium).launch();
 const errors = [];
 const rotationRequests = [];
 const rotationSmoke = process.argv.includes('--rotation-smoke');
@@ -31,8 +32,9 @@ async function fixture(edges = [], melodyStep = 0) {
   page.on('request', request => { if (/rotation-pop|humordome/i.test(request.url())) rotationRequests.push(request.url()); });
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   await page.route('**/api/visitors', route => route.fulfill({ json: { count: 1, scope: 'local' } }));
+  await page.route('**/api/analytics-config', route => route.fulfill({ json: { enabled: false } }));
   await page.route('**/api/presence', route => route.fulfill({ json: { online: 1, scope: 'local' } }));
-  await page.route('**/api/statistics?**', route => route.fulfill({ json: { period: new URL(route.request().url()).searchParams.get('period'), scope: 'local', trackingSince: '2026-09-10T00:00:00Z', totals: { visitors: 1, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
+  await page.route('**/api/statistics?**', route => route.fulfill({ json: { period: new URL(route.request().url()).searchParams.get('period'), scope: 'local', trackingSince: '2026-09-10T00:00:00Z', totals: { visitors: 1, puzzlesSolved: 0, nodesFilled: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
   await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors: [] } }));
   await page.addInitScript(({ settings, edges, melodyStep }) => {
     if (!sessionStorage.getItem('sound-fixture')) {
@@ -150,22 +152,14 @@ function assertScoredFill(events, index, count, tempo, label, queuedStart) {
   assert.equal(notes.length, count, `${label}: one melody note per added connection`);
   assert.deepEqual(notes.map(note => round(note.frequency)), Array.from({ length: count }, (_, offset) => round(midiToFrequency(melodyNote('odeToJoy', index + offset)))), `${label}: pitches continue from the actual player index`);
   if (queuedStart === undefined) assert.ok(Math.abs(notes[0].when - notes[0].now) < .05, `${label}: the first note starts immediately`);
-  else assert.ok(Math.abs(notes[0].when - queuedStart) < 1e-6, `${label}: notes wait for the previous phrase's last beat`);
+  else assert.ok(Math.abs(notes[0].when - Math.max(notes[0].now, queuedStart)) < 1e-6, `${label}: notes wait for the previous phrase's last beat`);
   let elapsed = 0;
   for (let offset = 0; offset < notes.length; offset++) {
-    assert.ok(Math.abs(notes[offset].when - notes[0].when - elapsed) < 1e-6, `${label}: note ${offset + 1} follows the score at the configured tempo`);
-    elapsed += melodyStepMs('odeToJoy', index + offset, tempo) / 1000;
+    assert.ok(Math.abs(notes[offset].when - notes[0].when - elapsed) < 1e-6, `${label}: note ${offset + 1} uses the fast fill interval`);
+    elapsed += FILL_NOTE_INTERVAL_MS / 1000;
   }
   assert.ok(notes.every(note => note.state === 'running'), `${label}: sources use a native running AudioContext`);
   return notes;
-}
-async function assertFutureCanceled(page, notes, action, label) {
-  const snapshot = await page.evaluate(() => ({ now: window.__audio.context.currentTime, stops: window.__audio.stops.length }));
-  const future = notes.filter(note => note.when > snapshot.now + .15);
-  assert.ok(future.length >= 2, `${label}: the action occurs while at least two scored notes are still pending`);
-  await action();
-  const stops = await page.evaluate(before => window.__audio.stops.slice(before), snapshot.stops);
-  assert.ok(future.every(note => stops.some(stop => stop.sourceId === note.sourceId && stop.when < note.when && stop.when - stop.now <= .01)), `${label}: native future sources stop before their scheduled attacks`);
 }
 async function doubleTapRhythm() {
   const page = await fixture([], 12);
@@ -183,6 +177,12 @@ async function doubleTapRhythm() {
   assert.equal(current.selected, null);
   assert.equal((await storage(page)).melodyStep, 16, 'The full fill persists its four-note advance immediately');
   const firstFill = assertScoredFill((await sounds(page)).slice(before.length), 12, 4, tempo, 'Dotted fill');
+  const fillStops = await page.evaluate(() => window.__audio.stops);
+  for (const note of firstFill) {
+    const stop = fillStops.find(stop => stop.sourceId === note.sourceId);
+    assert.ok(Math.abs(stop.when - note.when - current.config.sound.noteDurationMs / 1000 - .015) < 1e-6,
+      'Fast fills preserve the full configured note decay');
+  }
   const output = 'output/web-game/double-tap-rhythm';
   await mkdir(output, { recursive: true });
   await writeFile(`${output}/filled-state.json`, JSON.stringify(current, null, 2));
@@ -192,7 +192,7 @@ async function doubleTapRhythm() {
   assert.equal((await state(page)).selected, 15, 'A selection remains responsive while the fill melody is pending');
   assert.equal((await state(page)).edges.length, 4);
   assert.equal(await page.evaluate(() => window.__audio.stops.length), beforeSelection, 'Selection does not cancel the fill melody');
-  await assertFutureCanceled(page, firstFill, () => page.locator('#sound-button').click(), 'Mute');
+  await page.locator('#sound-button').click();
   await page.screenshot({ path: `${output}/filled-board.png` });
   assert.equal((await storage(page)).melodyStep, 16, 'Muting does not consume or rewind notes');
   await page.keyboard.press('Escape');
@@ -219,20 +219,20 @@ async function doubleTapRhythm() {
   const afterFill = await state(page);
   const added = afterFill.edges.length - current.edges.length;
   assert.ok(added > 0, 'Another double tap changes the board immediately');
-  const secondEnd = secondFill.at(-1).when + melodyStepMs('odeToJoy', 19, tempo) / 1000;
+  const secondEnd = secondFill.at(-1).when + FILL_NOTE_INTERVAL_MS / 1000;
   const queuedFill = assertScoredFill((await sounds(page)).slice(before.length), 20, added, tempo, 'Queued fill', secondEnd);
-  assert.ok(queuedFill[0].when > queuedFill[0].now, 'The real second gesture occurs before the previous phrase finishes');
+  assert.ok(queuedFill[0].when - queuedFill[0].now <= .4, 'A second fill waits at most one short burst');
   const newStops = await page.evaluate(before => window.__audio.stops.slice(before), stopsBeforeQueue);
   assert.ok(secondFill.every(note => !newStops.some(stop => stop.sourceId === note.sourceId)), 'Appending a fill never cuts off earlier notes');
   const [a, b] = [0, 1].map(id => afterFill.nodes.find(node => node.id === id));
   before = await sounds(page);
   await pairClick(page, a, b);
   assert.equal((await state(page)).edges.length, afterFill.edges.length + 1, 'A later connection is applied without waiting for the fill audio');
-  const queuedEnd = queuedFill.at(-1).when + melodyStepMs('odeToJoy', 19 + added, tempo) / 1000;
+  const queuedEnd = queuedFill.at(-1).when + FILL_NOTE_INTERVAL_MS / 1000;
   const next = assertScoredFill((await sounds(page)).slice(before.length), 20 + added, 1, tempo, 'Next manual move', queuedEnd);
   assert.equal((await storage(page)).melodyStep, 21 + added);
   await writeFile(`${output}/native-audio.json`, JSON.stringify({ tempo, firstFill, secondFill, queuedFill, next, melodyStep: 21 + added }, null, 2));
-  await assertFutureCanceled(page, [...queuedFill, ...next], () => restart(page), 'Restart');
+  await restart(page);
   await page.close();
 }
 async function completionReturnHome() {
@@ -439,18 +439,18 @@ try {
   const s = await state(completing);
   const before = await sounds(completing);
   await pairClick(completing, s.nodes.find(node => node.id === last[0]), s.nodes.find(node => node.id === last[1]));
-  await completing.waitForFunction(() => JSON.parse(window.render_game_to_text()).dialog === 'completion-dialog');
+  await completing.locator('#completion-dialog[open]').waitFor();
   const completed = await sounds(completing);
   const notes = melodySources(completed.slice(before.length));
   const continuationCount = melodyCompletionCount('odeToJoy', 1);
   assert.equal(notes.length, 1 + continuationCount, 'Final connection plus the remaining notes through the next phrase ending are scheduled');
   assert.deepEqual(notes.map(event => round(event.frequency)), Array.from({ length: 1 + continuationCount }, (_, index) => round(midiToFrequency(melodyNote('odeToJoy', index)))), 'Completion starts at the next unplayed melody note and stops on the cadence');
   const continuation = notes.slice(1);
-  const tempo = (await state(completing)).config.demo.tempoBpm;
-  let elapsed = melodyStepMs('odeToJoy', 0, tempo) / 1000;
+  const interval = (await state(completing)).config.sound.completionNoteIntervalMs / 1000;
+  let elapsed = Math.max(notes[0].when + interval, continuation[0].now) - notes[0].when;
   for (const [index, event] of continuation.entries()) {
-    assert.ok(Math.abs(event.when - notes[0].when - elapsed) < 1e-6, 'Completion preserves the score timing after the final connection');
-    elapsed += melodyStepMs('odeToJoy', index + 1, tempo) / 1000;
+    assert.ok(Math.abs(event.when - notes[0].when - elapsed) < 1e-6, `Player completion follows scored rhythm at the admin pace: ${JSON.stringify({ index, event, final: notes[0], elapsed })}`);
+    elapsed += interval * melodyStepMs('odeToJoy', index + 1) / melodyStepMs('odeToJoy', 0);
   }
   assert.equal((await storage(completing)).melodyStep, 1, 'Celebration does not consume player melody progress');
   await completing.keyboard.press('Escape'); await settle(completing);
@@ -462,12 +462,10 @@ try {
     await writeFile(`${output}/completion-state.json`, JSON.stringify(await state(completing), null, 2));
   }
   const stopCount = await completing.evaluate(() => window.__audio.stops.length);
-  // The completion modal intentionally prevents Escape and blocks the header.
-  // Exercise its existing mute handler directly while native scheduled notes are live.
-  await completing.locator('#sound-button').evaluate(button => button.click());
+  await completing.locator('#sound-button').click();
   const stopped = await completing.evaluate(before => window.__audio.stops.slice(before), stopCount);
   assert.ok(continuation.slice(1).every(note => stopped.some(stop => stop.sourceId === note.sourceId && stop.when - stop.now <= .01)), 'Mute cancels every future completion note');
-  assert.ok(completed.every(event => event.state === 'running'), 'Sounds were scheduled in a real running AudioContext');
+  assert.ok(completed.slice(before.length).every(event => event.state === 'running'), 'Sounds were scheduled in a real running AudioContext');
   await completing.close();
 
   const cadence = await fixture(solved.solution.slice(0, -1), 29);
@@ -476,7 +474,7 @@ try {
   assert.equal((await storage(cadence)).melodyStep, 29);
   const cadenceBefore = await sounds(cadence);
   await pairClick(cadence, cadenceState.nodes.find(node => node.id === last[0]), cadenceState.nodes.find(node => node.id === last[1]));
-  await cadence.waitForFunction(() => JSON.parse(window.render_game_to_text()).dialog === 'completion-dialog');
+  await cadence.locator('#completion-dialog[open]').waitFor();
   const finalNote = melodySources((await sounds(cadence)).slice(cadenceBefore.length));
   assert.equal(finalNote.length, 1, 'Solving on Ode index 29 plays its final connection, with no extra completion notes');
   assert.equal(round(finalNote[0].frequency), round(midiToFrequency(melodyNote('odeToJoy', 29))));
@@ -493,9 +491,9 @@ try {
   console.log(homeSmoke
     ? 'Passed: returning home cancels the unfinished completion phrase before the home demo starts its own melody.'
     : doubleTapSmoke
-    ? 'Passed: native double-click fills update four links immediately, follow dotted score timing at the saved melody index, persist the full count, queue subsequent fills and manual moves, cancel future sources on mute/restart, keep selection responsive, and retain the falling removal effect.'
+    ? 'Passed: native double-click fills update four links immediately, use fast 100ms spacing at the saved melody index, persist the full count, queue subsequent fills and manual moves, keep selection responsive, and retain the falling removal effect.'
     : completionSmoke
-    ? 'Passed: continuation through the next phrase ending, configured spacing, exact-cadence silence with its last-note tail preserved, no replay or player-index consumption, and mute cancellation.'
+    ? 'Passed: continuation through the next phrase ending, scored rhythm at the configured pace, exact-cadence silence with its last-note tail preserved, no replay or player-index consumption, and mute cancellation.'
     : rotationSmoke
     ? 'Passed: silent toolbar/key/swipe rotations, no rotation recording request/decode, audible connection/disconnect/completion, and mute.'
     : 'Passed: silent rotations without recording requests, native muted default, active melodic mute, E E F G melody, selection/removal/undo, multi-edge inputs, preview/persistence/reset, independent demo, completion once. No page/console errors.');

@@ -29,32 +29,26 @@
     <link rel="icon" type="image/svg+xml" href="/src/favicon.svg" />
     <title>Nodoku — 3D Spatial Reasoning Puzzle</title>
     <style>
-      #app-loader { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; overflow: hidden; background: #eeedf6; color: #302b48; opacity: 1; transition: opacity 420ms ease, visibility 420ms ease; }
-      #app-loader::before { content: ""; position: absolute; width: min(68vw, 520px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, #e2deed 0%, #eeedf600 68%); opacity: .72; transform: translateY(5%); }
+      @font-face { font-family: Outfit; font-style: normal; font-weight: 400; font-display: swap; src: url('/node_modules/@fontsource/outfit/files/outfit-latin-400-normal.woff2') format('woff2'); }
+      @font-face { font-family: Outfit; font-style: normal; font-weight: 600; font-display: swap; src: url('/node_modules/@fontsource/outfit/files/outfit-latin-600-normal.woff2') format('woff2'); }
+      #app-loader { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; overflow: auto; padding: 24px; box-sizing: border-box; background: #eeedf6; color: #302b48; opacity: 1; transition: opacity 300ms ease, visibility 300ms ease; }
       #app-loader.is-ready { opacity: 0; visibility: hidden; pointer-events: none; }
-      .loader-content { position: relative; display: grid; justify-items: center; gap: 20px; }
-      .loader-brand { display: flex; align-items: center; gap: 14px; font: 600 36px/1 Outfit, Arial, sans-serif; letter-spacing: -1.5px; }
-      .loader-mark { width: 56px; height: 56px; overflow: visible; filter: drop-shadow(0 4px 8px #675d8118); }
-      .loader-link { stroke-dasharray: 18; stroke-dashoffset: 18; animation: loader-link 2.1s cubic-bezier(.45, 0, .2, 1) infinite both; }
-      .loader-link--right { animation-delay: .14s; }
-      .loader-link--bottom { animation-delay: .28s; }
-      .loader-link--left { animation-delay: .42s; }
-      .loader-node, .loader-complete { transform-box: fill-box; transform-origin: center; }
-      .loader-node { animation: loader-node 2.1s cubic-bezier(.45, 0, .2, 1) infinite both; }
-      .loader-node--two { animation-delay: .14s; }
-      .loader-node--three { animation-delay: .28s; }
-      .loader-node--final { animation-delay: .42s; }
-      .loader-complete { animation: loader-complete 2.1s cubic-bezier(.45, 0, .2, 1) infinite; }
-      .loader-caption { color: #7c738f; font: 400 14px/1.3 Outfit, Arial, sans-serif; letter-spacing: .015em; }
-      #app-loader.is-failed .loader-mark * { animation: none; }
-      #app-loader.is-failed .loader-link { stroke-dashoffset: 0; }
+      .loader-content { display: grid; justify-items: center; width: min(100%, 300px); }
+      .loader-brand { display: flex; align-items: center; gap: 10px; font: 600 34px/40px Outfit, Arial, sans-serif; letter-spacing: -1.4px; }
+      .loader-mark { width: 38px; height: 38px; flex: none; }
+      .loader-progress { width: 88px; height: 3px; margin-top: 26px; overflow: hidden; border-radius: 3px; background: #ded8eb; }
+      .loader-progress::after { content: ''; display: block; width: 32px; height: 100%; border-radius: inherit; background: #8a76bd; animation: loader-sweep 1.6s cubic-bezier(.45, 0, .3, 1) infinite; }
+      .loader-caption { margin-top: 14px; color: #81778f; font: 400 13px/20px Outfit, Arial, sans-serif; text-align: center; }
+      #app-loader.is-failed .loader-progress { visibility: hidden; }
+      #app-loader.is-failed .loader-progress::after { animation: none; }
       .loader-recovery { max-width: 300px; margin: 0 24px; text-align: center; font: 400 15px/1.5 Outfit, Arial, sans-serif; }
       .loader-recovery[hidden] { display: none; }
       .loader-recovery button { padding: 12px 24px; border: 0; border-radius: 16px; background: #8270bd; color: white; font: inherit; cursor: pointer; }
-      @keyframes loader-link { 0%, 10% { stroke-dashoffset: 18; opacity: .18; } 32%, 80% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: .45; } }
-      @keyframes loader-node { 0%, 12% { transform: scale(.72); opacity: .42; } 32%, 80% { transform: scale(1); opacity: 1; } 100% { transform: scale(.86); opacity: .62; } }
-      @keyframes loader-complete { 0%, 48% { transform: scale(.56); opacity: 0; } 57% { transform: scale(1); opacity: .52; } 78%, 100% { transform: scale(1.7); opacity: 0; } }
-      @media (prefers-reduced-motion: reduce) { #app-loader, .loader-mark .loader-link, .loader-mark .loader-node, .loader-mark .loader-complete { transition: none; animation: none; } .loader-mark .loader-link { stroke-dashoffset: 0; } }
+      .loader-diagnostics { margin-top: 20px; text-align: left; font-size: 12px; color: #70667f; }
+      .loader-diagnostics summary { text-align: center; cursor: pointer; }
+      .loader-diagnostics pre { max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.5 monospace; }
+      @keyframes loader-sweep { from { transform: translateX(-36px); } to { transform: translateX(92px); } }
+      @media (prefers-reduced-motion: reduce) { #app-loader { transition: none; } .loader-progress::after { animation: none; transform: translateX(28px); } }
     </style>
     <script type="application/ld+json">
       {
@@ -95,13 +89,15 @@
     <div id="app-loader" role="status" aria-live="polite" aria-label="Loading Nodoku">
       <div class="loader-content">
         <div class="loader-brand" aria-hidden="true">
-          <svg class="loader-mark" viewBox="0 0 34 34"><g fill="none" stroke="#8270bd" stroke-width="3" stroke-linecap="round"><path class="loader-link loader-link--top" d="M8 9h18"/><path class="loader-link loader-link--right" d="M26 9v17"/><path class="loader-link loader-link--bottom" d="M26 26H8"/><path class="loader-link loader-link--left" d="M8 26V9"/></g><circle class="loader-complete" cx="26" cy="26" r="7" fill="none" stroke="#8b74c4" stroke-width="1.2"/><g fill="#a9cbbd"><circle class="loader-node" cx="8" cy="9" r="4.7"/><circle class="loader-node loader-node--two" cx="26" cy="9" r="4.7"/><circle class="loader-node loader-node--three" cx="8" cy="26" r="4.7"/></g><circle class="loader-node loader-node--final" cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/></svg>
+          <svg class="loader-mark" viewBox="0 0 34 34"><path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3"/><g fill="#a9cbbd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g><circle cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/></svg>
           <span>nodoku</span>
         </div>
-        <span class="loader-caption">Connecting the nodes</span>
+        <div class="loader-progress" aria-hidden="true"></div>
+        <span class="loader-caption">Preparing your puzzle</span>
         <div class="loader-recovery" hidden>
           <p>Nodoku couldn’t finish loading. Please reload to try again.</p>
           <button type="button" id="reload-app">Reload</button>
+          <details class="loader-diagnostics"><summary>Error details</summary><pre id="startup-error-details"></pre></details>
         </div>
       </div>
     </div>
@@ -142,23 +138,34 @@
       // strand the player on an endless loader. A slow startup can still finish.
       (function () {
         var loader = document.getElementById("app-loader");
-        function failed() {
+        var failureReason = "";
+        function failed(reason) {
           if (!loader.isConnected || loader.classList.contains("is-ready")) return;
+          if (typeof reason === "string") failureReason = reason.slice(0, 600);
           loader.classList.add("is-failed");
           loader.setAttribute("aria-label", "Nodoku could not finish loading");
           loader.querySelector(".loader-caption").textContent = "Unable to open the puzzle";
           loader.querySelector(".loader-recovery").hidden = false;
+          document.getElementById("startup-error-details").textContent = failureReason +
+            "\n\nBrowser: " + navigator.userAgent +
+            "\nConfiguration copying: " + (typeof window.structuredClone === "function" ? "available" : "unavailable") +
+            "\nSecure IDs: " + (window.crypto && typeof window.crypto.randomUUID === "function" ? "available" : "unavailable") +
+            "\nDialogs: " + (window.HTMLDialogElement && typeof HTMLDialogElement.prototype.showModal === "function" ? "available" : "unavailable") +
+            "\nWebGL 2 API: " + (typeof window.WebGL2RenderingContext === "function" ? "available" : "unavailable");
         }
-        var deadline = setTimeout(failed, 20000);
+        var deadline = setTimeout(function () {
+          if (!failureReason) failed("Loading has not finished after 20 seconds. A slow download can still finish.");
+        }, 20000);
         function scriptFailed(event) {
-          if (event.target && event.target.tagName === "SCRIPT" && event.target.type === "module") failed();
+          if (event.target && event.target.tagName === "SCRIPT" && event.target.type === "module") failed("The game script could not be loaded.");
         }
+        function startupFailed(event) { failed(typeof event.detail === "string" ? event.detail : "Game initialization failed."); }
         window.addEventListener("error", scriptFailed, true);
-        window.addEventListener("nodoku:startup-error", failed);
+        window.addEventListener("nodoku:startup-error", startupFailed);
         window.addEventListener("nodoku:startup-ready", function () {
           clearTimeout(deadline);
           window.removeEventListener("error", scriptFailed, true);
-          window.removeEventListener("nodoku:startup-error", failed);
+          window.removeEventListener("nodoku:startup-error", startupFailed);
         }, { once: true });
         document.getElementById("reload-app").addEventListener("click", function () { location.reload(); });
       })();

@@ -1,10 +1,12 @@
 import { timeoutSignal } from "./timeout";
 import { Puzzle } from "./puzzle";
 import { getVisitorId } from "./visitor";
+import { getAnalyticsSessionId } from "./analytics";
+import { getRankedTicket, forgetRankedTicket } from "./accounts";
 
 const PREFIX = "nodoku.completion.pending.v1.";
 const UUID = /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i;
-type Completion = { visitorId: string; attemptId: string; game: object };
+type Completion = { visitorId: string; attemptId: string; game: object; rankedTicket?: string; analytics?: { sessionId: string; timestamp: string } };
 const pending = new Map<string, Completion>();
 const sent = new Set<string>();
 let flushing = false;
@@ -39,6 +41,13 @@ async function flush(): Promise<void> {
     for (const [id, payload] of pending) {
       if (document.hidden || !navigator.onLine) break;
       try {
+        if (!payload.rankedTicket) {
+          const ticket = await getRankedTicket(id);
+          if (ticket) {
+            payload.rankedTicket = ticket;
+            try { localStorage.setItem(PREFIX + id, JSON.stringify(payload)); } catch { /* In-memory retries still retain the ticket. */ }
+          }
+        }
         const response = await fetch("/api/completions", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload), signal: timeoutSignal(12_000),
@@ -55,6 +64,7 @@ async function flush(): Promise<void> {
         }
         pending.delete(id);
         sent.add(id);
+        forgetRankedTicket(id);
         try { localStorage.removeItem(PREFIX + id); } catch { /* Server deduplication also covers reloads. */ }
         window.dispatchEvent(new Event("nodoku:statistics-updated"));
       } catch { break; }
@@ -67,8 +77,11 @@ async function flush(): Promise<void> {
 
 export function recordCompletion(puzzle: Puzzle, attemptId: string): void {
   if (!puzzle.solved || sent.has(attemptId) || pending.has(attemptId)) return;
+  const sessionId = getAnalyticsSessionId();
   const payload: Completion = {
     visitorId: getVisitorId(), attemptId,
+    // Freeze attribution at the solve, not at a later offline retry or reload.
+    ...(sessionId ? { analytics: { sessionId, timestamp: new Date().toISOString() } } : {}),
     // Only the final board is needed to verify its clues and connected network.
     game: { version: 1, settings: { ...puzzle.settings }, edges: puzzle.edges.map(edge => [...edge]), history: [] },
   };

@@ -32,7 +32,7 @@ async function fixture({ amplitude = .025, reduced = false, mobile = false } = {
   await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors: [] } }));
   await page.route('**/api/presence', route => route.fulfill({ json: { online: 1, scope: 'local' } }));
   await page.route('**/api/visitors', route => route.fulfill({ json: { count: 1, scope: 'local' } }));
-  await page.route('**/api/statistics?**', route => route.fulfill({ json: { scope: 'local', period: 'all', trackingSince: '2026-09-10T00:00:00Z', totals: { visitors: 1, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
+  await page.route('**/api/statistics?**', route => route.fulfill({ json: { scope: 'local', period: 'all', trackingSince: '2026-09-10T00:00:00Z', totals: { visitors: 1, puzzlesSolved: 0, nodesFilled: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
   await page.goto(`${url}/?admin=1#admin-token=${'a'.repeat(64)}`);
   await page.waitForFunction(() => typeof window.render_game_to_text === 'function', null, { polling: 25 });
   await page.locator('#config-scene-nodeFloatAmplitude').waitFor({ state: 'attached' });

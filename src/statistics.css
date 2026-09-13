@@ -22,7 +22,7 @@
 .statistics-total { display: flex; flex-direction: column; gap: 10px; padding: 26px 22px; border: 1px solid #e0dae9; border-radius: 18px; background: #f7f5fb; }
 .statistics-total:first-child { background: #e2ebe6; border-color: #d5e1d8; }
 .statistics-total strong { font-size: clamp(27px, 3.4vw, 40px); font-weight: 450; line-height: 1; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.statistics-total span { color: #7a6b88; font-size: 13px; line-height: 1.35; }
+.statistics-total > span { color: #7a6b88; font-size: 13px; line-height: 1.35; }
 .statistics-panel { padding: 28px; border: 1px solid #ded8e8; border-radius: 20px; background: #f6f4fa; }
 .statistics-panel h2 { margin: 0; font-size: 23px; font-weight: 450; letter-spacing: -.6px; }
 .statistics-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -30,7 +30,7 @@
 .statistics-histograms { display: grid; grid-template-columns: 1fr; gap: 14px; }
 .statistics-histogram { --chart-color: #ad9dce; --chart-hover: #8069ae; min-width: 0; padding: 16px; border: 1px solid #e0dae9; border-radius: 14px; background: #fbfaff; }
 .statistics-histogram[data-metric="visitors"] { --chart-color: #9fbcad; --chart-hover: #6e9884; }
-.statistics-histogram[data-metric="dotsCleared"] { --chart-color: #8fa9ca; --chart-hover: #6582a9; }
+.statistics-histogram[data-metric="nodesFilled"] { --chart-color: #8fa9ca; --chart-hover: #6582a9; }
 .statistics-histogram h3 { margin: 0 0 13px; font-size: 15px; font-weight: 500; color: #5e4f6e; }
 .statistics-chart { height: 148px; display: grid; grid-template-columns: repeat(var(--days), minmax(0, 1fr)); align-items: end; gap: clamp(2px, .6vw, 7px); padding: 0 3px; border-bottom: 1px solid #d6cfe2; background: repeating-linear-gradient(to top, transparent 0, transparent 36px, #e8e3ee 36px, #e8e3ee 37px); }
 .statistics-bar { display: flex; align-items: flex-end; justify-content: stretch; height: 100%; min-width: 0; padding: 0; border-radius: 5px 5px 0 0; }
@@ -108,6 +108,6 @@
   .statistics-periods button { flex: 1; padding: 9px 8px; font-size: 12px; }
   .statistics-panel { padding: 18px; }
   .statistics-total { padding: 20px 15px; }
-  .statistics-total span { font-size: 12px; }
+  .statistics-total > span { font-size: 12px; }
   .statistics-eyebrow { letter-spacing: .7px; font-size: 10px; }
 }

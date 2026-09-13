@@ -1,13 +1,13 @@
 import { followHint } from './helpers/follow-hint.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 import { Puzzle } from '../src/puzzle.ts';
 
 const url = process.env.TEST_URL || 'http://127.0.0.1:4173';
 const out = 'output/web-game/statistics';
 await fs.mkdir(out, { recursive: true });
-const browser = await chromium.launch();
+const browser = await (process.env.TEST_BROWSER === 'webkit' ? webkit : chromium).launch();
 const errors = [];
 const settings = { size: 3, depth: 1, difficulty: 'easy', seed: 54127 };
 const attemptId = 'e1111111-1111-4111-8111-111111111111';
@@ -24,8 +24,8 @@ const waitFor = async (check, label) => {
 const days = [...Array(7)].map((_, i) => new Date(Date.now() - (6 - i) * 86400000).toISOString().slice(0, 10));
 const stats = (period = 'all', solved = 213) => ({
   scope: 'local', period, trackingSince: `${days[0]}T00:00:00.000Z`,
-  totals: { visitors: 1529, puzzlesSolved: solved, dotsCleared: 16320, connectionsCompleted: 8160 },
-  daily: days.map((date, i) => ({ date, visitors: 13 + i * 4, puzzlesSolved: 4 + i * 2, dotsCleared: 132 + i * 8 })),
+  totals: { visitors: 1529, puzzlesSolved: solved, nodesFilled: 16320, connectionsCompleted: 8160 },
+  daily: days.map((date, i) => ({ date, visitors: 13 + i * 4, puzzlesSolved: 4 + i * 2, nodesFilled: 132 + i * 8 })),
   sizes: [{ size: 3, depth: 1, count: 80 }, { size: 3, depth: 3, count: 100 }, { size: 4, depth: 4, count: 33 }],
   difficulties: [{ difficulty: 'easy', count: 103 }, { difficulty: 'medium', count: 65 }, { difficulty: 'hard', count: 45 }],
 });
@@ -52,6 +52,7 @@ async function fixture(save = null) {
 }
 
 try {
+  if (!process.argv.includes('--view-only')) {
   const { page } = await fixture({ settings, screen: 'playing', game, attemptId });
   const completions = [];
   const counted = new Set();
@@ -115,6 +116,8 @@ try {
   assert.equal(demoCompletions, 0, 'Home auto-solving never records player achievements');
   await home.page.close();
 
+  }
+
   const view = await fixture({ settings, screen: 'playing', game, attemptId });
   await view.page.goto(url);
   await view.page.waitForFunction(() => typeof window.advanceTime === 'function');
@@ -125,10 +128,11 @@ try {
   await dialog.waitFor();
   assert.equal(await dialog.locator('.statistics-brand').getAttribute('href'), '/', 'Statistics logo returns to Nodoku');
   await waitFor(async () => await dialog.locator('[data-total=puzzlesSolved]').textContent() === '213', 'Statistics loads server aggregates');
-  assert.equal(await dialog.locator('[data-total=dotsCleared]').textContent(), '16,320');
+  assert.equal(await dialog.locator('[data-total=nodesFilled]').textContent(), '16,320');
+  assert.deepEqual(await dialog.locator('[data-total]').evaluateAll(elements => elements.map(el => el.dataset.total)), ['visitors', 'puzzlesSolved', 'nodesFilled', 'connectionsCompleted']);
   assert.equal(await dialog.locator('[data-total=visitors]').textContent(), '1,529');
   assert.equal(await dialog.locator('.statistics-histogram').count(), 3);
-  for (const metric of ['puzzlesSolved', 'visitors', 'dotsCleared']) assert.equal(await dialog.locator(`#statistics-chart-${metric} .statistics-bar`).count(), 7);
+  for (const metric of ['puzzlesSolved', 'visitors', 'nodesFilled']) assert.equal(await dialog.locator(`#statistics-chart-${metric} .statistics-bar`).count(), 7);
   assert.equal(await dialog.locator('#statistics-sizes .statistics-ranking-bar').count(), 3);
   assert.equal(await dialog.locator('#statistics-difficulties .statistics-ranking-bar').count(), 3);
   assert.equal(await dialog.locator('#statistics-difficulties .statistics-complexity-icon').count(), 3, 'Difficulty rankings use the home-page complexity symbols');
@@ -160,8 +164,18 @@ try {
   assert.match(await dialog.locator('#statistics-chart-note').textContent(), /last 30 days/i);
   await dialog.locator('#statistics-chart-visitors .statistics-bar').first().focus();
   assert.match(await dialog.locator('#statistics-chart-value-visitors').textContent(), /13/);
-  assert.match(await dialog.locator('#statistics-chart-dotsCleared .statistics-bar').first().getAttribute('aria-label'), /132 dots cleared/);
+  assert.match(await dialog.locator('#statistics-chart-nodesFilled .statistics-bar').first().getAttribute('aria-label'), /132 nodes filled/);
 
+  if (process.argv.includes('--view-only')) {
+    for (const width of [1440, 390, 320]) {
+      await view.page.setViewportSize({ width, height: width > 700 ? 1000 : 844 });
+      await dialog.evaluate(element => { element.scrollTop = 0; });
+      assert.ok(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1), `Statistics fits ${width}px`);
+      const numberSize = await dialog.locator('[data-total=nodesFilled] .rolling-counter-reel').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+      assert.ok(numberSize >= 24, 'Reel digits retain the large card typography');
+      await view.page.screenshot({ path: `${out}/statistics-${width}.png`, fullPage: true });
+    }
+  } else {
   const reports = [];
   await view.page.route('**/api/sponsor-report', route => {
     const payload = route.request().postDataJSON(); reports.push(payload);
@@ -209,7 +223,7 @@ try {
   assert.equal(await view.page.locator('#statistics-content').isVisible(), false, 'A failed period never displays stale totals');
   await view.page.route('**/api/statistics?*', route => {
     const period = new URL(route.request().url()).searchParams.get('period');
-    return route.fulfill({ json: { ...stats(period, 0), totals: { visitors: 0, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } });
+    return route.fulfill({ json: { ...stats(period, 0), totals: { visitors: 0, puzzlesSolved: 0, nodesFilled: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } });
   });
   await view.page.locator('#statistics-retry').click();
   await waitFor(async () => await view.page.locator('#statistics-content').isVisible(), 'Retry recovers');
@@ -217,8 +231,9 @@ try {
   assert.match(await view.page.locator('#statistics-sizes').textContent(), /No completed puzzles/);
   assert.equal(await view.page.locator('.statistics-chart-empty').count(), 3);
   assert.equal(await view.page.locator('#statistics-activity').isVisible(), false, 'Today keeps the summary cards without duplicate charts');
+  }
   await view.page.close();
 
   assert.deepEqual(errors, [], 'No uncaught browser errors');
-  console.log('Passed: solve tracking/deduplication and offline queue; statistics filters, separate histograms, private reports, mobile layout, history/refresh, errors/empty states, and game preservation.');
+  console.log(process.argv.includes('--view-only') ? 'Passed: statistics card order, node totals, filters, histograms and desktop/mobile counter layout.' : 'Passed: solve tracking, offline queue, statistics, private reports, mobile layout and game preservation.');
 } finally { await browser.close(); }

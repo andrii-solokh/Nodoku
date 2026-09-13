@@ -28,9 +28,10 @@ img,
 svg {
   -webkit-user-drag: none;
 }
+html { scrollbar-gutter: stable; }
 body {
   margin: 0;
-  min-width: 320px;
+  min-width: min(320px, 100%);
 }
 button,
 select {
@@ -727,14 +728,9 @@ a {
   flex-shrink: 0;
 }
 .game-title {
-  font-size: 14px;
-  white-space: nowrap;
-}
-.game-title span {
-  display: block;
-  color: #8d829e;
-  font-size: 11px;
-  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  color: #8170b9;
 }
 .progress-wrap {
   display: flex;
@@ -758,9 +754,54 @@ a {
 }
 .game-stage {
   position: absolute;
-  inset: 0;
+  inset: 48px 0 76px;
+  height: auto;
   min-height: 0;
 }
+.puzzle-melody {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 40px);
+  height: 28px;
+  color: #81768f;
+  font-size: 14px;
+  pointer-events: none;
+}
+.puzzle-melody svg { width: 16px; height: 16px; }
+.game-tip {
+  position: absolute;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100% - 40px));
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #81768f;
+  font-size: 14px;
+  line-height: 1.6;
+  pointer-events: none;
+}
+.game-tip kbd {
+  display: inline-block;
+  padding: 0 5px;
+  border: 1px solid #d8cfe8;
+  border-radius: 5px;
+  background: #f8f6fc;
+  color: #685587;
+  font: inherit;
+  font-size: .92em;
+}
+.game-tip-copy { animation: game-tip-in 350ms ease-out; }
+@keyframes game-tip-in { from { opacity: 0; } to { opacity: 1; } }
 .game-stage canvas {
   border-radius: 0;
 }
@@ -911,6 +952,7 @@ a {
 .network-separated .game-stage {
   position: relative;
   inset: auto;
+  height: 100%;
   min-width: 0;
 }
 .network-status {
@@ -1154,6 +1196,10 @@ a {
 .completion-share-networks,
 .completion-share-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
   gap: 8px;
 }
 .share-button {
@@ -1537,12 +1583,6 @@ a {
     flex-direction: column;
     align-items: flex-start;
   }
-  .game-title {
-    font-size: 12px;
-  }
-  .game-title span {
-    display: none;
-  }
   .progress-wrap {
     font-size: 10px;
     gap: 7px;
@@ -1652,6 +1692,8 @@ a {
   }
 }
 @media (max-aspect-ratio: 1/1), (max-width: 600px) {
+  .game-stage { bottom: max(140px, calc(env(safe-area-inset-bottom) + 128px)); }
+  .game-tip { bottom: max(78px, calc(env(safe-area-inset-bottom) + 66px)); font-size: 13px; }
   .network-separated .game-main { padding-bottom: max(80px, calc(env(safe-area-inset-bottom) + 72px)); }
   .network-status { padding: 12px 16px; }
   .network-separated .status-toast { bottom: 250px; }
@@ -1697,6 +1739,9 @@ a {
   }
 }
 @media (max-width: 760px) and (orientation: portrait) {
+  .game-stage { top: 76px; bottom: max(200px, calc(env(safe-area-inset-bottom) + 188px)); }
+  .puzzle-melody { top: 40px; font-size: 13px; }
+  .game-tip { bottom: max(140px, calc(env(safe-area-inset-bottom) + 128px)); }
   .playing #keyboard-button { display: none; }
   .game-toolbar {
     inset: 0;
@@ -1973,3 +2018,50 @@ a {
   border-top: 2px dashed currentColor;
   transform-origin: 0 50%;
 }
+
+/* Compact headers place activity on a second row above the melody label. */
+@media (max-width: 1199px) {
+  .game-stage { top: 76px; }
+  .puzzle-melody { top: 40px; }
+}
+
+/* Results use surrounding space without changing the canvas or its camera fit. */
+.is-complete .tools-group { visibility: hidden; pointer-events: none; }
+.completion-dialog[open] {
+  position: absolute;
+  z-index: 3;
+  inset: 100% auto auto 50%;
+  transform: translateX(-50%);
+  margin: 0 0 24px;
+  width: min(440px, calc(100% - 32px));
+  max-height: none;
+  padding: 24px;
+  border: 1px solid #e0dae9;
+  box-shadow: 0 12px 40px #433b5c0a;
+}
+@media (min-width: 1200px) and (min-aspect-ratio: 8/5) {
+  .completion-dialog[open] {
+    inset: 50% 24px auto auto;
+    transform: translateY(-50%);
+    width: clamp(280px, 22vw, 340px);
+    max-height: max(160px, calc(100% - 384px));
+  }
+  .flat-playing .completion-dialog[open] { max-height: calc(100% - 48px); }
+  .game-main .rotation-tools {
+    top: auto;
+    bottom: 24px;
+    transform: none;
+  }
+}
+.completion-dialog h2 { font-size: 28px; }
+.completion-dialog .completion-emblem { animation: completion-emblem 760ms cubic-bezier(.16, .9, .28, 1) both; }
+.completion-invite { margin: 16px 0 20px; }
+.completion-invite summary { cursor: pointer; color: #7966a9; font-size: 14px; }
+.completion-invite .completion-share { margin: 12px 0 0; padding: 12px 0 0; border: 0; border-radius: 0; background: transparent; }
+.completion-invite .completion-share-title { display: none; }
+.completion-dialog .start-button { padding: 14px 12px; font-size: 14px; }
+@media (prefers-reduced-motion: reduce) {
+  .completion-dialog .completion-emblem { animation: none; }
+}
+
+.is-complete.flat-playing .rotation-tools { display: none; }

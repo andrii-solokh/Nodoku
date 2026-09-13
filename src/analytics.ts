@@ -89,6 +89,15 @@ export function captureAnalytics(event: string, properties: EventProperties = {}
   if (queuedEvents.length < 32) queuedEvents.push({ event, properties });
 }
 
+/** Use the SDK's existing session; never manufacture one for server events. */
+export function getAnalyticsSessionId(): string | undefined {
+  try {
+    return initialized ? posthog?.get_session_id() || undefined : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Observe a PostHog Boolean flag. Missing analytics or a missing flag stays safely off. */
 export function subscribeFeatureFlag(key: string, listener: (enabled: boolean) => void): () => void {
   listener(false);

@@ -155,3 +155,7 @@ Publishing only `dist/`, including through the existing static Vercel configurat
 The Godot sources (`project.godot`, `scripts/*.gd`, `scenes/`, `shaders/`) and its old export (`public/`) remain available for reference. They are not included in the new browser build. Open `scenes/Main.tscn` in Godot to run that version; `npm run release:godot` invokes its original export pipeline.
 
 The new implementation preserves surface-only 3D topology, node degree limits, connected-network completion and alternative solutions. Generation, hints, visual design and interaction code were rewritten. It has a browser build; native iOS/Android packages have not been recreated. The local Studio panel provides the new scene and animation controls.
+
+### Player accounts and leaderboard
+
+Optional Google sign-in keeps ranked achievements across devices. Guest play remains available. See [accounts setup](docs/accounts.md) for Google origins, the server rollout flag, D1 setup, privacy, and ranking rules.

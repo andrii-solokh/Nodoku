@@ -10,3 +10,6 @@ REMOVE_ADS_AMOUNT=""
 # Optional PostHog product analytics. This public project key is delivered to
 # the browser through the same-origin /api/analytics-config endpoint.
 POSTHOG_PROJECT_API_KEY=""
+# Optional Google accounts + leaderboard. Enable only after schema setup.
+ACCOUNTS_ENABLED="false"
+GOOGLE_CLIENT_ID=""

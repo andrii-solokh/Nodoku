@@ -52,7 +52,7 @@ async function fixture({ clock = false, deferInitial = false } = {}) {
     mock.requests.statistics.push({ period });
     return route.fulfill({ status: mock.visitors.status, json: {
       scope: mock.visitors.body.scope, period, trackingSince: '2026-09-10T00:00:00Z',
-      totals: { visitors: mock.visitors.body.count, puzzlesSolved: 42, dotsCleared: 420, connectionsCompleted: 210 },
+      totals: { visitors: mock.visitors.body.count, puzzlesSolved: 42, nodesFilled: 420, connectionsCompleted: 210 },
       daily: [], sizes: [], difficulties: [],
     } });
   });
@@ -288,7 +288,7 @@ try {
   await direct.route('**/api/statistics?**', route => {
     const period = new URL(route.request().url()).searchParams.get('period');
     if (period === '30d') publicLoads++;
-    return route.fulfill({ json: { scope: 'local', period, trackingSince: '2026-09-10T00:00:00Z', totals: { visitors: registered ? 1 : 0, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } });
+    return route.fulfill({ json: { scope: 'local', period, trackingSince: '2026-09-10T00:00:00Z', totals: { visitors: registered ? 1 : 0, puzzlesSolved: 0, nodesFilled: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } });
   });
   await direct.goto(`${url}#statistics`);
   await waitFor(async () => typeof releaseRegistration === 'function' && await direct.locator('[data-total="visitors"]').textContent() === '0', 'A direct statistics entry can load before new-visitor registration completes');

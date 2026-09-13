@@ -16,8 +16,8 @@ export interface Statistics {
   scope: 'local' | 'global';
   period: StatisticsPeriod;
   trackingSince: string;
-  totals: { visitors: number; puzzlesSolved: number; dotsCleared: number; connectionsCompleted: number };
-  daily: { date: string; visitors: number; puzzlesSolved: number; dotsCleared: number }[];
+  totals: { visitors: number; puzzlesSolved: number; dotsCleared: number; nodesFilled: number; connectionsCompleted: number };
+  daily: { date: string; visitors: number; puzzlesSolved: number; dotsCleared: number; nodesFilled: number }[];
   sizes: { size: number; depth: number; count: number }[];
   difficulties: { difficulty: string; count: number }[];
 }

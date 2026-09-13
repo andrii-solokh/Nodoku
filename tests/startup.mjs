@@ -5,6 +5,7 @@ import { chromium, webkit } from 'playwright';
 const base = process.env.TEST_URL || 'http://127.0.0.1:4173';
 await mkdir('output/web-game/startup', { recursive: true });
 for (const [engine, browserType] of [['chromium', chromium], ['webkit', webkit]]) {
+  if (process.env.TEST_BROWSER && process.env.TEST_BROWSER !== engine) continue;
   const browser = await browserType.launch();
   try {
     for (const scenario of ['normal', 'no-timeout', 'fetch-throws']) {
@@ -44,16 +45,46 @@ for (const [engine, browserType] of [['chromium', chromium], ['webkit', webkit]]
       await page.close();
       console.log(`${engine}/${scenario}: tutorial touch, normal game and resume passed`);
     }
-    for (const failure of ['download', 'evaluation', 'stall']) {
+    for (const failure of ['download', 'evaluation', 'stall', 'no-webgl']) {
       const page = await browser.newPage();
       await page.route('**/api/**', route => route.fulfill({ json: {} }));
+      if (failure === 'no-webgl') await page.addInitScript(() => {
+        const getContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = function (type, ...args) { return type === 'webgl2' ? null : getContext.call(this, type, ...args); };
+      });
       if (failure === 'evaluation') await page.route('**/assets/main-*.js', route => route.fulfill({ contentType: 'text/javascript', body: 'throw new Error("startup fixture");' }));
-      else await page.route('**/assets/index-*.js', route => failure === 'download' ? route.abort() : route.fulfill({ contentType: 'text/javascript', body: '' }));
-      if (failure === 'stall') await page.clock.install();
+      else if (failure !== 'no-webgl') await page.route('**/assets/index-*.js', route => failure === 'download' ? route.abort() : route.fulfill({ contentType: 'text/javascript', body: '' }));
+      if (failure === 'stall' || failure === 'evaluation') await page.clock.install();
       await page.goto(base);
-      if (failure === 'stall') await page.clock.runFor(21000);
+      if (failure === 'stall') {
+        await page.evaluate(async () => {
+          await document.fonts.ready;
+          const animation = document.querySelector('.loader-progress').getAnimations({ subtree: true })[0];
+          animation.pause(); animation.currentTime = 800;
+        });
+        for (const [width, height] of [[1200, 850], [390, 844], [820, 1180]]) {
+          await page.setViewportSize({ width, height });
+          const mark = page.locator('.loader-mark');
+          assert.equal(await mark.locator('circle').count(), 4, 'Every logo node remains visible');
+          assert.equal(await mark.evaluate(el => el.getAnimations({ subtree: true }).length), 0, 'The brand stays still');
+          await page.screenshot({ path: `output/web-game/startup/${engine}-loader-${width}.png` });
+        }
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        assert.equal(await page.locator('.loader-progress').evaluate(el => getComputedStyle(el, '::after').animationName), 'none');
+        await page.clock.runFor(21000);
+      }
       await page.locator('.loader-recovery').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#reload-app').isEnabled(), true);
+      await page.locator('.loader-diagnostics summary').click();
+      const details = page.locator('#startup-error-details');
+      assert.match(await details.textContent(), /Browser:/);
+      if (failure === 'evaluation') {
+        assert.match(await details.textContent(), /startup fixture/);
+        await page.clock.runFor(21000);
+        assert.match(await details.textContent(), /startup fixture/, 'Timeout never overwrites the original error');
+      }
+      if (failure === 'no-webgl') assert.match(await details.textContent(), /WebGL context/);
+      if (failure === 'stall') assert.match(await details.textContent(), /20 seconds/);
       if (failure === 'evaluation') await page.screenshot({ path: `output/web-game/startup/${engine}-recovery.png` });
       await page.close();
       console.log(`${engine}/${failure}: visible startup recovery passed`);

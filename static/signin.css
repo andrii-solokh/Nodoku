@@ -1,0 +1,14 @@
+:root { font-family: system-ui, sans-serif; background: #eeedf6; color: #302b48; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 24px; }
+main { max-width: 440px; width: 100%; text-align: center; padding: 36px 24px; }
+.brand { font-size: 28px; font-weight: 750; letter-spacing: -.06em; color: #302b48; text-decoration: none; }
+h1 { margin-top: 40px; font-size: clamp(28px, 7vw, 36px); letter-spacing: -.05em; line-height: 1.12; }
+p { color: #7d718e; font-size: 15px; line-height: 1.6; }
+#google-button { display: flex; justify-content: center; margin-top: 32px; min-height: 44px; }
+#status { min-height: 24px; font-size: 13px; }
+a, button { color: #7966bd; }
+#back { display: inline-block; padding: 12px; font-size: 14px; }
+button { padding: 12px 24px; background: #faf8ff; border: 1px solid #dcd4e9; border-radius: 12px; cursor: pointer; }
+.privacy { margin-top: 36px; font-size: 12px; }
+[hidden] { display: none !important; }

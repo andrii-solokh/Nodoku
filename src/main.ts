@@ -1,3 +1,4 @@
+import { complexityIcon } from "./complexity-icon";
 import "@fontsource/outfit/300.css";
 import "@fontsource/outfit/400.css";
 import "@fontsource/outfit/500.css";
@@ -5,15 +6,18 @@ import "@fontsource/outfit/600.css";
 import "./style.css";
 import { Puzzle, dailyPuzzleSeed, edgeKey, type Difficulty, type Edge, type PuzzleSettings } from "./puzzle";
 import { updateAudiencePuzzle } from "./audience";
+import { mountGameTips } from "./game-tips";
 import { BoardScene } from "./scene";
 import { HomeDemo } from "./demo";
 import { mountSponsorship, setSponsorshipConfig } from "./sponsorship";
 import { getConfig, subscribeConfig } from "./config";
-import { GameAudio } from "./sound";
+import { FILL_NOTE_INTERVAL_MS, GameAudio } from "./sound";
+import { MELODIES } from "./melodies";
 import { AmbientAudio } from "./ambient";
 import moonlightUrl from "./assets/moonlight-scott-buckley.mp3?url";
 import { mountCompletionShare } from "./share";
 import { recordCompletion, restoreAttemptId, startCompletionTracking } from "./completions";
+import { mountAccounts, prepareRankedAttempt } from "./accounts";
 import { captureAnalytics, startAnalytics, subscribeFeatureFlag } from "./analytics";
 
 const paths: Record<string, string> = {
@@ -46,8 +50,7 @@ const paths: Record<string, string> = {
 };
 const icon = (name: string) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || ""}</svg>`;
-const complexityIcon = (level: number) =>
-  `<svg class="complexity-icon" viewBox="0 0 40 20" aria-hidden="true"><path class="complexity-track" d="M6 10h28"/>${level > 1 ? `<path class="complexity-link" d="M6 10h${(level - 1) * 14}"/>` : ""}${[1, 2, 3].map(dot => `<circle class="complexity-dot${dot <= level ? " filled" : ""}" cx="${6 + (dot - 1) * 14}" cy="10" r="3.5"/>`).join("")}</svg>`;
+
 const logo =
   '<svg viewBox="0 0 34 34" aria-hidden="true"><path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3"/><g fill="#a9cbbd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g><circle cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/></svg>';
 const labels: Record<Difficulty, string> = {
@@ -205,7 +208,9 @@ app.innerHTML = `
   <div class="home-stage-wrap"><div id="home-stage" class="stage home-stage"></div></div>
 </section>
 <section class="game-main" aria-label="Puzzle board">
+  <div class="puzzle-melody" aria-label="Selected melody">${icon("music")}<span id="puzzle-melody-name"></span></div>
   <div id="game-stage" class="stage game-stage"></div>
+  <div id="game-tip" class="game-tip" aria-label="Gameplay tip" hidden></div>
   <aside class="network-status" id="network-status" aria-label="Network status" hidden>
     <div role="status" aria-live="polite" aria-atomic="true"><strong id="network-status-title"></strong><p>All dots are cleared. Swap connections to join the groups.</p><span class="network-group-detail" id="network-group-detail"></span></div>
     <button id="network-group-button" type="button">Show group 1</button>
@@ -222,6 +227,13 @@ app.innerHTML = `
     </div>
     <div class="rotation-tools" role="group" aria-label="Board view"><button class="icon-button" data-rotate="left" aria-label="Rotate left" aria-keyshortcuts="ArrowLeft A">${icon("left")}${rotationShortcut("left")}</button><button class="icon-button" data-rotate="up" aria-label="Rotate up" aria-keyshortcuts="ArrowUp W">${icon("up")}${rotationShortcut("up")}</button><button class="icon-button view-reset" id="view-button" aria-label="Reset view" aria-keyshortcuts="R">${icon("cube")}Reset view<span class="rotation-shortcut" aria-hidden="true"><kbd data-key="r">R</kbd></span></button><button class="icon-button" data-rotate="down" aria-label="Rotate down" aria-keyshortcuts="ArrowDown S">${icon("down")}${rotationShortcut("down")}</button><button class="icon-button" data-rotate="right" aria-label="Rotate right" aria-keyshortcuts="ArrowRight D">${icon("right")}${rotationShortcut("right")}</button></div>
   </div>
+<dialog class="dialog completion-dialog" id="completion-dialog" aria-labelledby="completion-title">
+  <div class="completion-emblem">${icon("check")}</div>
+  <h2 id="completion-title">All connected.</h2>
+  <details class="completion-invite"><summary>Share your puzzle</summary><div id="completion-share"></div></details>
+  <button class="start-button" id="next-button">Solve another puzzle${icon("play")}</button>
+  <button class="secondary-button" id="completion-home">Return home</button>
+</dialog>
 </section>
 <section class="onboarding-main" aria-labelledby="onboarding-title">
   <div id="onboarding-stage" class="stage onboarding-stage"></div>
@@ -284,7 +296,7 @@ app.innerHTML = `
       </div>
     </div>
     <dl class="shortcut-list">
-      <div><dt>Fill / clear node</dt><dd><kbd>${modifierLabel}</kbd><span class="shortcut-join">+</span><kbd>Click</kbd></dd></div>
+      <div><dt>Fill / clear node</dt><dd><kbd>Shift</kbd><span class="shortcut-join">+</span><kbd>Click</kbd></dd></div>
       <div><dt>Undo</dt><dd><kbd>Ctrl / <span aria-hidden="true">⌘</span><span class="sr-only">Command</span></kbd><span class="shortcut-join">+</span><kbd>Z</kbd></dd></div>
       <div><dt>Redo</dt><dd><kbd>Ctrl / <span aria-hidden="true">⌘</span><span class="sr-only">Command</span></kbd><span class="shortcut-join">+</span><kbd>Shift</kbd><span class="shortcut-join">+</span><kbd>Z</kbd></dd></div>
       <div><dt>Restart puzzle</dt><dd><kbd>Shift</kbd><span class="shortcut-join">+</span><kbd>R</kbd></dd></div>
@@ -293,14 +305,7 @@ app.innerHTML = `
     </dl>
   </div>
 </dialog>
-<dialog class="dialog completion-dialog" id="completion-dialog" aria-labelledby="completion-title">
-  <div class="completion-emblem">${icon("check")}</div>
-  <h2 id="completion-title">All connected.</h2>
-  <p>You cleared every dot.<br>Invite a friend to find their own moment of calm.</p>
-  <div id="completion-share"></div>
-  <button class="start-button" id="next-button" autofocus>Solve another puzzle${icon("play")}</button>
-  <button class="secondary-button" id="completion-home">Return home</button>
-</dialog>
+
 <dialog class="dialog music-dialog" id="music-dialog" aria-labelledby="music-title">
   <div class="dialog-header"><h2 id="music-title">Ambient music</h2><button class="icon-button close" data-close="music-dialog" aria-label="Close music and credits">${icon("close")}</button></div>
   <div class="music-track">
@@ -331,6 +336,13 @@ let strokeChanged = false;
 let strokeAdded = 0;
 let strokeRemoved = 0;
 const strokeEdges = new Set<string>();
+const gameTips = mountGameTips(el("game-tip"), () => ({
+  active: mode === "playing" && !!puzzle && !puzzle.solved && !puzzle.disconnected,
+  flat: puzzle?.settings.depth === 1,
+  touch: touchInput.matches,
+  paused: !!strokePuzzle || !!document.querySelector("dialog[open]:not(#completion-dialog)"),
+}), modifierLabel);
+touchInput.addEventListener("change", () => gameTips.update());
 try {
   scene = new BoardScene(el("home-stage"), onTap, () => selectNode(null), {
     onDoubleTap: onDoubleTap,
@@ -354,7 +366,6 @@ try {
   el("home-stage").innerHTML =
     '<div class="webgl-error"><strong>The 3D view couldn’t start.</strong>Enable hardware acceleration in your browser, then reload to play Nodoku.</div>';
   el<HTMLButtonElement>("start-button").disabled = true;
-  finishLoading();
   throw error;
 }
 function demoSoundOptions(kind: "connect" | "complete") {
@@ -408,6 +419,8 @@ subscribeConfig(config => {
   requestAnimationFrame(() => { renderOnboardingCue(); if (mode === "onboarding") { renderRotationGuidance(); } });
   demo.setConfig(config);
   gameAudio.setConfig(config.sound);
+  el("puzzle-melody-name").textContent = config.sound.connectionMelody === "classic"
+    ? "Classic tones" : MELODIES[config.sound.connectionMelody].title;
   ambientAudio.setVolume(config.sound.ambientVolume);
   updateMusic();
   if (activeMelody !== config.sound.connectionMelody) {
@@ -421,7 +434,7 @@ subscribeConfig(config => {
 });
 let demoFrame = 0;
 function demoSuspended() {
-  return document.hidden || !!document.querySelector("dialog[open]");
+  return document.hidden || !!document.querySelector("dialog[open]:not(#completion-dialog)");
 }
 function runDemo() {
   if (demoFrame) cancelAnimationFrame(demoFrame);
@@ -518,13 +531,12 @@ function celebrateOnboarding(message: string, advance: () => void) {
 function tone(
   kind: "connect" | "disconnect" | "complete",
   count = 1,
-  sequenceTempoBpm?: number,
-  rhythmTempoBpm?: number,
+  sequenceNoteIntervalMs?: number,
 ) {
   const melodyIndex = melodyStep;
   if (kind === "connect") melodyStep += count;
   if (soundEnabled && !document.hidden)
-    gameAudio.play(kind, { melodyIndex, count, sequenceTempoBpm, rhythmTempoBpm });
+    gameAudio.play(kind, { melodyIndex, count, sequenceNoteIntervalMs });
 }
 function updateSound() {
   gameAudio.setEnabled(soundEnabled && !document.hidden);
@@ -604,9 +616,9 @@ function selectNode(id: number | null) {
       `Node ${id + 1}, ${remaining} ${remaining === 1 ? "dot" : "dots"} remaining. Choose a neighbor.`;
 }
 function onTap(id: number): (() => void) | void {
-  if (!puzzle || document.querySelector("dialog[open]")) return;
+  if (!puzzle || document.querySelector("dialog[open]:not(#completion-dialog)")) return;
   if (mode === "onboarding") return onOnboardingTap(id);
-  if (mode !== "playing") return;
+  if (mode !== "playing" || completionShown) return;
   const active = puzzle;
   const restore = active.checkpoint();
   const restoreMelodyStep = melodyStep;
@@ -679,7 +691,7 @@ function onOnboardingTap(id: number): (() => void) | void {
   return rollback;
 }
 function onNode(id: number) {
-  if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]"))
+  if (mode !== "playing" || !puzzle || document.querySelector("dialog[open]:not(#completion-dialog)"))
     return;
   if (selected === id) {
     selectNode(null);
@@ -713,7 +725,8 @@ function onNode(id: number) {
   updateGame();
 }
 function onDoubleTap(id: number, input: "double_tap" | "modifier_click" = "double_tap") {
-  if (!puzzle || document.querySelector("dialog[open]"))
+  if (mode === "playing" && completionShown) return;
+  if (!puzzle || document.querySelector("dialog[open]:not(#completion-dialog)"))
     return;
   if (mode === "onboarding") {
     if (onboardingCelebrating || (!isOnboardingPractice() && onboardingStep !== 3 && onboardingStep !== 4)) return;
@@ -726,7 +739,7 @@ function onDoubleTap(id: number, input: "double_tap" | "modifier_click" = "doubl
       celebrateOnboarding("Neighbors connected", () => { onboardingStep = 4; });
     } else if (isOnboardingPractice()) {
       tone(result.removed ? "disconnect" : "connect", result.count,
-        result.removed ? undefined : getConfig().demo.tempoBpm);
+        result.removed ? undefined : FILL_NOTE_INTERVAL_MS);
       refreshOnboardingPractice();
     } else if (!completeOnboarding2dIfSolved()) renderOnboarding();
     return;
@@ -745,7 +758,7 @@ function onDoubleTap(id: number, input: "double_tap" | "modifier_click" = "doubl
       result.removed ? result.count : 0,
     );
     tone(result.removed ? "disconnect" : "connect", result.count,
-      result.removed ? undefined : getConfig().demo.tempoBpm);
+      result.removed ? undefined : FILL_NOTE_INTERVAL_MS);
   }
   updateGame();
   if (!result.changed)
@@ -1111,6 +1124,7 @@ function startOnboarding(step = 0, rotation = 0) {
     puzzle.toggle(...puzzle.solution[0]);
   }
   mode = "onboarding";
+  gameTips.update();
   app.className = "onboarding";
   moveCanvas("onboarding-stage");
   scene.setPuzzle(puzzle);
@@ -1142,7 +1156,8 @@ function completeOnboarding2dIfSolved() {
   return true;
 }
 function onStrokeStart(id: number) {
-  if (!puzzle || document.querySelector("dialog[open]"))
+  if (mode === "playing" && completionShown) return false;
+  if (!puzzle || document.querySelector("dialog[open]:not(#completion-dialog)"))
     return;
   if (mode === "onboarding") {
     // During the turn lesson, even drags that begin on a node should rotate,
@@ -1174,7 +1189,7 @@ function onStrokeEdge(a: number, b: number): boolean {
   if (
     !puzzle ||
     strokePuzzle !== puzzle ||
-    document.querySelector("dialog[open]") ||
+    document.querySelector("dialog[open]:not(#completion-dialog)") ||
     !puzzle.neighbors(a).includes(b)
   )
     return false;
@@ -1278,9 +1293,13 @@ function updateGame(showCompletion = true) {
   el<HTMLButtonElement>("hint-button").disabled = puzzle.solved;
   updateNetworkStatus();
   if (showCompletion) maybeComplete();
-  if (!puzzle.solved) completionShown = false;
+  if (!puzzle.solved) {
+    completionShown = false;
+    app.classList.remove("is-complete");
+    el<HTMLDialogElement>("completion-dialog").close();
+  }
   if (mode === "playing" && attemptId) updateAudiencePuzzle({
-    attemptId, connections: puzzle.edges.length, solved: completionShown,
+    attemptId, connections: puzzle.edges.length, nodesFilled: puzzle.nodes.filter(node => puzzle!.remaining(node.id) === 0).length, solved: puzzle.solved,
   });
   if (!strokePuzzle) persist();
 }
@@ -1347,6 +1366,7 @@ function trackFirstConnection(input: "tap" | "drag" | "double_tap" | "modifier_c
   captureAnalytics("puzzle_first_connection", { input, ...puzzleAnalyticsProperties() });
 }
 function updateNetworkStatus() {
+  gameTips.update();
   networkGroups = mode === "playing" && puzzle?.disconnected ? puzzle.connectionGroups : [];
   const visible = networkGroups.length > 1;
   el("network-status").hidden = !visible;
@@ -1372,10 +1392,10 @@ function maybeComplete() {
     !completionShown &&
     !strokePuzzle &&
     !scene.hasPendingTap &&
-    !document.querySelector("dialog[open]")
+    !document.querySelector("dialog[open]:not(#completion-dialog)")
   ) {
     completionShown = true;
-    if (attemptId) updateAudiencePuzzle({ attemptId, connections: puzzle.edges.length, solved: true });
+    if (attemptId) updateAudiencePuzzle({ attemptId, connections: puzzle.edges.length, nodesFilled: puzzle.nodes.length, solved: true });
     if (attemptId) recordCompletion(puzzle, attemptId);
     captureAnalytics("puzzle_completion_viewed", {
       ...puzzleAnalyticsProperties(),
@@ -1383,15 +1403,18 @@ function maybeComplete() {
     });
     trackPuzzleSession("puzzle_session_completed", "completed");
     savedPuzzle = null;
-    // The cadence continues the player's score, including its rests and held notes.
-    tone("complete", 1, undefined, getConfig().demo.tempoBpm);
-    scene.setInteractive(false);
-    const completedPuzzle = puzzle;
-    playCompletionMoment(() => {
-      if (mode !== "playing" || puzzle !== completedPuzzle || !puzzle.solved) return;
-      completionShare.update(puzzle.settings, puzzle.edges.length);
-      el<HTMLDialogElement>("completion-dialog").showModal();
-    });
+    // Player endings follow the score at the configured completion pace.
+    tone("complete");
+    selectNode(null);
+    clearTimeout(toastTimer);
+    el("toast").textContent = "";
+    app.classList.add("is-complete");
+    completionShare.update(puzzle.settings, puzzle.edges.length);
+    const focused = document.activeElement;
+    const scroll = { x: window.scrollX, y: window.scrollY };
+    el<HTMLDialogElement>("completion-dialog").show();
+    if (focused instanceof HTMLElement) focused.focus({ preventScroll: true });
+    window.scrollTo(scroll.x, scroll.y);
   }
 }
 function startGame(
@@ -1399,6 +1422,7 @@ function startGame(
   seed = dailyPuzzleSeed(),
   puzzleType: "daily" | "new" = "daily",
 ) {
+  el<HTMLDialogElement>("completion-dialog").close();
   clearCompletionMoment();
   if (demoFrame) cancelAnimationFrame(demoFrame);
   demoFrame = 0;
@@ -1414,6 +1438,7 @@ function startGame(
     resumedPuzzle
       ? resumedPuzzle
       : new Puzzle({ ...settings, seed });
+  prepareRankedAttempt(puzzle, attemptId!);
   if (!resumedPuzzle) melodyStep = 0;
   savedPuzzle = null;
   savedView = null;
@@ -1437,8 +1462,12 @@ function startGame(
   app.className = `playing${puzzle.settings.depth === 1 ? " flat-playing" : ""}`;
   el("toast").textContent = "";
   const s = puzzle.settings;
-  el("game-title").innerHTML =
-    `${s.size} × ${s.size}${s.depth > 1 ? ` × ${s.depth}` : ""}<span>${labels[s.difficulty]}</span>`;
+  const complexity = { easy: 1, medium: 2, hard: 3 }[s.difficulty];
+  const complexityLabel = `${["Low", "Medium", "High"][complexity - 1]} complexity — ${labels[s.difficulty]}`;
+  el("game-title").innerHTML = complexityIcon(complexity);
+  el("game-title").setAttribute("role", "img");
+  el("game-title").setAttribute("aria-label", complexityLabel);
+  el("game-title").title = complexityLabel;
   moveCanvas("game-stage");
   scene.setPuzzle(puzzle);
   if (resumedPuzzle) scene.restoreView(restoredView);
@@ -1450,7 +1479,7 @@ function startGame(
     puzzle_type: puzzleType,
     resumed: !!resumedPuzzle,
   });
-  if (!document.querySelector("dialog[open]"))
+  if (!document.querySelector("dialog[open]:not(#completion-dialog)"))
     app.querySelector("canvas")?.focus({ preventScroll: true });
 }
 function goHome() {
@@ -1714,7 +1743,7 @@ document.querySelectorAll<HTMLElement>("[data-difficulty]").forEach((button) =>
   }),
 );
 document.addEventListener("keydown", (event) => {
-  if ((mode !== "playing" && mode !== "onboarding") || !puzzle || document.querySelector("dialog[open]"))
+  if ((mode !== "playing" && mode !== "onboarding") || !puzzle || document.querySelector("dialog[open]:not(#completion-dialog)"))
     return;
   if (event.target instanceof Element && event.target.closest("#admin-panel")) return;
   if (
@@ -1849,13 +1878,14 @@ Object.assign(window, {
       config: getConfig(),
       audio: { soundEnabled, musicAvailable: getConfig().sound.showAmbientMusic, musicEnabled: musicEnabled && getConfig().sound.showAmbientMusic, ambientTrack: "Moonlight — Scott Buckley" },
       melodyStep: mode === "home" ? (demo.puzzle?.edges.length ?? 0) : melodyStep,
+      gameplayTip: el("game-tip").hidden ? null : el("game-tip").textContent,
       nodes:
         displayed?.nodes.map((node) => ({
           ...node,
           remaining: displayed!.remaining(node.id),
           screen: screenNodes.get(node.id),
         })) ?? [],
-      dialog: document.querySelector("dialog[open]")?.id ?? null,
+      dialog: document.querySelector("dialog[open]:not(#completion-dialog)")?.id ?? null,
     });
   },
   advanceTime: (ms: number) => {
@@ -1883,7 +1913,12 @@ if (showOnboarding) {
 }
 else if (resumeOnLoad) startGame(true);
 else updateOptions();
-finishLoading();
+window.addEventListener("nodoku:startup-ready", finishLoading, { once: true });
+mountAccounts(() => {
+  scene.cancelPendingTap();
+  onStrokeEnd(false);
+  persist();
+}, () => maybeComplete());
 mountSponsorship({
   beforeOpen: () => {
     scene.cancelPendingTap();
