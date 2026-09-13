@@ -58,7 +58,7 @@ test('completion queue freezes attribution through offline storage, reload, and 
     const context = createContext({
       window, document, navigator: { onLine: online }, Event, crypto, Puzzle,
       getVisitorId: () => visitorId, getAnalyticsSessionId: () => sessionId,
-      getRankedTicket: async () => undefined, forgetRankedTicket: () => {},
+      getRankedTicket: async () => undefined, forgetRankedTicket: () => {}, refreshCompletionRanking: async () => {},
       timeoutSignal: () => undefined,
       localStorage: {
         get length() { return storage.size; }, key: (i: number) => [...storage.keys()][i],

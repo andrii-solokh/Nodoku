@@ -18,7 +18,7 @@ import { AmbientAudio } from "./ambient";
 import moonlightUrl from "./assets/moonlight-scott-buckley.mp3?url";
 import { mountCompletionShare } from "./share";
 import { recordCompletion, restoreAttemptId, startCompletionTracking } from "./completions";
-import { mountAccounts, prepareRankedAttempt } from "./accounts";
+import { mountAccounts, prepareRankedAttempt, showCompletionRanking } from "./accounts";
 import { captureAnalytics, startAnalytics, subscribeFeatureFlag } from "./analytics";
 
 const paths: Record<string, string> = {
@@ -1407,7 +1407,10 @@ function maybeComplete() {
   ) {
     completionShown = true;
     if (attemptId) updateAudiencePuzzle({ attemptId, connections: puzzle.edges.length, nodesFilled: puzzle.nodes.length, solved: true });
-    if (attemptId) recordCompletion(puzzle, attemptId);
+    if (attemptId) {
+      showCompletionRanking(puzzle.settings, attemptId);
+      recordCompletion(puzzle, attemptId);
+    }
     captureAnalytics("puzzle_completion_viewed", {
       ...puzzleAnalyticsProperties(),
       ...puzzleProgressProperties(),

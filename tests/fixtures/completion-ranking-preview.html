@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Completion ranking preview · Nodoku</title></head>
+<body>
+  <header class="site-header"><strong>nodoku</strong><div class="header-actions"></div></header>
+  <main class="game-main flat-playing">
+    <dialog class="dialog completion-dialog" id="completion-dialog" open aria-labelledby="completion-title">
+      <div class="completion-emblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m5 12 4 4 10-10"/></svg></div>
+      <h2 id="completion-title">All connected.</h2>
+      <details class="completion-invite"><summary>Share your puzzle</summary></details>
+      <button class="start-button" id="next-button">Solve another puzzle ▸</button>
+      <button class="secondary-button" id="completion-home">Return home</button>
+    </dialog>
+    <button id="preview-complete">Preview completion</button>
+  </main>
+  <script type="module">
+    import '@fontsource/outfit/400.css';
+    import '@fontsource/outfit/500.css';
+    import '@fontsource/outfit/600.css';
+    import '/src/style.css';
+    import { mountAccounts, prepareRankedAttempt, getRankedTicket, showCompletionRanking, refreshCompletionRanking, forgetRankedTicket } from '/src/accounts.ts';
+    const scenario = new URL(location.href).searchParams.get('case') || 'improved';
+    const cases = {
+      improved: { before: [18, 42], after: [15, 30] },
+      first: { before: [null, null], after: [10001, 80] },
+      unchanged: { before: [1, 1], after: [1, 1] },
+      offline: { before: [10, 20], after: [10, 20] },
+      guest: { before: [null, null], after: [null, null] },
+    };
+    const data = cases[scenario];
+    const settings = { size: 4, depth: 1, difficulty: 'easy', seed: 17 };
+    const attemptId = crypto.randomUUID();
+    const player = scenario === 'guest' ? null : { id: 'you', nickname: 'Mira' };
+    let complete = false;
+    window.previewCalls = [];
+    window.fetch = async input => {
+      const url = new URL(String(input), location.href);
+      window.previewCalls.push(url.pathname + url.search);
+      if (url.pathname === '/api/auth/config') return Response.json({ enabled: true, clientId: 'preview' });
+      if (url.pathname === '/api/auth/me') return Response.json({ player });
+      if (url.pathname === '/api/ranked-attempts') return Response.json({ playerId: player.id, ticket: 'a'.repeat(64) });
+      if (url.pathname === '/api/leaderboard') {
+        if (scenario === 'offline' && complete) return Response.json({ error: 'Unavailable' }, { status: 503 });
+        const rank = data[complete ? 'after' : 'before'][url.searchParams.get('metric') === 'time' ? 1 : 0];
+        return Response.json({ entries: [], me: { rank, solved: 12, bestTimeMs: 45000 } });
+      }
+      return Response.json({});
+    };
+    mountAccounts(() => {}, () => {});
+    prepareRankedAttempt({ settings, solved: false, edges: [] }, attemptId);
+    await getRankedTicket(attemptId);
+    document.querySelector('#preview-complete').addEventListener('click', async () => {
+      showCompletionRanking(settings, attemptId);
+      await new Promise(resolve => setTimeout(resolve, 450));
+      complete = true;
+      const refreshed = refreshCompletionRanking(attemptId);
+      forgetRankedTicket(attemptId);
+      await refreshed;
+    });
+    window.render_game_to_text = () => JSON.stringify({ mode: 'completion-preview', complete, summary: document.querySelector('.completion-account')?.textContent });
+    window.advanceTime = () => {};
+    if (new URL(location.href).searchParams.has('auto')) setTimeout(() => document.querySelector('#preview-complete').click(), 100);
+  </script>
+  <style>
+    body { margin: 0; background: #eeedf6; font-family: Outfit, sans-serif; }
+    .site-header { position: relative; padding: 16px 24px; }
+    .game-main { height: auto; min-height: calc(100vh - 80px); padding: 24px 16px; }
+    .completion-dialog[open] { position: relative; inset: auto; transform: none; margin: 0 auto; width: min(340px, 100%); max-height: none; }
+    #preview-complete { display: block; margin: 20px auto; }
+  </style>
+</body>
+</html>

@@ -8,6 +8,67 @@ import { loadGoogleIdentity } from './google-signin';
 
 type Player = { id: string; nickname: string; avatarUrl?: string; profileUrl?: string };
 type Ranking = { entries: { id: string; nickname: string; profileUrl?: string; solved: number; rank: number; bestTimeMs: number | null }[]; me: { solved: number; rank: number | null; bestTimeMs: number | null } | null };
+type RankSnapshot = { solved: number | null; time: number | null };
+type RankBaseline = { playerId: string; capturedAt: number; ranks: RankSnapshot };
+const rankBaselines = new Map<string, Promise<RankBaseline | undefined>>();
+let completionRank: { attemptId: string; settings: Puzzle['settings']; completedAt: number; playerId?: string; before?: RankSnapshot; after?: RankSnapshot; pending: boolean } | undefined;
+const rankParams = (settings: Puzzle['settings'], metric: string) => new URLSearchParams({
+  period: 'all', perspective: settings.depth === 1 ? 'flat' : '3d', size: String(settings.size), difficulty: settings.difficulty, metric,
+});
+async function readRanks(settings: Puzzle['settings']): Promise<RankSnapshot> {
+  const [solved, time]: Ranking[] = await Promise.all(['solved', 'time'].map(metric => api(`/api/leaderboard?${rankParams(settings, metric)}`)));
+  return { solved: solved.me?.rank ?? null, time: time.me?.rank ?? null };
+}
+function rememberRankBaseline(attemptId: string, settings: Puzzle['settings'], playerId: string): void {
+  if (rankBaselines.has(attemptId)) return;
+  rankBaselines.set(attemptId, (async () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PREFIX + attemptId) || 'null');
+      if (saved?.playerId === playerId && saved.rankBaseline?.playerId === playerId) return saved.rankBaseline as RankBaseline;
+    } catch { /* Storage is optional. */ }
+    try {
+      const baseline = { playerId, ranks: await readRanks(settings), capturedAt: Date.now() };
+      if ((await api('/api/auth/me')).player?.id !== playerId) return undefined;
+      try {
+        const saved = JSON.parse(localStorage.getItem(PREFIX + attemptId) || 'null');
+        if (saved?.playerId === playerId) localStorage.setItem(PREFIX + attemptId, JSON.stringify({ ...saved, rankBaseline: baseline }));
+      } catch { /* In-memory comparison still works. */ }
+      return baseline;
+    } catch { return undefined; }
+  })());
+}
+export function showCompletionRanking(settings: Puzzle['settings'], attemptId: string): void {
+  if (completionRank?.attemptId === attemptId) return;
+  completionRank = { settings: { ...settings }, attemptId, completedAt: Date.now(), pending: true };
+  window.dispatchEvent(new Event('nodoku:completion-ranking'));
+}
+export async function refreshCompletionRanking(attemptId: string): Promise<void> {
+  const current = completionRank;
+  if (!current || current.attemptId !== attemptId) return;
+  // Read attribution before the successful upload removes its ticket.
+  let owner: string | undefined;
+  let savedBaseline: RankBaseline | undefined;
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREFIX + attemptId) || 'null');
+    owner = saved?.playerId;
+    if (saved?.rankBaseline?.playerId === owner) savedBaseline = saved.rankBaseline;
+  } catch { /* Optional storage. */ }
+  await initialize();
+  const baseline = await rankBaselines.get(attemptId) ?? savedBaseline;
+  owner ??= baseline?.playerId;
+  try {
+    if (!player || player.id !== owner) return;
+    current.playerId = owner;
+    const after = await readRanks(current.settings);
+    if ((await api('/api/auth/me')).player?.id !== owner) return;
+    current.after = after;
+    if (baseline && baseline.capturedAt < current.completedAt) current.before = baseline.ranks;
+  } catch { /* Keep completion usable when rankings cannot be loaded. */ }
+  finally {
+    current.pending = false;
+    if (completionRank === current) window.dispatchEvent(new Event('nodoku:completion-ranking'));
+  }
+}
 function formatBestTime(ms: number | null | undefined): string {
   if (ms == null || !Number.isFinite(ms) || ms < 0) return '—';
   if (ms < 1000) return '<1s';
@@ -51,13 +112,17 @@ export function prepareRankedAttempt(puzzle: Puzzle, attemptId: string): void {
     const playerId = player.id;
     try {
       const saved = JSON.parse(localStorage.getItem(PREFIX + attemptId) || 'null');
-      if (saved?.playerId === playerId && saved.expires > Date.now() && /^[a-f0-9]{64}$/.test(saved.ticket)) return saved.ticket;
+      if (saved?.playerId === playerId && saved.expires > Date.now() && /^[a-f0-9]{64}$/.test(saved.ticket)) {
+        rememberRankBaseline(attemptId, settings, playerId);
+        return saved.ticket;
+      }
     } catch { /* Local storage is optional. */ }
     if (alreadyStarted) return;
     try {
       const result = await api('/api/ranked-attempts', { settings });
       if (result.playerId !== playerId || !/^[a-f0-9]{64}$/.test(result.ticket)) return;
       try { localStorage.setItem(PREFIX + attemptId, JSON.stringify({ ...result, expires: Date.now() + 7 * 86400000 })); } catch { /* In-memory attribution still works. */ }
+      rememberRankBaseline(attemptId, settings, playerId);
       return result.ticket as string;
     } catch { /* Guest completion always works if ranking is unavailable. */ }
   })());
@@ -246,8 +311,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
   const updateProfile = () => {
     find('.player-guest').hidden = !!player;
     find('.player-profile').hidden = !player;
-    const invite = document.querySelector('.completion-account');
-    if (invite) invite.textContent = player ? 'View your ranking' : 'Join the leaderboard';
+    renderCompletionRanking();
     const profileButton = controls.querySelector<HTMLButtonElement>('#account-button')!;
     profileButton.setAttribute('aria-label', player ? 'Your profile' : 'Sign in');
     profileButton.setAttribute('title', player ? 'Your profile' : 'Sign in');
@@ -388,12 +452,51 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
   }
   find('.player-logout').addEventListener('click', () => void action(signOut));
   window.addEventListener('nodoku:statistics-updated', () => { if (active === 'leaderboard') void ranking(); });
+  function renderCompletionRanking() {
+    const host = document.querySelector<HTMLElement>('.completion-account');
+    if (!host) return;
+    host.hidden = !enabled;
+    host.replaceChildren();
+    if (!player) {
+      const invite = document.createElement('button'); invite.className = 'text-button';
+      invite.textContent = 'Join the leaderboard'; invite.addEventListener('click', () => void open('profile'));
+      host.append(invite); return;
+    }
+    const result = completionRank;
+    host.title = 'Rank changes compared with the start of this puzzle, for its size and difficulty.';
+    if (!result?.after || result.playerId !== player.id) {
+      host.textContent = result?.pending ? 'Syncing your rankings…' : 'Rankings unavailable for this puzzle';
+      return;
+    }
+    const caption = document.createElement('span'); caption.className = 'completion-rank-caption';
+    caption.textContent = `Your rankings · ${result.settings.depth === 1 ? 'Flat' : '3D'} · ${result.settings.size} × ${result.settings.size}`;
+    host.append(caption);
+    for (const metric of ['solved', 'time'] as const) {
+      const row = document.createElement('button'); row.className = 'completion-rank-row';
+      const label = document.createElement('span'); label.textContent = metric === 'solved' ? 'Most solved' : 'Best time';
+      const value = document.createElement('strong');
+      const before = result.before?.[metric], after = result.after[metric];
+      const rank = (n: number) => `#${n.toLocaleString()}`;
+      value.textContent = after === null ? 'Unranked' : before === undefined ? rank(after)
+        : before === null ? `New · ${rank(after)}` : before === after ? `${rank(after)} · unchanged` : `${rank(before)} → ${rank(after)}`;
+      row.classList.toggle('is-improved', after !== null && before !== undefined && (before === null || after < before));
+      row.append(label, value);
+      row.setAttribute('aria-label', `${label.textContent}: ${value.textContent}. Open leaderboard`);
+      row.addEventListener('click', () => {
+        rankingMetric = metric; rankingPerspective = result.settings.depth === 1 ? 'flat' : '3d';
+        rankingSize = result.settings.size; rankingDifficulty = result.settings.difficulty;
+        leaderboard.querySelectorAll<HTMLButtonElement>('[data-ranking-metric]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.rankingMetric === metric)));
+        updateRankingControls(); void open('leaderboard');
+      });
+      host.append(row);
+    }
+  }
+  window.addEventListener('nodoku:completion-ranking', renderCompletionRanking);
   void initialize().then(() => {
     controls.hidden = !enabled; document.body.classList.toggle('has-player-accounts', enabled); updateProfile();
-    const invite = document.createElement('button'); invite.className = 'text-button completion-account'; invite.hidden = !enabled;
-    invite.textContent = player ? 'View your ranking' : 'Join the leaderboard';
-    invite.addEventListener('click', () => void open(player ? 'leaderboard' : 'profile'));
-    document.querySelector('#completion-dialog')?.append(invite);
+    const invite = document.createElement('div'); invite.className = 'completion-account'; invite.setAttribute('aria-live', 'polite');
+    document.querySelector('#next-button')?.before(invite);
+    renderCompletionRanking();
     try {
       if (enabled && player && sessionStorage.getItem('nodoku.signin.done')) {
         sessionStorage.removeItem('nodoku.signin.done'); void open('profile');
