@@ -1,15 +1,16 @@
+import { renderCounter } from './rolling-counter';
 import { mountStatistics, openStatistics, parseStatistics, type StatisticsData } from './statistics';
 
 const HEARTBEAT_MS = 30_000;
 const STATISTICS_REFRESH_MS = 60_000;
 const metrics = [
   { key: 'puzzlesSolved', id: 'puzzles-solved-count', label: 'Puzzles solved' },
+  { key: 'nodesFilled', id: 'nodes-filled-count', label: 'Nodes filled' },
   { key: 'connectionsCompleted', id: 'connections-completed-count', label: 'Connections' },
-  { key: 'dotsCleared', id: 'dots-cleared-count', label: 'Dots cleared' },
   { key: 'visitors', id: 'visitor-count', label: 'Visitors' },
 ] as const;
 
-type PuzzleActivity = { attemptId: string; connections: number; solved: boolean };
+type PuzzleActivity = { attemptId: string; connections: number; nodesFilled: number; solved: boolean };
 let currentPuzzleActivity: PuzzleActivity | null = null;
 export function updateAudiencePuzzle(activity: PuzzleActivity | null): void {
   currentPuzzleActivity = activity;
@@ -35,14 +36,12 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
   }
   const format = new Intl.NumberFormat();
   const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 });
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let registeredDay = '';
   let statisticsUpdatedAt = -Infinity;
   let timer: number | undefined;
   let metricIndex = 0;
   let activity: (PuzzleActivity & { showProgress: boolean }) | null = currentPuzzleActivity
     ? { ...currentPuzzleActivity, showProgress: false } : null;
-  let detailTimer: number | undefined;
   let active: AbortController | null = null;
   let away = false;
   let statistics: StatisticsData | null = null;
@@ -76,16 +75,20 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
   function metricValue(widget: HTMLElement, key: typeof metrics[number]['key']) {
     if (widget.classList.contains('visitor-game') && activity?.showProgress && !activity.solved) {
       if (key === 'connectionsCompleted') return { value: activity.connections, scope: 'in this puzzle' };
-      if (key === 'dotsCleared') return { value: activity.connections * 2, scope: 'in this puzzle' };
+      if (key === 'nodesFilled') return { value: activity.nodesFilled, scope: 'in this puzzle' };
     }
     return { value: statistics?.totals[key], scope: 'all time' };
   }
-  function renderMetrics() {
+  function renderMetrics(previous?: PuzzleActivity | null) {
     for (const widget of widgets) {
       for (const metric of metrics) {
         const counter = widget.querySelector<HTMLElement>(`.audience-${metric.key}`)!;
         const { value, scope } = metricValue(widget, metric.key);
-        counter.querySelector('strong')!.textContent = value === undefined ? '—' : value >= 100_000 ? compact.format(value) : format.format(value);
+        const samePuzzle = previous && activity?.attemptId === previous.attemptId;
+        const from = samePuzzle && scope === 'in this puzzle'
+          ? metric.key === 'nodesFilled' ? previous.nodesFilled : metric.key === 'connectionsCompleted' ? previous.connections : undefined
+          : undefined;
+        renderCounter(counter.querySelector('strong')!, value, value === undefined ? '—' : value >= 100_000 ? compact.format(value) : format.format(value), { animate: metric.key === metrics[metricIndex].key, from });
         counter.title = value === undefined ? `${metric.label} are temporarily unavailable` : `${format.format(value)} ${metric.label.toLowerCase()} · ${scope}`;
         counter.classList.toggle('is-unavailable', value === undefined);
       }
@@ -97,29 +100,21 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
     metricIndex = metrics.findIndex(metric => metric.key === key);
     for (const widget of widgets) {
       metrics.forEach(metric => { widget.querySelector<HTMLElement>(`.audience-${metric.key}`)!.hidden = metric.key !== key; });
-      if (!reducedMotion.matches) widget.querySelector(`.audience-${key} strong`)!.animate(
-        [{ color: '#7966bd', transform: 'translateY(-2px)' }, { color: 'inherit', transform: 'translateY(0)' }],
-        { duration: 450, easing: 'ease-out' },
-      );
     }
     updateAccessibleLabels();
   }
   window.addEventListener('nodoku:puzzle-activity', event => {
     const next = (event as CustomEvent<PuzzleActivity | null>).detail;
     if (next && activity && next.attemptId === activity.attemptId
-      && next.connections === activity.connections && next.solved === activity.solved) return;
-    window.clearTimeout(detailTimer);
-    const samePuzzle = next && next.attemptId === activity?.attemptId;
+      && next.connections === activity.connections && next.nodesFilled === activity.nodesFilled && next.solved === activity.solved) return;
+    const previous = activity;
+    const samePuzzle = next && next.attemptId === previous?.attemptId;
     activity = next ? { ...next, showProgress: !!samePuzzle } : null;
-    renderMetrics();
-    if (!activity || !samePuzzle || activity.solved) {
-      showMetric('puzzlesSolved');
-      return;
-    }
-    showMetric('connectionsCompleted');
-    // Both values changed in this move: show the connection, then its cleared dots.
-    // This is a single follow-up, never an idle rotation.
-    detailTimer = window.setTimeout(() => showMetric('dotsCleared'), 1000);
+    // One action has one result: solving outranks filling, which outranks linking.
+    const key = !activity || !samePuzzle || activity.solved ? 'puzzlesSolved'
+      : activity.nodesFilled !== previous?.nodesFilled ? 'nodesFilled' : 'connectionsCompleted';
+    showMetric(key);
+    renderMetrics(samePuzzle ? previous : null);
   });
   function online(value: number | null, scope?: string) {
     onlineCount = value;
@@ -164,8 +159,8 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
       const changed = statistics && metrics.find(metric => result.totals[metric.key] !== statistics!.totals[metric.key]);
       statistics = result;
       statisticsUpdatedAt = Date.now();
-      renderMetrics();
       if (changed && (!activity?.showProgress || activity.solved)) showMetric(changed.key);
+      renderMetrics();
     } catch {
       if (active === controller && !document.hidden && !away) { statistics = null; renderMetrics(); }
     } finally {

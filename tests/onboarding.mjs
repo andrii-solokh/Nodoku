@@ -41,7 +41,7 @@ async function fixture(openOnboarding = true) {
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/api/visitors', route => route.fulfill({ json: { count: 1, scope: 'local' } }));
   await page.route('**/api/presence', route => route.fulfill({ json: { online: 1, scope: 'local' } }));
-  await page.route('**/api/statistics?**', route => route.fulfill({ json: { period: 'all', scope: 'local', trackingSince: null, totals: { visitors: 1, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
+  await page.route('**/api/statistics?**', route => route.fulfill({ json: { period: 'all', scope: 'local', trackingSince: null, totals: { visitors: 1, puzzlesSolved: 0, nodesFilled: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
   await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors: [] } }));
   await page.goto(openOnboarding ? `${url}?onboarding=1` : url);
   await page.waitForFunction(expected => typeof window.render_game_to_text === 'function'

@@ -2,7 +2,8 @@ import Stripe from 'stripe';
 import type { Order, Store } from './store.js';
 import type { StatisticsPeriod } from './statistics.js';
 import { Puzzle } from '../src/puzzle.js';
-import { capturePostHog } from './posthog.js';
+import { capturePostHog, completionAnalytics } from './posthog.js';
+import { accountsEnabled, handleAccountsApi, tokenHash } from './accounts-api.js';
 
 type Env = Record<string, string | undefined>;
 const PLAN = { id: 'spotlight', name: 'Sponsored placement', days: 30, amount: 10000, currency: 'usd' } as const;
@@ -282,6 +283,7 @@ async function webhook(request: Request, env: Env, store: Store): Promise<Respon
 /** Fetch-compatible API shared by Vite development and Cloudflare Pages Functions. */
 export async function handleApi(request: Request, env: Env, store: Store): Promise<Response> {
   const path = new URL(request.url).pathname;
+  if (path.startsWith('/api/auth/') || path === '/api/leaderboard' || path === '/api/ranked-attempts') return handleAccountsApi(request, env, store);
   const allowed: Record<string, string[]> = {
     '/api/visitors': ['GET', 'POST'], '/api/presence': ['POST'], '/api/sponsorship': ['GET'], '/api/checkout': ['POST'],
     '/api/statistics': ['GET'], '/api/analytics-config': ['GET'], '/api/completions': ['POST'], '/api/sponsor-events': ['POST'], '/api/sponsor-report': ['POST'],
@@ -321,7 +323,7 @@ export async function handleApi(request: Request, env: Env, store: Store): Promi
     if (path === '/api/completions') {
       checkOrigin(request, env);
       const body = await bodyJson(request, 262144);
-      if (Object.keys(body).some(key => !['visitorId', 'attemptId', 'game'].includes(key)) || typeof body.attemptId !== 'string' || !UUID.test(body.attemptId)) throw new ApiError(400, 'Invalid completion.');
+      if (Object.keys(body).some(key => !['visitorId', 'attemptId', 'game', 'analytics', 'rankedTicket'].includes(key)) || typeof body.attemptId !== 'string' || !UUID.test(body.attemptId)) throw new ApiError(400, 'Invalid completion.');
       const id = visitorId(body.visitorId);
       const puzzle = Puzzle.restore(body.game);
       if (!puzzle?.solved) throw new ApiError(400, 'A completed puzzle is required.');
@@ -331,14 +333,19 @@ export async function handleApi(request: Request, env: Env, store: Store): Promi
         visitorId: id, attemptId: body.attemptId.toLowerCase(), size, depth, difficulty, seed,
         connections: puzzle.edges.length, dots: puzzle.nodes.reduce((sum, node) => sum + node.required, 0),
       });
+      const analytics = completionAnalytics(body.analytics);
+      if (accountsEnabled(env) && store.accounts && typeof body.rankedTicket === 'string' && /^[a-f0-9]{64}$/.test(body.rankedTicket)) {
+        await store.accounts.completeAttempt(await tokenHash(body.rankedTicket), puzzle.settings);
+      }
       if (recorded) await capturePostHog(env, 'puzzle_completed', id, {
+        ...(analytics ? { $session_id: analytics.sessionId } : {}),
         grid_size: size,
         depth,
         perspective: depth === 1 ? 'flat' : '3d',
         difficulty,
         connection_count: puzzle.edges.length,
         dot_count: puzzle.nodes.reduce((sum, node) => sum + node.required, 0),
-      });
+      }, analytics?.timestamp);
       return json({ recorded });
     }
     if (path === '/api/sponsor-events') {

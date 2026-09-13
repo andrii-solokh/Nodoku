@@ -64,8 +64,8 @@ test('empty statistics begin on the real tracking day and reject unsupported per
   assert.equal(result.scope, 'local');
   assert.equal(result.period, 'all');
   assert.equal(result.trackingSince, '2026-08-01T12:00:00.000Z');
-  assert.deepEqual(result.totals, { visitors: 0, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 });
-  assert.deepEqual(result.daily, [{ date: '2026-08-01', visitors: 0, puzzlesSolved: 0, dotsCleared: 0 }]);
+  assert.deepEqual(result.totals, { visitors: 0, puzzlesSolved: 0, dotsCleared: 0, nodesFilled: 0, connectionsCompleted: 0 });
+  assert.deepEqual(result.daily, [{ date: '2026-08-01', visitors: 0, puzzlesSolved: 0, dotsCleared: 0, nodesFilled: 0 }]);
   assert.deepEqual(result.sizes, []);
   assert.deepEqual(result.difficulties, []);
   assert.equal((await (await handleApi(request('/api/statistics'), env, store)).json()).period, '30d');
@@ -81,6 +81,8 @@ test('completions require a truly solved graph and derive counts instead of trus
   const result = await stats(store);
   assert.equal(result.totals.puzzlesSolved, 1);
   assert.equal(result.totals.connectionsCompleted, puzzle.edges.length);
+  assert.equal(result.totals.nodesFilled, puzzle.nodes.length);
+  assert.equal(result.daily[0].nodesFilled, 26, "Only the cube surface has playable nodes");
   assert.equal(result.totals.dotsCleared, puzzle.nodes.reduce((sum, node) => sum + node.required, 0));
   assert.deepEqual(result.sizes, [{ size: 3, depth: 3, count: 1 }]);
   assert.deepEqual(result.difficulties, [{ difficulty: 'easy', count: 1 }]);
@@ -112,6 +114,44 @@ test('concurrent completion retries, refreshes and new attempt IDs cannot recoun
   const result = await stats(store);
   assert.equal(result.totals.puzzlesSolved, 2);
   assert.deepEqual(result.daily.map((day: { puzzlesSolved: number }) => day.puzzlesSolved), [1, 1], 'The original completion date is immutable');
+});
+
+test('verified completions retain browser session attribution on delayed delivery without duplicate events', async t => {
+  const { store, time, at } = setup(t);
+  const hex = time().toString(16).padStart(12, '0');
+  const analytics = { sessionId: `${hex.slice(0, 8)}-${hex.slice(8)}-7000-8000-000000000001`, timestamp: new Date(time() + 1000).toISOString() };
+  const captures: any[] = [];
+  t.mock.method(globalThis, 'fetch', async (_input: unknown, init: RequestInit) => {
+    captures.push(JSON.parse(String(init.body)));
+    return new Response('', { status: 202 });
+  });
+  const analyticsEnv = { ...env, POSTHOG_PROJECT_API_KEY: 'phc_test' };
+  const payload = { ...completion(solved().serialize()), analytics };
+  at(time() + 2 * DAY);
+  for (let i = 0; i < 2; i++) {
+    const response = await handleApi(request('/api/completions', payload), analyticsEnv, store);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { recorded: i === 0 });
+  }
+  assert.equal(captures.length, 1);
+  assert.equal(captures[0].event, 'puzzle_completed');
+  assert.equal(captures[0].properties.$session_id, analytics.sessionId);
+  assert.equal(captures[0].properties.distinct_id, visitorA);
+  assert.equal(captures[0].timestamp, analytics.timestamp);
+  assert.equal(captures[0].properties.connection_count, solved().edges.length);
+  // Old clients and damaged optional metadata still save verified puzzle results.
+  for (const [index, value] of [undefined, { sessionId: 'bad', timestamp: analytics.timestamp }].entries()) {
+    const response = await handleApi(request('/api/completions', {
+      ...completion(solved({ seed: 30 + index }).serialize()), analytics: value,
+    }), analyticsEnv, store);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { recorded: true });
+    assert.equal(captures.at(-1).properties.$session_id, undefined);
+    assert.equal(captures.at(-1).timestamp, undefined);
+  }
+  const incomplete = solved({ seed: 99 }); incomplete.undo();
+  assert.equal((await handleApi(request('/api/completions', { ...completion(incomplete.serialize()), analytics }), analyticsEnv, store)).status, 400);
+  assert.equal(captures.length, 3);
 });
 
 test('UTC periods count distinct visitors, keep daily counts nonadditive and bound all-time charts', async t => {
@@ -148,6 +188,8 @@ test('UTC periods count distinct visitors, keep daily counts nonadditive and bou
   assert.equal(all.totals.puzzlesSolved, 4);
   assert.equal(all.totals.connectionsCompleted, puzzles.reduce((sum, puzzle) => sum + puzzle.edges.length, 0));
   assert.equal(all.totals.dotsCleared, all.totals.connectionsCompleted * 2);
+  assert.equal(all.totals.nodesFilled, puzzles.reduce((sum, puzzle) => sum + puzzle.nodes.length, 0));
+  assert.equal(all.daily.find((row: { date: string }) => row.date === "2026-08-25").nodesFilled, 16);
   assert.equal(all.daily.length, 30);
   assert.equal(all.daily[0].date, '2026-08-02');
   assert.deepEqual(all.sizes, [{ size: 3, depth: 3, count: 3 }, { size: 4, depth: 1, count: 1 }]);

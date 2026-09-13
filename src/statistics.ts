@@ -1,13 +1,14 @@
+import { renderCounter } from './rolling-counter';
 import './statistics.css';
 
 export type StatisticsPeriod = 'today' | '7d' | '30d' | 'all';
-type ActivityMetric = 'puzzlesSolved' | 'visitors' | 'dotsCleared';
+type ActivityMetric = 'puzzlesSolved' | 'visitors' | 'nodesFilled';
 export interface StatisticsData {
   scope: 'local' | 'global';
   period: StatisticsPeriod;
   trackingSince: string;
   totals: Record<ActivityMetric | 'connectionsCompleted', number>;
-  daily: { date: string; visitors: number; puzzlesSolved: number; dotsCleared: number }[];
+  daily: { date: string; visitors: number; puzzlesSolved: number; nodesFilled: number }[];
   sizes: { size: number; depth: number; count: number }[];
   difficulties: { difficulty: 'easy' | 'medium' | 'hard'; count: number }[];
 }
@@ -17,8 +18,8 @@ const day = (value: unknown): value is string => typeof value === 'string' && /^
 export function parseStatistics(value: unknown, period: StatisticsPeriod): StatisticsData {
   if (!record(value) || value.period !== period || !['local', 'global'].includes(String(value.scope)) ||
     typeof value.trackingSince !== 'string' || !Number.isFinite(Date.parse(value.trackingSince)) || !record(value.totals) ||
-    !['visitors', 'puzzlesSolved', 'dotsCleared', 'connectionsCompleted'].every(key => count((value.totals as Record<string, unknown>)[key])) ||
-    !Array.isArray(value.daily) || !value.daily.every(row => record(row) && day(row.date) && count(row.visitors) && count(row.puzzlesSolved) && count(row.dotsCleared)) ||
+    !['visitors', 'puzzlesSolved', 'nodesFilled', 'connectionsCompleted'].every(key => count((value.totals as Record<string, unknown>)[key])) ||
+    !Array.isArray(value.daily) || !value.daily.every(row => record(row) && day(row.date) && count(row.visitors) && count(row.puzzlesSolved) && count(row.nodesFilled)) ||
     !Array.isArray(value.sizes) || !value.sizes.every(row => record(row) && Number.isInteger(row.size) && Number(row.size) >= 3 && Number(row.size) <= 7 && (row.depth === 1 || row.depth === row.size) && count(row.count)) ||
     !Array.isArray(value.difficulties) || !value.difficulties.every(row => record(row) && ['easy', 'medium', 'hard'].includes(String(row.difficulty)) && count(row.count))) {
     throw new Error('Statistics are temporarily unavailable.');
@@ -29,7 +30,7 @@ const format = new Intl.NumberFormat();
 const complexityIcon = (level: number) =>
   `<svg class="complexity-icon statistics-complexity-icon" viewBox="0 0 40 20" aria-hidden="true"><path class="complexity-track" d="M6 10h28"/>${level > 1 ? `<path class="complexity-link" d="M6 10h${(level - 1) * 14}"/>` : ''}${[1, 2, 3].map(dot => `<circle class="complexity-dot${dot <= level ? ' filled' : ''}" cx="${6 + (dot - 1) * 14}" cy="10" r="3.5"/>`).join('')}</svg>`;
 const periodLabels: Record<StatisticsPeriod, string> = { today: 'Today', '7d': '7 days', '30d': '30 days', all: 'All time' };
-const metricLabels: Record<ActivityMetric, string> = { puzzlesSolved: 'Puzzles solved', visitors: 'Visitors', dotsCleared: 'Dots cleared' };
+const metricLabels: Record<ActivityMetric, string> = { puzzlesSolved: 'Puzzles solved', visitors: 'Visitors', nodesFilled: 'Nodes filled' };
 const activityMetrics = Object.keys(metricLabels) as ActivityMetric[];
 let openPage: ((options?: { report?: boolean }) => void) | undefined;
 export function openStatistics(options?: { report?: boolean }): void { openPage?.(options); }
@@ -47,8 +48,8 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
       <nav class="statistics-periods" aria-label="Statistics period">${Object.entries(periodLabels).map(([value, label]) => `<button type="button" data-period="${value}" aria-pressed="${value === '30d'}">${label}</button>`).join('')}</nav>
       <div class="statistics-status" id="statistics-status" role="status" aria-live="polite"></div><button class="statistics-retry" id="statistics-retry" hidden>Try again</button>
       <div id="statistics-content" hidden>
-        <div class="statistics-totals">${[['visitors', 'Visitors'], ['puzzlesSolved', 'Puzzles solved'], ['connectionsCompleted', 'Connections completed'], ['dotsCleared', 'Dots cleared']].map(([key, label]) => `<article class="statistics-total"><strong data-total="${key}">—</strong><span>${label}</span></article>`).join('')}</div>
-        <section id="statistics-activity" class="statistics-panel statistics-activity" aria-labelledby="statistics-activity-title"><div class="statistics-panel-heading"><div><h2 id="statistics-activity-title">Daily activity</h2></div></div><p id="statistics-chart-note"></p><div class="statistics-histograms">${activityMetrics.map(metric => `<section class="statistics-histogram" data-metric="${metric}" aria-labelledby="statistics-histogram-${metric}"><h3 id="statistics-histogram-${metric}">${metricLabels[metric]}</h3><div id="statistics-chart-${metric}" class="statistics-chart" role="group" aria-label="Daily ${metricLabels[metric].toLowerCase()} histogram"></div><div class="statistics-chart-axis"><span id="statistics-chart-first-${metric}"></span><output id="statistics-chart-value-${metric}" aria-live="polite"></output><span id="statistics-chart-last-${metric}"></span></div><p id="statistics-chart-empty-${metric}" class="statistics-chart-empty" hidden>No ${metricLabels[metric].toLowerCase()} recorded in this period yet.</p></section>`).join('')}</div><details class="statistics-daily-details"><summary>Daily values</summary><div class="statistics-table-wrap"><table><caption class="sr-only">Daily activity values</caption><thead><tr><th>Date (UTC)</th><th>Puzzles</th><th>Visitors</th><th>Dots</th></tr></thead><tbody id="statistics-daily-values"></tbody></table></div></details></section>
+        <div class="statistics-totals">${[['visitors', 'Visitors'], ['puzzlesSolved', 'Puzzles solved'], ['nodesFilled', 'Nodes filled'], ['connectionsCompleted', 'Connections']].map(([key, label]) => `<article class="statistics-total"><strong data-total="${key}">—</strong><span>${label}</span></article>`).join('')}</div>
+        <section id="statistics-activity" class="statistics-panel statistics-activity" aria-labelledby="statistics-activity-title"><div class="statistics-panel-heading"><div><h2 id="statistics-activity-title">Daily activity</h2></div></div><p id="statistics-chart-note"></p><div class="statistics-histograms">${activityMetrics.map(metric => `<section class="statistics-histogram" data-metric="${metric}" aria-labelledby="statistics-histogram-${metric}"><h3 id="statistics-histogram-${metric}">${metricLabels[metric]}</h3><div id="statistics-chart-${metric}" class="statistics-chart" role="group" aria-label="Daily ${metricLabels[metric].toLowerCase()} histogram"></div><div class="statistics-chart-axis"><span id="statistics-chart-first-${metric}"></span><output id="statistics-chart-value-${metric}" aria-live="polite"></output><span id="statistics-chart-last-${metric}"></span></div><p id="statistics-chart-empty-${metric}" class="statistics-chart-empty" hidden>No ${metricLabels[metric].toLowerCase()} recorded in this period yet.</p></section>`).join('')}</div><details class="statistics-daily-details"><summary>Daily values</summary><div class="statistics-table-wrap"><table><caption class="sr-only">Daily activity values</caption><thead><tr><th>Date (UTC)</th><th>Puzzles</th><th>Visitors</th><th>Nodes filled</th></tr></thead><tbody id="statistics-daily-values"></tbody></table></div></details></section>
         <div class="statistics-breakdowns"><section class="statistics-panel"><h2>Popular grids</h2><ul id="statistics-sizes" class="statistics-ranking"></ul></section><section class="statistics-panel"><h2>Popular difficulties</h2><ul id="statistics-difficulties" class="statistics-ranking"></ul></section></div>
         <p id="statistics-tracking" class="statistics-tracking"></p>
       </div>
@@ -132,7 +133,10 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
   }
   function render() {
     if (!data) return;
-    for (const element of dialog.querySelectorAll<HTMLElement>('[data-total]')) element.textContent = format.format(data.totals[element.dataset.total as keyof StatisticsData['totals']]);
+    for (const element of dialog.querySelectorAll<HTMLElement>('[data-total]')) {
+      const value = data.totals[element.dataset.total as keyof StatisticsData['totals']];
+      renderCounter(element, value, format.format(value));
+    }
     el('statistics-scope').hidden = data.scope !== 'local';
     el('statistics-tracking').textContent = `Daily tracking began ${dateLabel(data.trackingSince)}. Earlier visitors appear only in the all-time visitor total.`;
     ranking('statistics-sizes', data.sizes.map(row => ({ label: `${row.size} × ${row.size}${row.depth === 1 ? ' · Flat' : ` × ${row.depth}`}`, count: row.count })));
@@ -143,7 +147,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
     body.replaceChildren();
     for (const row of data.daily) {
       const tr = document.createElement('tr');
-      for (const value of [row.date, format.format(row.puzzlesSolved), format.format(row.visitors), format.format(row.dotsCleared)]) { const td = document.createElement('td'); td.textContent = value; tr.appendChild(td); }
+      for (const value of [row.date, format.format(row.puzzlesSolved), format.format(row.visitors), format.format(row.nodesFilled)]) { const td = document.createElement('td'); td.textContent = value; tr.appendChild(td); }
       body.appendChild(tr);
     }
     el('statistics-activity').hidden = period === 'today';

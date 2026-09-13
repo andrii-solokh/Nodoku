@@ -53,10 +53,10 @@ test("robots and sitemap permit discovery of the canonical homepage", async () =
 test("homepage ships a motion-safe branded loading screen", async () => {
   const [html, app] = await Promise.all([readRootFile("index.html"), readRootFile("src/main.ts")]);
   assert.match(html, /id="app-loader"/);
-  assert.match(html, /Connecting the nodes/);
+  assert.match(html, /Preparing your puzzle/);
   assert.match(html, /prefers-reduced-motion: reduce/);
-  assert.match(html, /loader-link--top/);
-  assert.match(html, /loader-complete/);
+  assert.match(html, /loader-progress/);
+  assert.match(html, /startup-error-details/);
   assert.match(app, /function finishLoading\(\)/);
   assert.match(app, /g fill="#a9cbbd"/);
   assert.match(app, /fill="#fcfaf5" stroke="#d7d2df"/);

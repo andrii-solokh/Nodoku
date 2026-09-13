@@ -76,7 +76,10 @@ export function sponsorshipApi(): Plugin {
       const response = new URL(request.url).pathname.startsWith("/api/admin/")
         ? await handleAdminApi(request, { root: config.root, remoteAddress: req.socket.remoteAddress })
         : await handleApi(request, { ...env, APP_ORIGIN: env.APP_ORIGIN || origin }, store);
-      res.writeHead(response.status, Object.fromEntries(response.headers));
+      const responseHeaders: Record<string, string | string[]> = Object.fromEntries(response.headers);
+      const cookies = response.headers.getSetCookie();
+      if (cookies.length) responseHeaders['set-cookie'] = cookies;
+      res.writeHead(response.status, responseHeaders);
       res.end(Buffer.from(await response.arrayBuffer()));
     }
   };

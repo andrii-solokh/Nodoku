@@ -12,7 +12,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     page.on('pageerror', error => errors.push(error.message));
     const settings = { size: 2, depth: 1, difficulty: 'easy', seed: 17 };
     const source = new Puzzle(settings);
-    const totals = { visitors: 100, puzzlesSolved: 42, dotsCleared: 420, connectionsCompleted: 210 };
+    const totals = { visitors: 100, puzzlesSolved: 42, nodesFilled: 420, connectionsCompleted: 210 };
     await page.route('**/api/**', route => {
       const path = new URL(route.request().url()).pathname;
       if (path === '/api/statistics') return route.fulfill({ json: { scope: 'global', period: 'all', trackingSince: '2026-09-10T00:00:00Z', totals, daily: [], sizes: [], difficulties: [] } });
@@ -21,7 +21,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
       if (path === '/api/completions') {
         totals.puzzlesSolved++;
         totals.connectionsCompleted += source.solution.length;
-        totals.dotsCleared += source.solution.length * 2;
+        totals.nodesFilled += source.nodes.length;
         return route.fulfill({ json: { recorded: true } });
       }
       return route.fulfill({ json: {} });
@@ -54,35 +54,38 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     assert.equal((await state()).edges.length, 1, 'Fixture made a connection');
     assert.match(await visible(), /1Connections/, 'A real connection immediately shows its count');
     await page.clock.fastForward(1000);
-    assert.match(await visible(), /2Dots cleared/, 'The move then shows its two cleared dots');
-    assert.match(await page.locator('.visitor-game .audience-link').getAttribute('aria-label'), /2 dots cleared in this puzzle/);
+    assert.match(await visible(), /1Connections/, 'No delayed secondary metric replaces a connection');
+    assert.match(await page.locator('.visitor-game .audience-link').getAttribute('aria-label'), /1 connections in this puzzle/);
     const width = (await page.locator('.visitor-game').boundingBox()).width;
     await page.clock.fastForward(20000);
-    assert.match(await visible(), /2Dots cleared/, 'The latest changed metric remains visible');
+    assert.match(await visible(), /1Connections/, 'The latest changed metric remains visible');
     await page.keyboard.press('h');
     await page.clock.fastForward(1500);
-    assert.match(await visible(), /2Dots cleared/, 'Hint does not change activity counters');
+    assert.match(await visible(), /1Connections/, 'Hint does not change activity counters');
     await page.keyboard.press('Control+z');
     assert.match(await visible(), /0Connections/, 'Undo updates progress rather than inflating all-time totals');
     await page.clock.fastForward(1000);
-    assert.match(await visible(), /0Dots cleared/);
+    assert.match(await visible(), /0Connections/);
     await page.keyboard.press('Control+Shift+z');
     const node = (await state()).nodes.find(node => node.id === 0);
-    await page.keyboard.down('Meta');
+    await page.keyboard.down('Shift');
     await page.mouse.click(node.screen.x, node.screen.y);
-    await page.keyboard.up('Meta');
-    assert.match(await visible(), /2Connections/, 'Node fill updates the whole move');
+    await page.keyboard.up('Shift');
+    assert.match(await visible(), /1Nodes filled/, 'Node fill outranks the connection from the same move');
+    assert.ok(await page.locator('#nodes-filled-count-game').evaluate(el => el.getAnimations({ subtree: true }).length > 0), 'An increase rolls the number reels');
     await page.clock.fastForward(1000);
-    assert.match(await visible(), /4Dots cleared/);
+    assert.match(await visible(), /1Nodes filled/);
     assert.equal((await page.locator('.visitor-game').boundingBox()).width, width, 'Counter updates do not shift layout');
     await page.screenshot({ path: `output/web-game/activity/${name}.png` });
-    for (const edge of source.solution) {
-      if (!(await state()).edges.some(current => current[0] === edge[0] && current[1] === edge[1])) await connect(edge);
-    }
+    const lastNode = (await state()).nodes.find(node => node.id === 3);
+    await page.keyboard.down('Shift');
+    await page.mouse.click(lastNode.screen.x, lastNode.screen.y);
+    await page.keyboard.up('Shift');
+    assert.match(await visible(), /Puzzles solved/, 'The final node fill immediately selects only puzzle completion');
     for (let i = 0; i < 50 && !/43Puzzles solved/.test(await visible()); i++) await new Promise(resolve => setTimeout(resolve, 50));
     assert.match(await visible(), /43Puzzles solved/, 'A recorded solve selects and increments the community solved count');
     await page.clock.fastForward(2000);
-    assert.match(await visible(), /43Puzzles solved/, 'A queued dot update cannot replace completion');
+    assert.match(await visible(), /43Puzzles solved/, 'A lower-priority update cannot replace completion');
     assert.equal(totals.puzzlesSolved, 43, 'Completion is counted once');
     await page.locator('#completion-home').click();
     assert.match(await page.locator('.visitor-home .audience-rotating > :not([hidden])').textContent(), /43Puzzles solved/);
@@ -91,6 +94,6 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     for (let i = 0; i < 50 && await page.locator('#visitor-count').textContent() !== '101'; i++) await new Promise(resolve => setTimeout(resolve, 50));
     assert.match(await page.locator('.visitor-home .audience-rotating > :not([hidden])').textContent(), /101Visitors/, 'Public counters switch only when a total changes');
     assert.deepEqual(errors, []);
-    console.log(`${name}: idle stability, connection/dot updates, hint, undo/redo, fill, completion priority and public changes passed`);
+    console.log(`${name}: idle stability, connection/node updates, hint, undo/redo, fill, completion priority and public changes passed`);
   } catch (error) { console.error(error); throw error; } finally { await browser.close(); }
 }

@@ -186,6 +186,12 @@ try {
     const parsed = new URL(href);
     assert.equal(parsed.origin + parsed.pathname, destination);
     assert.deepEqual(Object.fromEntries(parsed.searchParams), params, `${network}: share text and URL round-trip through encoding`);
+    if (network === 'telegram') {
+      const rawText = parsed.search.slice(1).split('&').find(part => part.startsWith('text=')).slice(5);
+      assert.ok(rawText.includes('%20'), 'Telegram spaces use percent encoding');
+      assert.ok(!rawText.includes('+'), 'Telegram must not receive form-encoded plus signs');
+      assert.equal(decodeURIComponent(rawText), expected.text, 'Telegram app decoding preserves spaces and Unicode');
+    }
     assert.ok(!decodeURIComponent(href).includes('private-'), `${network}: private URL information is excluded`);
     assert.equal(await link.getAttribute('target'), '_blank');
     assert.match(await link.getAttribute('rel'), /noopener/);

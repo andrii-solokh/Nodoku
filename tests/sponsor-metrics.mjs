@@ -31,7 +31,7 @@ async function fixture({ sponsors = [sponsor(1)], paid = false, fail = false, ad
   });
   await page.route('**/api/presence', route => route.fulfill({ json: { online: 1, scope: 'local' } }));
   await page.route('**/api/visitors', route => route.fulfill({ json: { count: 1, scope: 'local' } }));
-  await page.route('**/api/statistics?**', route => route.fulfill({ json: { scope: 'local', period: 'all', trackingSince: null, totals: { visitors: 1, puzzlesSolved: 0, dotsCleared: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
+  await page.route('**/api/statistics?**', route => route.fulfill({ json: { scope: 'local', period: 'all', trackingSince: null, totals: { visitors: 1, puzzlesSolved: 0, nodesFilled: 0, connectionsCompleted: 0 }, daily: [], sizes: [], difficulties: [] } }));
   await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors } }));
   await page.route('**/api/checkout-status?**', route => route.fulfill({ json: { status: paid ? 'paid' : 'unavailable' } }));
   await page.context().route('https://sponsor.example/**', route => route.fulfill({ body: 'Test sponsor destination' }));

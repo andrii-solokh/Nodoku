@@ -10,6 +10,8 @@ interface Env {
   STRIPE_WEBHOOK_SECRET?: string;
   REMOVE_ADS_AMOUNT?: string;
   POSTHOG_PROJECT_API_KEY?: string;
+  ACCOUNTS_ENABLED?: string;
+  GOOGLE_CLIENT_ID?: string;
 }
 
 export const onRequest: PagesFunction<Env> = ({ request, env }) => {
@@ -21,5 +23,7 @@ export const onRequest: PagesFunction<Env> = ({ request, env }) => {
     STRIPE_WEBHOOK_SECRET: env.STRIPE_WEBHOOK_SECRET,
     REMOVE_ADS_AMOUNT: env.REMOVE_ADS_AMOUNT,
     POSTHOG_PROJECT_API_KEY: env.POSTHOG_PROJECT_API_KEY,
+    ACCOUNTS_ENABLED: env.ACCOUNTS_ENABLED,
+    GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
   }, store);
 };

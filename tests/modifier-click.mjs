@@ -34,12 +34,12 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
       };
       expected.toggleNode(node.id);
       const filled = expected.edges.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-      for (const modifier of ['Control', 'Meta']) {
+      for (const modifier of ['Shift']) {
         await click(modifier);
         assert.deepEqual((await state()).edges, filled, `${name}/${depth}: ${modifier}-click fills immediately`);
         assert.equal((await state()).selected, null, 'The shortcut does not leave a single selection');
-        if (modifier === 'Meta') await page.evaluate(() => window.advanceTime(500));
-        if (modifier === 'Meta') await page.screenshot({ path: `output/web-game/modifier-click/${name}-${depth}.png` });
+        await page.evaluate(() => window.advanceTime(500));
+        await page.screenshot({ path: `output/web-game/modifier-click/${name}-${depth}.png` });
         await click(modifier);
         assert.deepEqual((await state()).edges, [], 'A full node clears like double-click');
         await page.keyboard.press('Control+z');
@@ -54,14 +54,20 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
       assert.equal((await state()).selected, node.id, 'Ordinary click still selects');
       await page.waitForTimeout(300);
       const neighbor = (await state()).nodes.find(other => other.screen.pickable && expected.neighbors(node.id).includes(other.id));
-      await page.keyboard.down('Control');
+      await page.keyboard.down('Shift');
       await page.mouse.move(node.screen.x, node.screen.y);
       await page.mouse.down();
       await page.mouse.move(neighbor.screen.x, neighbor.screen.y, { steps: 8 });
       await page.mouse.up();
-      await page.keyboard.up('Control');
+      await page.keyboard.up('Shift');
       assert.equal((await state()).edges.length, 1, 'Modified drag remains a single connection, not a node fill');
       const beforeRightClick = (await state()).edges;
+      for (const modifier of ['Meta', 'Control']) {
+        await page.waitForTimeout(400);
+        await click(modifier);
+        assert.deepEqual((await state()).edges, beforeRightClick, `${modifier}-click no longer fills`);
+        await page.keyboard.press('Escape');
+      }
       await click(null, 'right');
       assert.deepEqual((await state()).edges, beforeRightClick, 'Ordinary right-click does not fill');
       await page.close();

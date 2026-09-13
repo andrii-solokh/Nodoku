@@ -1,4 +1,5 @@
 import { chartDays, periodStart, utcDay, type Completion, type SponsorEventKind, type SponsorReport, type Statistics, type StatisticsPeriod } from './statistics.js';
+import { AccountsStore } from './accounts-store.js';
 
 export interface Sponsor {
   id: string;
@@ -29,6 +30,7 @@ export interface Order {
 }
 
 export interface Store {
+  readonly accounts?: AccountsStore;
   readonly scope: 'local' | 'global';
   readonly persistent: boolean;
   health(): Promise<boolean>;
@@ -94,7 +96,8 @@ function decode(row: Record<string, unknown> | undefined): Order | null {
 /** Shared parameterized SQL keeps local SQLite and Cloudflare D1 behavior identical. */
 export class SqlStore implements Store {
   readonly persistent = true;
-  constructor(readonly scope: 'local' | 'global', private readonly sql: SqlExecutor) {}
+  readonly accounts: AccountsStore;
+  constructor(readonly scope: 'local' | 'global', private readonly sql: SqlExecutor) { this.accounts = new AccountsStore(sql); }
 
   async health(): Promise<boolean> {
     try {
@@ -149,9 +152,9 @@ export class SqlStore implements Store {
       period === 'all'
         ? { sql: 'SELECT COUNT(*) AS count FROM visitors' }
         : { sql: 'SELECT COUNT(DISTINCT visitor_id) AS count FROM visitor_days WHERE day >= ? AND day <= ?', values: [from, through] },
-      { sql: 'SELECT COUNT(*) AS solved, COALESCE(SUM(dots), 0) AS dots, COALESCE(SUM(connections), 0) AS connections FROM puzzle_completions WHERE day >= ? AND day <= ?', values: [from, through] },
+      { sql: 'SELECT COUNT(*) AS solved, COALESCE(SUM(dots), 0) AS dots, COALESCE(SUM(size * size * depth - MAX(size - 2, 0) * MAX(size - 2, 0) * MAX(depth - 2, 0)), 0) AS nodes, COALESCE(SUM(connections), 0) AS connections FROM puzzle_completions WHERE day >= ? AND day <= ?', values: [from, through] },
       { sql: 'SELECT day, COUNT(*) AS count FROM visitor_days WHERE day >= ? AND day <= ? GROUP BY day ORDER BY day', values: [chartFrom, through] },
-      { sql: 'SELECT day, COUNT(*) AS solved, SUM(dots) AS dots FROM puzzle_completions WHERE day >= ? AND day <= ? GROUP BY day ORDER BY day', values: [chartFrom, through] },
+      { sql: 'SELECT day, COUNT(*) AS solved, SUM(dots) AS dots, SUM(size * size * depth - MAX(size - 2, 0) * MAX(size - 2, 0) * MAX(depth - 2, 0)) AS nodes FROM puzzle_completions WHERE day >= ? AND day <= ? GROUP BY day ORDER BY day', values: [chartFrom, through] },
       { sql: 'SELECT size, depth, COUNT(*) AS count FROM puzzle_completions WHERE day >= ? AND day <= ? GROUP BY size, depth ORDER BY size, depth', values: [from, through] },
       { sql: 'SELECT difficulty, COUNT(*) AS count FROM puzzle_completions WHERE day >= ? AND day <= ? GROUP BY difficulty ORDER BY difficulty', values: [from, through] },
     ]);
@@ -161,8 +164,8 @@ export class SqlStore implements Store {
     const totals = results[3][0];
     return {
       scope: this.scope, period, trackingSince,
-      totals: { visitors: Number(results[2][0].count), puzzlesSolved: Number(totals.solved), dotsCleared: Number(totals.dots), connectionsCompleted: Number(totals.connections) },
-      daily: chartDays(period, now, trackingSince).map(date => ({ date, visitors: visitorsByDay.get(date) ?? 0, puzzlesSolved: Number(completionsByDay.get(date)?.solved ?? 0), dotsCleared: Number(completionsByDay.get(date)?.dots ?? 0) })),
+      totals: { visitors: Number(results[2][0].count), puzzlesSolved: Number(totals.solved), dotsCleared: Number(totals.dots), nodesFilled: Number(totals.nodes), connectionsCompleted: Number(totals.connections) },
+      daily: chartDays(period, now, trackingSince).map(date => ({ date, visitors: visitorsByDay.get(date) ?? 0, puzzlesSolved: Number(completionsByDay.get(date)?.solved ?? 0), dotsCleared: Number(completionsByDay.get(date)?.dots ?? 0), nodesFilled: Number(completionsByDay.get(date)?.nodes ?? 0) })),
       sizes: results[6].map(row => ({ size: Number(row.size), depth: Number(row.depth), count: Number(row.count) })),
       difficulties: results[7].map(row => ({ difficulty: String(row.difficulty), count: Number(row.count) })),
     };
