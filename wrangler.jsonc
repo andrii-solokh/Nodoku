@@ -14,7 +14,9 @@
   ],
   // Stripe credentials belong in Pages secrets, never in this file.
   "vars": {
-    "APP_ORIGIN": "https://nodoku.solokh.com"
+    "APP_ORIGIN": "https://nodoku.solokh.com",
+    "ACCOUNTS_ENABLED": "true",
+    "GOOGLE_CLIENT_ID": "753823719328-khvnlpnb0e0o3ao59g6l8h6u7svdn932.apps.googleusercontent.com"
   },
   "env": {
     "preview": {

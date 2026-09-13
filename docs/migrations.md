@@ -14,7 +14,8 @@ temporary Wrangler OAuth session as a CI credential.
 
 The deployment job fails explicitly if the secret is missing. PR checks do not
 receive this token or access production. Google and Stripe runtime secrets stay
-in Pages; this workflow does not turn accounts or payments on.
+in Pages. Production account availability and the public Google client ID are
+declared in `wrangler.jsonc`; payments still require separate configuration.
 
 ## Release sequence
 
