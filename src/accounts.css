@@ -11,7 +11,7 @@
 .player-caption, .ranking-empty, .player-status { color: #7d718e; font-size: 13px; line-height: 1.6; }
 .player-profile > label { display: grid; gap: 8px; font-size: 13px; color: #796c8b; }
 .player-popup input[type="text"], .player-profile input[name="nickname"] { width: 100%; min-width: 0; height: 44px; min-height: 44px; appearance: none; border: 1px solid #dcd4e9; background: #fffaff; border-radius: 10px; padding: 10px; color: #302b48; font: inherit; }
-.ranking-personal { margin: 14px 0; }
+.ranking-personal { margin: 0; }
 .ranking-grid-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; border-radius: 12px; background: #f2eff7; }
 .ranking-grid-table th { font-size: 12px; color: #84768f; font-weight: 400; padding: 12px 8px; }
 .ranking-grid-table td { padding: 14px 8px; border-top: 1px solid #e6dfee; font-size: 14px; overflow-wrap: anywhere; }
@@ -56,12 +56,14 @@
 #leaderboard-popup { width: min(420px, calc(100vw - 24px)); }
 .ranking-grid-table td:last-child { white-space: nowrap; }
 
-.ranking-filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0; }
+.ranking-view { display: grid; gap: 12px; margin-top: 12px; }
+.ranking-view > :is(.player-caption, .ranking-empty) { margin: 0; }
+.ranking-filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .ranking-filter-heading .player-caption { margin: 0; font-size: 12px; }
 .ranking-perspectives { display: flex; flex: 0 0 128px; gap: 2px; padding: 2px; border-radius: 9px; background: #eae6f1; }
 .ranking-perspectives button { display: flex; align-items: center; justify-content: center; gap: 4px; flex: 1; min-height: 28px; padding: 0 8px; border-radius: 7px; color: #796c8b; font-size: 12px; }
 .ranking-perspectives button[aria-pressed="true"] { background: #faf8ff; color: #66519e; box-shadow: 0 2px 6px #433b5c0a; }
-.ranking-matrix { display: grid; grid-template-columns: 40px repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 8px; align-items: center; }
+.ranking-matrix { display: grid; grid-template-columns: 40px repeat(3, minmax(0, 1fr)); gap: 4px; align-items: center; }
 .ranking-matrix-size { font-size: 12px; color: #796c8b; }
 .ranking-matrix button { display: flex; justify-content: center; align-items: center; height: 30px; min-height: 30px; min-width: 0; padding: 0; border: 1px solid #e3dcec; border-radius: 7px; color: #9286a5; background: #f3f0f8; }
 .ranking-matrix button:hover { background: #eae4f3; }
