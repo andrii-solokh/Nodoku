@@ -308,9 +308,8 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
   document.addEventListener('pointerdown', event => {
     if (active && !popups[active].contains(event.target as Node) && !controls.contains(event.target as Node)) close();
   }, true);
-  document.addEventListener('focusin', event => {
-    if (active && !popups[active].contains(event.target as Node) && !controls.contains(event.target as Node)) close();
-  });
+  // Google and password-manager helpers can take focus outside the popup.
+  // Dismiss only on explicit actions, not incidental focus changes during sign-in.
   document.addEventListener('keydown', event => {
     if (active && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(true); }
   }, true);

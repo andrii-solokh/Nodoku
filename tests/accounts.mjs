@@ -173,6 +173,15 @@ try {
     await page.locator('.player-signin').click();
     const google = page.locator('.player-google-button button');
     await google.waitFor();
+    // Sign-in helpers can mount outside our popup and take focus without a click.
+    await page.evaluate(() => {
+      const helper = document.createElement('button');
+      helper.id = 'signin-helper'; helper.textContent = 'Sign-in options';
+      document.body.append(helper); helper.focus();
+    });
+    assert.equal(await page.locator('#profile-popup').isVisible(), true, 'External sign-in focus does not dismiss the profile');
+    assert.equal(await page.locator('#account-button').getAttribute('aria-expanded'), 'true');
+    await page.locator('#signin-helper').evaluate(el => el.remove());
     assert.deepEqual(await page.evaluate(() => ({ mode: window.googleOptions.ux_mode, nonce: window.googleOptions.nonce, clientId: window.googleOptions.client_id })),
       { mode: 'popup', nonce: 'inline-test-nonce', clientId: '123-test.apps.googleusercontent.com' });
     await page.evaluate(() => { window.cancelGoogle = true; window.originalCanvas = document.querySelector('canvas'); });
