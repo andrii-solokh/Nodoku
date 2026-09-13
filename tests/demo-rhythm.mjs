@@ -27,6 +27,8 @@ try {
   });
   await page.goto(`${url}/?admin=1#admin-token=rhythm-fixture`);
   await page.locator('#admin-settings').waitFor();
+  // This fixture freezes animation frames, including the startup loader fade.
+  await page.evaluate(() => document.getElementById("app-loader")?.remove());
   await page.locator('#admin-close').click();
   await advance(page, (await state(page)).demo.delayMs);
   let s = await state(page);
@@ -53,7 +55,8 @@ try {
   await advance(page, 10000);
   assert.deepEqual((await state(page)).edges, paused);
   await toggleDemoSuspension(page);
-  while (!(await state(page)).solved) {
+  for (let steps = 0; !(await state(page)).solved; steps++) {
+    assert.ok(steps < 500, JSON.stringify(await state(page)).slice(0, 1000));
     s = await state(page);
     await advance(page, Math.max(1, s.demo.delayMs));
   }

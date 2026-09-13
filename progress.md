@@ -2194,3 +2194,12 @@ TODO / Note
 - Removed the home mobile rule hiding Preview and the gameplay rule hiding the activity counter/divider. Mobile now exposes the same scope, online count and current activity metric as desktop, with a fixed gameplay counter width to avoid shifts.
 - Increased the compact account-enabled home counter width slightly to contain the restored content. Inspected 320px home/game captures.
 - Build and audience browser suite pass: mobile/desktop layouts, scope/counter visibility, polling/lifecycle and error recovery. Made the audience fixture explicitly disable accounts instead of inheriting local OAuth configuration; its account-independent desktop layout otherwise overlapped when local account controls were enabled. No desktop account-layout change made here. Local preview rebuilt.
+
+
+## Melody library and composer credits (2026-09-13)
+- Added compact title/composer credits above the board, linking to a score/attribution page.
+- Expanded from two Beethoven themes to ten score-derived excerpts: Satie, Joplin, Mozart, Pachelbel, Schumann, and three contemporary works by C. J. Brown (2007/2011). These contemporary works are not pop songs by the singer Chris Brown.
+- Library mode selects a tune deterministically from the puzzle seed; Studio retains fixed tune choices. Home and onboarding use the default library preview tune.
+- Preserved rhythm, rests, and phrase stopping points; included source/adapter/license credits for each score at static/music-credits.html.
+- Validation: 228 unit tests pass; production build passes; desktop/mobile browser test verifies composer fit, clickable credits, reload and home/resume preservation. The required web-game client ran and its board screenshot/state were inspected.
+- Demo rhythm browser test also passes. Its frozen-frame fixture now explicitly dismisses the startup loader (the same loader behavior exists on origin/main), and its solve loop is bounded.
