@@ -44,8 +44,8 @@
   },
   "sound": {
     "connectionMelody": "odeToJoy",
-    "noteDurationMs": 810,
-    "melodyVolume": 0.75,
+    "noteDurationMs": 1000,
+    "melodyVolume": 1,
     "completionSound": true,
     "completionNoteIntervalMs": 240,
     "showAmbientMusic": false,
