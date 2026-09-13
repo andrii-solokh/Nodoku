@@ -2002,3 +2002,166 @@ TODO / Note
 - Replaced the header's timed statistics rotation with updates driven by actual changes. Moves briefly show current-puzzle connections, then cleared dots once; undo/redo/removal and node fill update those values. Completion cancels queued move details and selects the public puzzles-solved count, refreshed after server recording. Public totals switch only when changed; online/mobile visibility stays intact.
 - Kept unfinished puzzle progress separate from all-time community totals, with scope in tooltips/accessibility labels. Cached initial puzzle activity because the audience widget mounts after resumed gameplay; this fixes its first move being missed.
 - Production build and focused Chromium/WebKit checks passed: idle stability, first move, dots, hint no-op, undo/redo, fill, stable width, recorded completion priority/deduplication, return home and changed visitors. Updated the existing audience suite's idle-rotation assertions. Used an isolated static preview after the existing preview stalled under heavy machine load; made fake-clock timing deterministic. Ran the web-game client and inspected the activity screenshots.
+
+2026-09-13
+- Switched desktop node fill/clear from Ctrl/Cmd-click to Shift-click, updated Keyboard controls, and removed the obsolete Control-click context-menu suppression.
+- Production build and Chromium/WebKit checks passed in flat/3D: Shift fill/clear, grouped undo, double-click parity, selection, modified drag, right-click, and Ctrl/Cmd no longer filling. Ran the web-game client and inspected gameplay screenshots.
+
+2026-09-13
+- Added one rotating gameplay tip below the normal puzzle, advancing every seven seconds. Copy adapts to touch/keyboard and flat/3D; covers connection gestures, removal, node fill, dots/network, hint and undo. Tips pause for dialogs/connection strokes and hidden tabs, and stop on home/onboarding/solved or disconnected boards.
+- Reserved stable space for tips above mobile controls; changing copy never resizes the puzzle. Included the current tip in render_game_to_text. Build and Chromium/WebKit checks passed for rotation, copy, bounds, stable layout, dialog pause and home cleanup. Ran the web-game client and inspected desktop/mobile screenshots after the fade settled.
+
+2026-09-13
+- Added the selected melody title above the game board with a small music icon, using shared melody names (Ode to Joy / Für Elise) and Classic tones for the non-melodic option. It updates with admin sound configuration. Reserved space keeps it clear of the board and mobile header.
+- Build and desktop/mobile browser checks passed, with no page errors. Ran the web-game client and inspected both layouts.
+
+2026-09-13
+- Sped up double-tap/Shift-click fill notes to a fixed 100ms interval, independent of the home demo score tempo. Short 90ms envelopes keep the burst clear even with the saved one-second note duration. Pending moves retain note order and completion waits for the final burst beat.
+- Production build, all 38 audio unit tests, and native-browser double-tap smoke checks passed (immediate graph update, pitches, fast intervals, repeated fills/manual moves, persistence, selection and removal). Updated older slow-fill browser expectations; cancellation remains covered by unit tests. Ran the web-game client and inspected the filled-board screenshot.
+
+2026-09-13
+- Removed grid dimensions and difficulty words from the gameplay header. It now uses the existing three-node complexity symbol, with the level retained in its tooltip and accessible label.
+- Production build passed. Chromium visual checks timed out during startup under heavy machine load; retrying against an isolated preview.
+- WebKit isolated-preview check passed: the low-complexity symbol renders correctly with no visible size/difficulty text. Inspected its gameplay screenshot. The earlier Chromium checks did not complete.
+- Also separated the melody label from the compact desktop activity row after spotting their overlap in the screenshot. Final build and WebKit high-complexity check passed; isolated preview stopped afterward.
+
+2026-09-13
+- Hardened iPhone SFX: request the optional Audio Session playback category during enabled gesture unlock so supported Safari versions use playback rather than silent/ringer routing (WebKit issue 237322). Default branch had no session policy. Also removed the pending-resume lockout so touch release or a later gesture can retry an unresolved request; stale promise resolutions cannot replay pending notes. Warm-up is retried with each resume gesture.
+- Build and all 40 audio unit tests passed, including pending-resume recovery and optional/rejected Audio Session support. Native WebKit touch checks passed for speaker preview, connection notes, mute and re-enable. Physical iPhone audible output and Silent Mode still need device confirmation. Ran web-game client and inspected the touch-game screenshot.
+- The generic Chromium web-game client stalled under machine load and was stopped; the focused native WebKit touch verification completed successfully. Stopped the isolated preview afterward.
+
+2026-09-13
+- Fixed clipped double-tap note tails: fast fills retain 100ms attack spacing but now use the full configured decay (currently one second), rather than shortening every note to 90ms. Repeated fills and completion preserve earlier tails.
+- Build and all 40 audio tests passed. Native WebKit double-tap checks verified full source durations and fast spacing. Added a WebKit option and mocked the analytics-config endpoint in the sound browser fixture for static previews. Chromium startup/client stalled under machine load and was stopped. Inspected the WebKit filled-board screenshot; stopped the isolated preview.
+
+2026-09-13 — Nodes-filled statistics and counter reels
+- Replaced Dots cleared in statistics cards, daily charts/table, and the activity header with Nodes filled. Card order: Visitors, Puzzles solved, Nodes filled, Connections.
+- Added nodesFilled aggregates to the API from persisted grid dimensions, subtracting the hollow 3D interior; legacy dotsCleared API fields remain available. No history relabeling or schema migration.
+- Activity snapshots now count completed nodes and use the actual solved graph state, including while the completion presentation is pending. Each action selects one result: solved > filled nodes > connections; removed the delayed secondary metric timer.
+- Added per-digit rolling counters for header increments, with carry-over, cancellation on rapid updates, stable decimal widths, accessible final values, and reduced-motion support.
+- Validation: production build, 8 statistics backend tests, WebKit activity integration (including final-node fill), standalone reel tests, and statistics public-view checks at 1440/390/320px passed. Inspected game/header and statistics screenshots. The broader statistics run reached an unrelated hidden sponsor-report input after reload; narrowed public-view checks exclude that flow. The required Chromium skill client stalled and was stopped; WebKit covered the changed interactions.
+- Restarted local Vite preview on port 4173 (session 4674) so its API includes nodesFilled; temporary static server on 4187 stopped. Changes remain uncommitted and not deployed.
+
+2026-09-13 — Loader redesign and iPad startup diagnostics
+- Simplified startup to an intact static brand mark, balanced 38px/34px icon/wordmark, an 88px indeterminate violet sweep, and smaller Preparing your puzzle caption. Removed fading node/link animations and the large background glow. Loader fonts are bundled directly in the initial HTML, independent of the main game download; reduced motion keeps a static indicator.
+- Bootstrap preserves startup exception messages in expandable Error details, alongside browser/API availability; timeout cannot overwrite the original exception. Initialization now dismisses the loader only on startup-ready, including graphics failures that previously scheduled a dismissal before throwing.
+- Confirmed origin/main and deployed site use the same generic recovery behavior. The physical iPad cause remains unknown: asked for Settings > General > About software version. No device-specific fix claimed; screenshot alone cannot distinguish download/JS/graphics failure.
+- Validation: build passed; all 7 WebKit startup scenarios passed (normal, absent timeout API, analytics failure, script download failure, evaluation error, stalled download, unavailable WebGL). Checked tutorial touch/play/resume, recovery details/retry access, original-error retention, reduced motion, and loader screenshots at 1200/390/820px. Chromium skill client completed without error; inspected resulting board screenshot. Local preview updated, not deployed.
+
+2026-09-13 — Nonblocking completed-puzzle review
+- Moved completion into a nonmodal panel beside the board on desktop and into the page flow below the board on <=900px screens. Reserved board/control space, retained animated success emblem, and collapsed optional sharing. No centered celebration or blurred backdrop for normal-game completion.
+- Finished scenes remain interactive for swipe/drag, keyboard and rotation buttons. Node taps/fills/connection drags cannot alter a reviewed solved graph; explicit undo/restart still return to editing. New puzzle/home close the panel, and unsolving removes review layout. Kept focus and scroll position, and cleared stale hint toasts on completion. Tutorial success cues remain in their existing positions above the puzzle.
+- Validation: build and WebKit completion review checks at 1200px/390px passed: panel/board nonintersection, no modal/scroll trap, keyboard/button/drag rotation (including starting on a filled node), unchanged edges, one completion record, next puzzle and toast cleanup. Inspected desktop/mobile completed views and Chromium skill-client board screenshot. Local only, not deployed.
+
+## PostHog completion session attribution (2026-09-13)
+- Confirmed origin/main and local API both emitted verified puzzle_completed without $session_id; browser completion payload did not carry SDK session context.
+- Added optional SDK session getter and stored session ID + solve timestamp with pending completions, preserving attribution across offline retries and reloads.
+- API accepts optional analytics metadata, validates UUIDv7 and its event-time window, and forwards $session_id + original event timestamp only after server puzzle verification and successful deduplicated recording. Legacy/analytics-unavailable completions still save normally; invalid optional attribution is ignored.
+- Validated against PostHog sessions documentation. Historical events are not changed by this patch; production verification remains pending deployment.
+- Build passed; 13 targeted analytics/statistics tests passed, including delayed delivery, duplicate suppression, malformed attribution, offline/reload persistence, and unavailable SDK handling. Local preview restarted for backend changes.
+
+## Stable completion layout (2026-09-13)
+- Removed completion-only canvas resizing/recentering, melody movement, and controller repositioning. Editing tools retain their layout space while hidden.
+- Nonmodal result uses the left-side free space on wide landscape screens; compact screens place it below the unchanged game viewport. Stable scrollbar gutter prevents a newly scrollable result from changing canvas width.
+- Updated completion regression to compare exact stage/melody/controller bounds before and after solving at 1440, 1200, and 390px, plus clear puzzle space, review controls, deduplication, and next-puzzle behavior.
+- Build and all three WebKit viewport cases passed. Inspected desktop/mobile completion screenshots; ran standard game client smoke test. Local only.
+
+## Player completion note interval (2026-09-13)
+- Confirmed both origin/main and local maybeComplete passed demo.tempoBpm into the player completion sound, overriding sound.completionNoteIntervalMs (currently 80 ms).
+- Player tone helper no longer accepts demo rhythm overrides; solved gameplay now follows the configured completion interval, matching onboarding. Home demo retains its own scored timing.
+- Corrected tempo setting description to distinguish demo tempo, completion interval, and fast fills.
+- Build passed. 41 audio unit tests passed, including live interval changes 400→80 ms with full note tails; WebKit native audio completion smoke passed for configured spacing, cadence boundaries, no replay, and mute. Standard game client smoke screenshot inspected.
+- Changes remain local, not deployed.
+
+## Completion share layout (2026-09-13)
+- Removed the requested completion explanatory paragraph. Added explicit spacing between title and share disclosure.
+- Fixed nonwrapping social/action groups overflowing the narrow side card: groups now wrap and center within available width, preserving 44px touch targets.
+- Build passed; expanded sharing tested at 1440, 1200, 390, and 320px alongside stable puzzle layout and review/next controls. Desktop/mobile screenshots inspected; standard game smoke client passed. Local preview rebuilt.
+
+## Google accounts and leaderboard (2026-09-13)
+- Implemented optional Google Identity Services sign-in via dedicated /signin.html with JavaScript credential callback, nonce cookie, server RS256/JWKS issuer/audience/expiry/nonce/azp checks using jose, and hashed 30-day HttpOnly sessions. Added route-scoped sign-in headers and multi-Set-Cookie support in local Vite adapter.
+- New additive player/session/ranked-attempt/ranked-completion/rate-limit tables shared by local SQLite and D1. Nickname and public-listing opt-in, sign-out, full account/session/ranked-data deletion. No Google email/name/photo stored; anonymous historical statistics remain independent.
+- Leaderboard ranks distinct solved puzzles with shared ranks, last-seven-UTC-days/all-time, perspective/size/difficulty filters, top 100 and personal rank/count. Issued opaque tickets bind exact puzzles to accounts; bounded issuance, server graph verification, cross-device deduplication and durable completion queue attribution. Unranked partial boards are not retroactively claimed. Tutorial/home demo remain excluded.
+- Added responsive profile/leaderboard dialogs, completion invitation, standalone Google sign-in and safe return/cancel flow. Mobile uses the trophy entry for leaderboard/profile tabs to preserve header space.
+- Server rollout gated by ACCOUNTS_ENABLED=true and GOOGLE_CLIENT_ID. No credentials supplied yet: local /api/auth/config returns enabled:false. User was instructed to keep production + localhost origins, add localhost:4173 and localhost, and leave redirect URIs empty because this is a GIS callback flow.
+- Docs: docs/accounts.md and .dev.vars.example contain configuration, D1 additive migration, rollout, privacy and scoring rules. Production deployment and a real Google account sign-in remain pending the client ID/configuration. No deploy or commit performed.
+- Build passed; full 217-test suite passed, including real-signature JWT/auth/session/scoring/privacy/expiry/rate-limit tests and client ticket recovery. Updated stale loader SEO assertions from prior loader work so suite matches current UI.
+- WebKit UI fixtures passed at 1440/390/320px; Google script callback/nonce/config/return fixture passed. Header/dialog/sign-in screenshots inspected. Standard Chromium game smoke client passed. These fixtures do not replace a real Google sign-in test.
+- Preview restarted with current server/schema; running tool session 2197, PID 2664, port4173.
+
+2026-09-13 — Completion melody rhythm
+- Completion now follows score-relative note intervals and rests for Ode to Joy and Für Elise. The existing admin completion interval controls the opening-note pace; demo BPM behavior and fast-fill spacing are preserved.
+- Updated duration estimates and final-connection handoff to use the same rhythm. Full configured note tails remain intact.
+- Verified: build; 49 sound/melody unit tests, including every melody position across two loops; WebKit completion smoke; standard web-game client and screenshots. No deployment or commit.
+
+2026-09-13 — Google profile default nickname
+- Verified Google ID-token name, then given_name, then verified email local part supplies new-account nicknames. Normalize to nickname limits with Unicode letters/marks supported; missing names retain generated fallback. Existing saved names are never overwritten.
+- Updated sign-in privacy copy and account docs to describe the stored nickname accurately. Full email is not persisted.
+- Verified signed-token profile fallbacks, actual login route persistence, custom-name preservation, single-character and multilingual names; 5 account/client tests and build passed. Restarted local preview. origin/main has no account integration; this remains local.
+
+2026-09-13 — Signed-in profile avatar
+- Verified Google picture claim supplies an HTTPS Google-hosted avatar. Saved in an additive player_avatars table and refreshed on sign-in; only current-player API responses expose it. Account deletion removes the URL.
+- Circular header image keeps profile leftmost; person icon remains while loading, on image errors, and for guests. Image requests use no-referrer. Updated privacy copy and account docs.
+- Build and 5 account/client tests passed, covering picture URL validation and refresh/removal. Browser fixtures cover loaded images, fallback and sign-out. Existing sessions need another Google sign-in to populate an avatar.
+
+2026-09-13 — Completion card on the right
+- Wide landscape result card is pinned to the upper right. Desktop rotation controls sit at the bottom right before and after a solve, preserving layout across completion. Narrow layouts retain the card below the board.
+- Card has explicit stacking above the canvas input surface, and expanded sharing is bounded above the rotation controls.
+- Build and standard web-game smoke passed; right-side screenshot reviewed. Responsive completion tests verify fixed canvas/melody/controller bounds, clear puzzle, keyboard/drag/button rotation, sharing, no duplicate completion, and next puzzle.
+
+2026-09-13 — All-time leaderboard only
+- Removed period, perspective, size and complexity controls. Leaderboard requests all-time solves and shows rank, player and solved total. API default is now all time; retained internal filter support.
+- Build, 5 account/client tests and WebKit UI checks at 1440/390/320px passed. Verified old solves count in the default API response and preview has no filter controls.
+
+2026-09-13 — Separate account popups
+- Replaced the combined modal/tabbed account menu with separate fixed popups anchored to the profile and leaderboard buttons. No backdrop or focus trap; outside pointer/focus and Escape dismiss, with focus restored for explicit close. Keyboard events inside do not reach game shortcuts.
+- Both entry buttons are visible on mobile; reduced activity width to keep the header within 320px. Sign-in uses the official Google G PNG on a white button.
+- Popup reads are canceled when dismissed or navigating to sign-in; stale responses cannot reopen/update another popup.
+- Build, account/client tests, and WebKit desktop/390/320px fixtures passed. Reviewed screenshots for leaderboard, signed-in profile and guest sign-in.
+
+## Same-page Google sign-in (2026-09-13)
+- Profile now loads the official GIS button lazily and uses popup mode with the existing nonce/ID-token verification endpoint. Successful login updates the profile and avatar without navigating or remounting the game. Loading and credential errors offer retry; closing Google leaves guest play intact.
+- Added shared Google script loader, nine-minute visible-menu challenge renewal, and popup-compatible COOP headers for Vite/Pages. Standalone signin.html retained only for direct-link compatibility.
+- Build and five account tests pass; WebKit account UI checks pass at 1440/390/320 widths with Google callbacks mocked. Actual GIS button renders, but Google rejects both current local preview origins; localhost:4173 must be added to this OAuth client's authorized JavaScript origins before real local login can be verified.
+- Chromium checks passed at 1440/390 widths; its 320px case exposed existing body minimum-width overflow beside a reserved scrollbar. Body minimum now respects the available width; 320px checks pass in Chromium and WebKit without puzzle movement. Same-page tests cover challenge failure/retry, cancelled Google selection, credential rejection/retry, successful profile/avatar update, unchanged URL and surviving canvas.
+- Real local Google login remains unverified because the OAuth client rejects the preview origin. No production deployment or commit performed.
+
+## Repair generated Google nicknames (2026-09-13)
+- Diagnosed returning sign-ins: INSERT OR IGNORE preserved generated Player names while refreshing avatars. origin/main has no account integration; this behavior belongs to the local account work.
+- Returning sign-ins now replace only the exact Player + account-ID-prefix fallback when Google supplies a verified usable name. Added additive player_custom_nicknames table to preserve explicit saves, including a deliberately retained fallback spelling; profile saves and marker insertion are atomic, and account deletion removes the marker.
+- Regression reproduced before the fix and passes afterward. Six account tests and build pass. Preview restarted on 4173; account config endpoint responds 200. Existing sessions need a fresh Google sign-in to obtain name claims; no credentials or name claims are inferred from the avatar, and production was not deployed.
+
+## Telegram share spacing (2026-09-13)
+- Confirmed URLSearchParams encodes share-message spaces as + on both origin/main and the working tree; the supplied iPhone Telegram screenshot shows those plus signs literally. Telegram's official custom-button example uses raw URL encoding.
+- Telegram now encodes url/text separately with encodeURIComponent, preserving spaces as %20, Unicode dimensions, and genuine plus signs as %2B. Other destinations unchanged.
+- Build, diff checks, and isolated WebKit test of the actual share component pass (tests/telegram-share.mjs). Added a raw-encoding regression assertion to the broader share test; that existing suite is blocked earlier by an ad-free dialog intercepting its Resume click, so it did not reach the new assertion. No messages sent, commit, or deployment.
+
+## Public leaderboard for every account (2026-09-13)
+- Removed private-ranking behavior from the account API, client types, nickname saves, and leaderboard query. Every account with recorded ranked solves is included, including older rows with legacy listed=0. The unused database column remains for schema compatibility; no data rewrite or new sign-in is needed.
+- Removed the Private profile label. Public leaderboard fields remain rank, nickname and solved count; Google identity/email/session data are not exposed.
+- Six account tests, build, and 390px WebKit account UI checks pass. Local preview restarted. origin/main has no account/leaderboard implementation; changes remain local, not deployed.
+- Proposed next design: retain one all-time solve count, highlight your row, show the next player and the solves needed to pass them, retain equal ranks and one credit per distinct puzzle. Proposal only; scoring rules unchanged.
+
+## Best solution time (2026-09-13)
+- Added Best time to leaderboard rows and the personal rank summary; duration formats as m:ss (h:mm:ss for long sessions), <1s for subsecond results, and an em dash for untimed history. Solve count remains the only ranking metric.
+- Additive ranked_solve_times records server-measured elapsed milliseconds per ranked attempt after solved-board validation. Duration runs from ticket issue to first accepted completion and includes breaks, reloads, hints and offline delivery delays. Replaying a puzzle can improve its time without incrementing unique solve count. Ticket-key deduplication prevents retries from changing time; old completion retries cannot fabricate historical timing.
+- Account deletion removes timing rows. The public API only exposes the aggregate best duration, with matching puzzle filters. Existing completed puzzles remain untimed until a new replay is completed. Apply server/schema.sql before production deployment.
+- Eight account tests, build, and WebKit UI fixtures at 320/1440 pass. Inspected the mobile leaderboard screenshot, refreshed local preview on 4173, and confirmed the real API includes bestTimeMs. No commit or deployment; origin/main has no account leaderboard.
+
+## Signal Archive narrative draft (2026-09-13)
+- Added `docs/story-script.md`: a complete, implementation-neutral 15-relay story arc for Nodoku. It introduces Nia, the Curator, and the Static; gives every relay a start card, completion fragment, next hook, and small archive/audio reveal; and ends cleanly at relay 15.
+- Optional post-ending Echoes are explicitly non-punitive. No game behavior, production configuration, or implementation files were changed.
+- Revised the visual direction after reviewing the current home board: story is expressed only through Nodoku-like node arrangements, connection pulses, rings, mirrored patterns, and the existing pale studio palette. Generated images are preview-only; no artwork was added to the project.
+
+## Leaderboard category matrix and rounded table (2026-09-13)
+- Added a 3×3 grid-size/complexity selector using the same extracted complexity SVG helper as the home configurator. 3D/Flat controls select perspective; All puzzles resets categories. Every selection requests matching all-time ranks, solve counts and best times from the existing API filters.
+- Rounded the table container and both ends of the highlighted player row; separate table borders allow the corner styling to render.
+- Build and eight account unit/client tests pass. WebKit account UI checks at 320px and 1440px pass, including matrix query parameters, selected states, category-specific counts/times, empty results, reset, rounded corners and no horizontal overflow. Inspected mobile and desktop screenshots. Changes are local; no commit or deployment.
+
+## Simpler leaderboard controls (2026-09-13)
+- Removed All puzzles, defaulting the perspective to 3D. Kept the 3D/Flat switch and symbol matrix; removed visible difficulty headings and the redundant selection caption. Accessible labels and tooltips retain difficulty names.
+- Build and existing WebKit account UI checks at 320/1440px pass, including filtered results and absence of the removed labels. Local preview rebuilt.
+
+## Flat leaderboard sizes (2026-09-13)
+- Matched the configurator: Flat hides/disables the 3×3 matrix row, showing only 4×4 and 5×5. Switching from selected 3D size 3 to Flat selects size 4 with the same difficulty, so no unavailable Flat category is requested.
+- Build and WebKit UI checks at 320/1440px pass, including visible rows, switching perspectives, selection fallback and request filters. Local preview rebuilt.
