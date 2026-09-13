@@ -128,9 +128,10 @@ export async function handleAccountsApi(request: Request, env: Record<string, st
     if (path === '/api/leaderboard') {
       const period = url.searchParams.get('period') || 'all', perspective = url.searchParams.get('perspective') || 'all';
       const size = url.searchParams.get('size'), difficulty = url.searchParams.get('difficulty');
-      if (!['7d', 'all'].includes(period) || !['all', 'flat', '3d'].includes(perspective)
+      const metric = url.searchParams.get('metric') || 'solved';
+      if (!['solved', 'time'].includes(metric) || !['7d', 'all'].includes(period) || !['all', 'flat', '3d'].includes(perspective)
         || (size !== null && !['3', '4', '5'].includes(size)) || (difficulty !== null && !['easy', 'medium', 'hard'].includes(difficulty))) throw new ErrorResponse(400, 'Invalid leaderboard filter.');
-      return json(await accounts.leaderboard({ period, perspective, size: size ? Number(size) : null, difficulty } as RankingFilter, player?.id));
+      return json(await accounts.leaderboard({ period, perspective, size: size ? Number(size) : null, difficulty, metric } as RankingFilter, player?.id));
     }
     if (!player) throw new ErrorResponse(401, 'Please sign in first.');
     if (path === '/api/auth/profile') {

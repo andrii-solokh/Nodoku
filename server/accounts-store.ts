@@ -2,7 +2,7 @@ import type { SqlExecutor } from './store.js';
 import type { PuzzleSettings } from '../src/puzzle.js';
 
 export type Player = { id: string; nickname: string; avatarUrl?: string; profileUrl?: string };
-export type RankingFilter = { period: '7d' | 'all'; perspective: 'all' | 'flat' | '3d'; size: number | null; difficulty: string | null };
+export type RankingFilter = { period: '7d' | 'all'; perspective: 'all' | 'flat' | '3d'; size: number | null; difficulty: string | null; metric?: 'solved' | 'time' };
 const DAY = 86_400_000;
 function player(row: Record<string, unknown> | undefined): Player | null {
   return row ? { id: String(row.id), nickname: String(row.nickname),
@@ -111,7 +111,9 @@ export class AccountsStore {
         FROM ranked_solve_times GROUP BY player_id, size, depth, difficulty, seed) t
         ON t.player_id = c.player_id AND t.size = c.size AND t.depth = c.depth AND t.difficulty = c.difficulty AND t.seed = c.seed
       WHERE ${conditions.join(' AND ')} GROUP BY p.id, p.nickname, l.url`;
-    const ranked = `WITH scores AS (${counts}), ranked AS (SELECT id, nickname, profile_url, solved, best_time_ms, RANK() OVER (ORDER BY solved DESC) AS rank FROM scores)`;
+    const byTime = filter.metric === 'time';
+    const ranked = `WITH scores AS (${counts}), ranked AS (SELECT id, nickname, profile_url, solved, best_time_ms,
+      RANK() OVER (ORDER BY ${byTime ? 'best_time_ms ASC' : 'solved DESC'}) AS rank FROM scores${byTime ? ' WHERE best_time_ms IS NOT NULL' : ''})`;
     const result = await this.sql.transaction([
       { sql: `${ranked} SELECT * FROM ranked ORDER BY rank, nickname COLLATE NOCASE, id LIMIT 100`, values },
       { sql: `${ranked} SELECT * FROM ranked WHERE id = ?`, values: [...values, currentId ?? ''] },

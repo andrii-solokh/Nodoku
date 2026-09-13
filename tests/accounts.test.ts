@@ -311,4 +311,40 @@ test('personal rank remains available at 10001 while only the top 100 are return
   assert.equal(ranking.entries.length, 100);
   assert.equal(ranking.entries.some(entry => entry.id === 'player-10001'), false);
   assert.deepEqual(ranking.me, { rank: 10001, solved: 1, bestTimeMs: null });
+  const times = new DatabaseSync(file);
+  times.exec("INSERT INTO ranked_solve_times SELECT id,id,4,1,'easy',1,CAST(substr(id,8) AS INTEGER)*1000,100000 FROM players");
+  times.close();
+  const timed = await store.accounts.leaderboard({ period: 'all', perspective: 'flat', size: 4, difficulty: 'easy', metric: 'time' }, 'player-10001');
+  assert.equal(timed.entries.length, 100);
+  assert.equal(timed.entries.some(entry => entry.id === 'player-10001'), false);
+  assert.deepEqual(timed.me, { rank: 10001, solved: 1, bestTimeMs: 10001000 });
+});
+
+test('solve totals and best times have independent ranks, ties and eligibility', async t => {
+  const directory = mkdtempSync(join(tmpdir(), 'nodoku-two-rankings-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const file = join(directory, 'accounts.sqlite');
+  const store = new LocalStore(file); t.after(() => store.close());
+  const db = new DatabaseSync(file);
+  for (const [id, solved, elapsed] of [['Ada', 3, 90000], ['Bea', 2, 30000], ['Cy', 1, 30000], ['Dee', 4, null]] as const) {
+    db.prepare('INSERT INTO players (id,google_sub,nickname,created_at) VALUES (?,?,?,1)').run(id, id, id);
+    for (let seed = 1; seed <= solved; seed++) {
+      db.prepare("INSERT INTO ranked_completions VALUES (?,4,1,'easy',?,100000)").run(id, seed);
+    }
+    if (elapsed !== null) db.prepare("INSERT INTO ranked_solve_times VALUES (?,?,4,1,'easy',1,?,100000)").run(id, id, elapsed);
+  }
+  // A faster solve in another category must not affect this ranking.
+  db.exec("INSERT INTO ranked_completions VALUES ('Ada',5,1,'hard',1,100000); INSERT INTO ranked_solve_times VALUES ('other','Ada',5,1,'hard',1,1000,100000)");
+  db.close();
+  const filter = { period: 'all' as const, perspective: 'flat' as const, size: 4, difficulty: 'easy' };
+  const totals = await store.accounts.leaderboard(filter, 'Ada');
+  assert.deepEqual(totals.entries.map(row => [row.id, row.rank, row.solved]), [['Dee', 1, 4], ['Ada', 2, 3], ['Bea', 3, 2], ['Cy', 4, 1]]);
+  const timed = await store.accounts.leaderboard({ ...filter, metric: 'time' }, 'Ada');
+  assert.deepEqual(timed.entries.map(row => [row.id, row.rank, row.bestTimeMs]), [['Bea', 1, 30000], ['Cy', 1, 30000], ['Ada', 3, 90000]]);
+  assert.equal(timed.me!.rank, 3);
+  assert.equal((await store.accounts.leaderboard({ ...filter, metric: 'time' }, 'Dee')).me!.rank, null);
+  const response = await handleApi(req('/api/leaderboard?metric=time&perspective=flat&size=4&difficulty=easy'), env, store);
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).entries.map((row: { id: string }) => row.id), ['Bea', 'Cy', 'Ada']);
+  assert.equal((await handleApi(req('/api/leaderboard?metric=invalid'), env, store)).status, 400);
 });

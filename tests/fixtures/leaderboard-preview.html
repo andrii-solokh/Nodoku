@@ -31,7 +31,13 @@
       const path = new URL(String(input), location.href).pathname;
       if (path === '/api/auth/config') return Response.json({ enabled: true, clientId: 'preview' });
       if (path === '/api/auth/me') return Response.json({ player });
-      if (path === '/api/leaderboard') return Response.json({ entries, me });
+      if (path === '/api/leaderboard') {
+        if (new URL(String(input), location.href).searchParams.get('metric') === 'time') {
+          const timed = entries.map((entry, index) => ({ ...entry, solved: 2 + index % 13, bestTimeMs: 28000 + index * 1793 }));
+          return Response.json({ entries: timed, me: { rank, solved: rank <= 100 ? timed[rank - 1].solved : 2, bestTimeMs: rank <= 100 ? timed[rank - 1].bestTimeMs : 540000 } });
+        }
+        return Response.json({ entries, me });
+      }
       if (path === '/api/auth/profile') { Object.assign(player, JSON.parse(options.body)); return Response.json({ player }); }
       return Response.json({ error: 'This is a sample-data preview.' }, { status: 400 });
     };
