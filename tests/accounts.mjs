@@ -17,7 +17,10 @@ try {
     await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ contentType: 'text/javascript', body: `
       window.google = { accounts: { id: {
         initialize(options) { window.googleOptions = options; },
-        renderButton(host) { const button = document.createElement('button');
+        renderButton(host, options) { window.googleRenderOptions = options;
+          window.googleRenderCount = (window.googleRenderCount || 0) + 1;
+          const button = document.createElement('button');
+          button.style.width = options.width + 'px'; button.style.height = '40px';
           button.innerHTML = '<img src="/google-g.png" width="20" height="20" alt="">Continue with Google';
           button.onclick = () => { if (!window.cancelGoogle) window.googleOptions.callback({ credential: 'inline-test-credential' }); };
           host.replaceChildren(button); }
@@ -170,9 +173,33 @@ try {
     const gameUrl = page.url();
     await page.locator('.player-signin:enabled').waitFor();
     challengeFails = false;
+    const signInBounds = await page.locator('.player-google-slot').boundingBox();
     await page.locator('.player-signin').click();
     const google = page.locator('.player-google-button button');
     await google.waitFor();
+    assert.equal(await page.evaluate(() => window.googleRenderOptions.width), Math.floor(signInBounds.width), 'Google receives the visible slot width');
+    assert.deepEqual(await page.locator('.player-google-slot').boundingBox(), signInBounds, 'Loading and ready buttons occupy the same space');
+    assert.equal(await page.locator('.player-signin').isHidden(), true);
+    const challengeCount = calls.filter(call => call.path === '/api/auth/challenge').length;
+    const renderCount = await page.evaluate(() => { window.savedGoogleButton = document.querySelector('.player-google-button button'); return window.googleRenderCount; });
+    await page.locator('#profile-popup .player-close').click();
+    await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/api/auth/me')),
+      page.locator('#account-button').click(),
+    ]);
+    assert.equal(await page.evaluate(() => document.querySelector('.player-google-button button') === window.savedGoogleButton), true, 'Reopening retains the loaded Google button');
+    assert.equal(await page.evaluate(() => window.googleRenderCount), renderCount);
+    assert.equal(calls.filter(call => call.path === '/api/auth/challenge').length, challengeCount, 'Reopening reuses the unexpired challenge');
+    assert.equal(await page.locator('.player-signin').isHidden(), true, 'Reopening never shows the loading placeholder');
+    await page.locator('#profile-popup .player-close').click();
+    await page.evaluate(() => { window.originalNow = Date.now; Date.now = () => window.originalNow() + 10 * 60 * 1000; });
+    await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/api/auth/challenge')),
+      page.locator('#account-button').click(),
+    ]);
+    await page.waitForFunction(() => !document.querySelector('.player-google-button').inert);
+    assert.equal(calls.filter(call => call.path === '/api/auth/challenge').length, challengeCount + 1, 'Expired challenges are refreshed before reuse');
+    await page.evaluate(() => { Date.now = window.originalNow; });
     // Sign-in helpers can mount outside our popup and take focus without a click.
     await page.evaluate(() => {
       const helper = document.createElement('button');
