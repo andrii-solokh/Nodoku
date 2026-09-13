@@ -58,4 +58,3 @@ CREATE TABLE IF NOT EXISTS sponsor_orders (
 );
 
 CREATE INDEX IF NOT EXISTS sponsors_active ON sponsor_orders(status, ends_at, paid_at);
-
