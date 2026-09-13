@@ -107,7 +107,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
     </div>
 `);
   const profile = makePopup('profile-popup', 'Your profile', `    <div class="profile-view">
-      <div class="player-guest"><p>Keep your achievements across devices and join the leaderboard.</p><div class="player-google-button"></div><button type="button" class="player-signin" disabled><img src="/google-g.png" width="20" height="20" alt=""><span>Loading Google…</span></button><p class="player-caption">You can always play as a guest.</p></div>
+      <div class="player-guest"><p>Keep your achievements across devices and join the leaderboard.</p><div class="player-google-slot"><div class="player-google-button"></div><button type="button" class="player-signin" disabled aria-label="Loading Google sign-in"><img src="/google-g.png" width="20" height="20" alt=""><span>Continue with Google</span></button></div><p class="player-caption">You can always play as a guest.</p></div>
       <form class="player-profile" hidden><label>Public nickname<input name="nickname" minlength="1" maxlength="24" required autocomplete="nickname"></label>
         <label>Link (optional)<input type="text" name="profileUrl" inputmode="url" maxlength="2048" autocomplete="url" autocapitalize="none" spellcheck="false" placeholder="x.com/yourname" aria-describedby="profile-link-note"><span id="profile-link-note" class="profile-link-note">Shown on the leaderboard</span></label>
         <div class="player-profile-actions">
@@ -153,23 +153,35 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
   }));
   let popupRequest: AbortController | undefined;
   let signInRevision = 0, signingIn = false;
+  let signInExpiresAt = 0, signInButtonWidth = 0;
   let signInRefresh: ReturnType<typeof setTimeout> | undefined;
   const googleButton = find('.player-google-button');
   const signInRetry = find<HTMLButtonElement>('.player-signin');
   async function prepareSignIn() {
+    const width = Math.floor(find('.player-google-slot').clientWidth);
+    if (!width || active !== 'profile' || player) return;
+    if (signInExpiresAt > Date.now() && signInButtonWidth === width) {
+      clearTimeout(signInRefresh);
+      signInRefresh = setTimeout(() => void prepareSignIn(), signInExpiresAt - Date.now());
+      return;
+    }
     const version = ++signInRevision;
+    signInExpiresAt = 0;
     clearTimeout(signInRefresh);
-    googleButton.replaceChildren(); signInRetry.hidden = false; signInRetry.disabled = true;
-    signInRetry.querySelector('span')!.textContent = 'Loading Google…';
+    googleButton.inert = true;
+    signInRetry.disabled = true;
+    signInRetry.setAttribute('aria-label', 'Loading Google sign-in');
+    signInRetry.querySelector('span')!.textContent = 'Continue with Google';
     try {
       const identity = await loadGoogleIdentity();
       if (version !== signInRevision || active !== 'profile' || player) return;
+      const challengeStarted = Date.now();
       const { nonce } = await api('/api/auth/challenge', {});
       if (version !== signInRevision || active !== 'profile' || player) return;
       identity.initialize({ client_id: clientId, nonce, ux_mode: 'popup', auto_select: false,
         callback: async ({ credential }) => {
           if (signingIn) return;
-          signingIn = true; ++profileRevision; clearTimeout(signInRefresh);
+          signingIn = true; signInExpiresAt = 0; ++profileRevision; clearTimeout(signInRefresh);
           status.textContent = 'Signing in…';
           try {
             const result = await api('/api/auth/google', { credential });
@@ -183,12 +195,22 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
           } finally { signingIn = false; }
         },
       });
-      identity.renderButton(googleButton, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: Math.floor(googleButton.clientWidth) });
+      // A new challenge needs a widget configured with its fresh nonce.
+      googleButton.replaceChildren();
+      identity.renderButton(googleButton, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width });
+      signInButtonWidth = width;
+      googleButton.style.visibility = '';
+      googleButton.inert = false;
       signInRetry.hidden = true;
       // The login challenge lasts ten minutes. Refresh while the menu is open.
-      signInRefresh = setTimeout(() => void prepareSignIn(), 9 * 60 * 1000);
+      signInExpiresAt = challengeStarted + 9 * 60 * 1000;
+      signInRefresh = setTimeout(() => void prepareSignIn(), Math.max(0, signInExpiresAt - Date.now()));
     } catch (error) {
       if (version !== signInRevision || active !== 'profile') return;
+      signInExpiresAt = 0;
+      googleButton.style.visibility = 'hidden';
+      signInRetry.hidden = false;
+      signInRetry.removeAttribute('aria-label');
       status.textContent = (error as Error).message;
       signInRetry.disabled = false; signInRetry.querySelector('span')!.textContent = 'Try Google again';
     }
@@ -314,6 +336,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
     if (active && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(true); }
   }, true);
   window.addEventListener('resize', position);
+  window.addEventListener('resize', () => { if (active === 'profile' && !player) void prepareSignIn(); });
   window.visualViewport?.addEventListener('resize', position);
   window.addEventListener('scroll', position, { passive: true });
   find('form').addEventListener('submit', event => {
@@ -331,7 +354,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
   }
   async function signOut() {
     await api('/api/auth/logout', {});
-    player = null; tickets.clear(); updateProfile();
+    player = null; signInExpiresAt = 0; tickets.clear(); updateProfile();
     if (active === 'profile') void prepareSignIn();
     try {
       for (const key of Object.keys(localStorage)) if (key.startsWith(PREFIX)) localStorage.removeItem(key);

@@ -24,8 +24,8 @@
 .ranking-grid-table .is-you td:first-child { border-radius: 12px 0 0 12px; }
 .ranking-grid-table .is-you td:last-child { border-radius: 0 12px 12px 0; }
 .player-guest { text-align: center; line-height: 1.6; padding: 12px 0; }
-.player-signin { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 12px; margin: 20px 0 12px; border: 1px solid #747775; border-radius: 24px; background: #fff; color: #1f1f1f; font-size: 14px; font-weight: 500; text-decoration: none; }
-.player-signin img { flex: none; width: 20px; height: 20px; }
+.player-signin { position: relative; display: flex; align-items: center; justify-content: center; height: 40px; min-height: 40px; padding: 0 12px; margin: 0; border: 1px solid #dadce0; border-radius: 20px; background: #fff; color: #3c4043; font: 500 14px Arial, sans-serif; letter-spacing: .25px; text-decoration: none; }
+.player-signin img { position: absolute; left: 12px; width: 18px; height: 18px; }
 .player-signin:hover { background: #f2f2f2; }
 .player-signin:focus-visible { outline: 2px solid #7966bd; outline-offset: 3px; }
 .player-profile { display: grid; gap: 16px; margin-top: 16px; }
@@ -43,10 +43,12 @@
   .has-player-accounts .playing .game-header-info { left: 96px; }
 }
 
-.player-google-button { width: 100%; margin: 20px 0 12px; min-height: 40px; }
-.player-google-button:empty { display: none; }
-.player-signin { width: 100%; font-family: inherit; cursor: pointer; }
-.player-signin:disabled { cursor: wait; opacity: .7; }
+.player-google-slot { display: grid; height: 40px; margin: 20px 0 12px; }
+.player-google-button, .player-signin { grid-area: 1 / 1; width: 100%; min-width: 0; }
+.player-google-button { min-height: 40px; }
+.player-google-button:empty { visibility: hidden; }
+.player-signin { cursor: pointer; }
+.player-signin:disabled { cursor: wait; opacity: 1; }
 
 .player-profile-actions { display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center; gap: 12px; }
 .player-profile-actions .start-button { min-height: 44px; padding: 10px 16px; margin: 0; }
