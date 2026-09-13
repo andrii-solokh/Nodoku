@@ -46,6 +46,15 @@ jobs:
       - run: npm test
       - run: npm run test:migrations:d1
       - run: npm run build
+      - name: Install browser for layout regression
+        run: npx playwright install --with-deps chromium
+      - name: Check puzzle layout stability
+        run: |
+          npm run preview -- --port 4173 > "$RUNNER_TEMP/network-layout-preview.log" 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          curl --fail --silent --show-error --retry 30 --retry-delay 1 --retry-connrefused http://127.0.0.1:4173/ --output /dev/null
+          npm run test:network-layout
       - name: Compile Pages Functions
         run: npx wrangler pages functions build --outdir "$RUNNER_TEMP/nodoku-functions"
 

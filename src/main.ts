@@ -212,7 +212,7 @@ app.innerHTML = `
   <div id="game-stage" class="stage game-stage"></div>
   <div id="game-tip" class="game-tip" aria-label="Gameplay tip" hidden></div>
   <aside class="network-status" id="network-status" aria-label="Network status" hidden>
-    <div role="status" aria-live="polite" aria-atomic="true"><strong id="network-status-title"></strong><p>All dots are cleared. Swap connections to join the groups.</p><span class="network-group-detail" id="network-group-detail"></span></div>
+    <div role="status" aria-live="polite" aria-atomic="true"><strong id="network-status-title"></strong><p>Swap connections to join the groups.</p><span class="network-group-detail" id="network-group-detail"></span></div>
     <button id="network-group-button" type="button">Show group 1</button>
   </aside>
   <div class="hint-cue" id="hint-cue" aria-hidden="true" hidden>

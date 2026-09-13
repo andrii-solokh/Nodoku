@@ -39,6 +39,7 @@
     "test:drag-preview": "node tests/drag-preview.mjs",
     "test:front-face": "node tests/front-face.mjs",
     "test:ambient": "node tests/ambient.mjs",
+    "test:network-layout": "node --import tsx tests/network-layout.mjs",
     "test:connectivity": "node --import tsx tests/connectivity.mjs",
     "test:connection-colors": "node --import tsx tests/connection-colors.mjs",
     "test:gum-materials": "node --import tsx tests/gum-materials.mjs",

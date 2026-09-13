@@ -2203,3 +2203,9 @@ TODO / Note
 - Preserved rhythm, rests, and phrase stopping points; included source/adapter/license credits for each score at static/music-credits.html.
 - Validation: 228 unit tests pass; production build passes; desktop/mobile browser test verifies composer fit, clickable credits, reload and home/resume preservation. The required web-game client ran and its board screenshot/state were inspected.
 - Demo rhythm browser test also passes. Its frozen-frame fixture now explicitly dismisses the startup loader (the same loader behavior exists on origin/main), and its solve loop is bounded.
+
+## Stable separate-groups guidance (2026-09-13)
+- Confirmed origin/main switches .game-main into a grid and replaces .game-stage absolute positioning when network-separated appears; this changes the camera fit.
+- Removed those geometry overrides. The notice now floats independently, with compact layouts for short portrait and landscape screens, and shorter guidance text.
+- Added test:network-layout covering real undo/redo visibility changes, longer text, canvas/board/camera/scroll invariance, control access, and node clearance across six viewports for flat and cube puzzles. Wired this browser regression into the CI deployment gate.
+- Production build passes; layout browser verification is in progress. The older broad connectivity script stops on its selected-node material/highlight assertion; this change does not modify selection/material logic.
