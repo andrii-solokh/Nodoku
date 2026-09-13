@@ -8,7 +8,8 @@
     {
       "binding": "DB",
       "database_name": "nodoku",
-      "database_id": "b7be3da8-25d3-4559-8613-920b0a148812"
+      "database_id": "b7be3da8-25d3-4559-8613-920b0a148812",
+      "migrations_dir": "server/migrations"
     }
   ],
   // Stripe credentials belong in Pages secrets, never in this file.

@@ -36,8 +36,9 @@ Leave `APP_ORIGIN` empty locally so the API uses the current localhost address. 
 
 ## Production rollout
 
-1. Back up the D1 database and apply the additive schema before enabling accounts:
-   `npx wrangler d1 execute nodoku --remote --file=server/schema.sql`
+1. Configure the [migration/deployment workflow](migrations.md). It records a D1
+   recovery point and runs `npm run db:migrate:production` before deployment,
+   including the initial account tables and player links.
 2. Set `GOOGLE_CLIENT_ID` in the production Pages runtime variables. Keep `APP_ORIGIN=https://nodoku.solokh.com`.
 3. Deploy the tested build and Pages Functions. Leave `ACCOUNTS_ENABLED=false` until configuration and sign-in testing are complete.
 4. Set `ACCOUNTS_ENABLED=true` to expose account/leaderboard navigation and enable the APIs. This server-controlled rollout flag works independently of PostHog availability. Disabling it hides the feature and preserves stored accounts/results.

@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS player_links (
+  player_id TEXT PRIMARY KEY NOT NULL,
+  url TEXT NOT NULL
+);

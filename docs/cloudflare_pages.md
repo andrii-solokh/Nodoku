@@ -1,6 +1,6 @@
 # Cloudflare Pages
 
-The production domain is **https://nodoku.solokh.com**. The Cloudflare Pages project is `nodoku`, with the default hostname `nodoku.pages.dev`. It uses direct uploads from this checkout; the older Git-connected `dotcon` project still serves the Godot version. The application uses Vite for the game and Cloudflare Pages Functions with D1 for sponsorship and visitor counts. Build settings are:
+The production domain is **https://nodoku.solokh.com**. The Cloudflare Pages project is `nodoku`, with the default hostname `nodoku.pages.dev`. The [GitHub Actions workflow](migrations.md) validates changes, applies tracked D1 migrations, and publishes direct uploads on `main`. The older Git-connected `dotcon` project is separate. The application uses Vite for the game and Cloudflare Pages Functions with D1 for sponsorship and visitor counts. Build settings are:
 
 - Framework preset: Vite
 - Build command: `npm run build`
@@ -15,10 +15,11 @@ To deploy a later build to this project's production branch:
 
 ```sh
 npm run build
+npm run db:migrate:production
 npx wrangler pages deploy dist --project-name nodoku --branch main
 ```
 
-Wrangler includes the Pages Functions beside `dist`. Publishing does not commit or push source code. Git pushes do not automatically deploy this direct-upload project.
+Wrangler includes the Pages Functions beside `dist`. Publishing does not commit or push source code. The GitHub workflow supplies automatic deployment for this direct-upload project; configure its Cloudflare API token as described in [CI/CD setup](migrations.md).
 
 ## Custom domain
 
@@ -37,6 +38,6 @@ Use `npx wrangler pages dev dist --port 8788` to test the built game together wi
 
 Preview deployments have no D1 binding by default. To enable a payment preview, configure a separate preview database, its schema, a preview origin, and Stripe test credentials. Keep production and preview settings separate. The Wrangler file becomes the source of truth when deployed; reconcile its project name and settings with any existing Pages project before publishing. See [Pages configuration](https://developers.cloudflare.com/pages/functions/wrangler-configuration/).
 
-The separate `dotcon` deployment serves `public/` from the Godot version on `origin/main`. No deployment is performed by `npm run build` or `npm run release:web`.
+The separate legacy `dotcon` integration targets `public/` and is not used by this workflow. No deployment is performed by `npm run build` or `npm run release:web` alone.
 
 The old export remains in `public/` for reference. `npm run release:godot` invokes the previous Godot export/release script; see that script before using it.
