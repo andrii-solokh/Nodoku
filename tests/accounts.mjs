@@ -86,23 +86,23 @@ try {
     assert.equal(await website.getAttribute('href'), 'https://github.com/juniper');
     assert.equal(await website.getAttribute('target'), '_blank');
     assert.match(await website.getAttribute('rel'), /noopener noreferrer/);
-    assert.deepEqual(await page.locator('.ranking-personal td').allTextContents(), ['2', 'You', '12', '2:05']);
+    assert.deepEqual(await page.locator('.ranking-personal td').allTextContents(), []);
     await page.screenshot({ path: `output/web-game/accounts/leaderboard-${width}.png`, fullPage: true });
     assert.equal(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth), true);
     assert.equal(await dialog.locator('select').count(), 0, 'Categories use the matrix rather than dropdowns');
-    assert.ok(calls.some(call => call.path === '/api/leaderboard' && call.search === '?period=all&perspective=3d'));
-    assert.deepEqual(await page.locator('.ranking-table th').allTextContents(), ['Rank', 'Player', 'Solved', 'Best time']);
-    assert.deepEqual(await dialog.locator('.ranking-table tbody td:last-child').allTextContents(), ['1:05', '2:05', '—']);
+    assert.ok(calls.some(call => call.path === '/api/leaderboard' && call.search === '?period=all&perspective=3d&metric=solved'));
+    assert.deepEqual(await page.locator('.ranking-table th').allTextContents(), ['Rank', 'Player', 'Solved']);
+    assert.deepEqual(await dialog.locator('.ranking-table tbody td:last-child').allTextContents(), ['18', '12', '12']);
     assert.equal(await dialog.locator('[data-ranking-size]').count(), 9);
     const category = dialog.locator('[data-ranking-size="4"][data-ranking-difficulty="medium"]');
     await category.click();
-    await page.waitForFunction(() => document.querySelector('.ranking-personal td:last-child')?.textContent === '0:50');
-    assert.ok(calls.some(call => call.search === '?period=all&perspective=3d&size=4&difficulty=medium'));
+    await page.waitForFunction(() => document.querySelector('.ranking-table tbody td:last-child')?.textContent === '3');
+    assert.ok(calls.some(call => call.search === '?period=all&perspective=3d&metric=solved&size=4&difficulty=medium'));
     assert.equal(await category.getAttribute('aria-pressed'), 'true');
     assert.equal(await dialog.locator('[data-ranking-perspective="3d"]').getAttribute('aria-pressed'), 'true');
     assert.deepEqual(await dialog.locator('[data-ranking-perspective]').allTextContents(), ['3D', 'Flat']);
     assert.doesNotMatch(await dialog.innerText(), /Gentle|Focused|Intricate|All puzzles/);
-    assert.deepEqual(await dialog.locator('.ranking-table tbody td').allTextContents(), ['1', 'Mira', '3', '0:50']);
+    assert.deepEqual(await dialog.locator('.ranking-table tbody td').allTextContents(), ['1', 'Mira', '3']);
     const corners = await dialog.locator('.ranking-table').evaluate(table => ({
       table: getComputedStyle(table).borderTopLeftRadius,
       left: getComputedStyle(table.querySelector('.is-you td:first-child')).borderTopLeftRadius,
@@ -111,9 +111,14 @@ try {
     assert.deepEqual(corners, { table: '12px', left: '12px', right: '12px' });
     await page.waitForTimeout(250); // Let the selected-button color transition finish for the visual check.
     await page.screenshot({ path: `output/web-game/accounts/matrix-${width}.png`, fullPage: true });
+    await dialog.locator('[data-ranking-metric="time"]').click();
+    await page.waitForFunction(() => document.querySelector('.ranking-table tbody td:last-child')?.textContent === '0:50');
+    assert.deepEqual(await dialog.locator('.ranking-table th').allTextContents(), ['Rank', 'Player', 'Best time']);
+    assert.equal(await dialog.locator('.ranking-personal').isHidden(), true, 'Your result appears only once when listed');
+    assert.ok(calls.some(call => call.search === '?period=all&perspective=3d&metric=time&size=4&difficulty=medium'));
     await dialog.locator('[data-ranking-perspective="flat"]').click();
-    await page.waitForFunction(() => document.querySelector('.ranking-personal td:last-child')?.textContent === '0:30');
-    assert.ok(calls.some(call => call.search === '?period=all&perspective=flat&size=4&difficulty=medium'));
+    await page.waitForFunction(() => document.querySelector('.ranking-table tbody td:last-child')?.textContent === '0:30');
+    assert.ok(calls.some(call => call.search === '?period=all&perspective=flat&metric=time&size=4&difficulty=medium'));
     assert.equal(await dialog.locator('[data-ranking-size]:visible').count(), 6);
     assert.equal(await dialog.locator('[data-ranking-size-label="3"]').isHidden(), true);
     assert.equal(await dialog.locator('[data-ranking-size="3"]:enabled').count(), 0);
@@ -125,9 +130,9 @@ try {
     await dialog.locator('[data-ranking-size="3"][data-ranking-difficulty="easy"]').click();
     await dialog.locator('.ranking-table .is-you').waitFor();
     assert.equal(await dialog.locator('[data-ranking-size][aria-pressed="true"]').count(), 1);
-    assert.deepEqual(await dialog.locator('.ranking-personal td').allTextContents(), ['2', 'You', '12', '2:05']);
+    assert.deepEqual(await dialog.locator('.ranking-personal td').allTextContents(), []);
     await dialog.locator('[data-ranking-perspective="flat"]').click();
-    await page.waitForFunction(() => document.querySelector('.ranking-personal td:last-child')?.textContent === '0:30');
+    await page.waitForFunction(() => document.querySelector('.ranking-table tbody td:last-child')?.textContent === '0:30');
     assert.equal(await dialog.locator('[data-ranking-size="4"][data-ranking-difficulty="easy"]').getAttribute('aria-pressed'), 'true');
     assert.equal(calls.some(call => call.path === '/api/leaderboard' && call.search.includes('perspective=flat&size=3')), false);
     await page.locator('#account-button').click();

@@ -16,8 +16,7 @@
 .ranking-grid-table th { font-size: 12px; color: #84768f; font-weight: 400; padding: 12px 8px; }
 .ranking-grid-table td { padding: 14px 8px; border-top: 1px solid #e6dfee; font-size: 14px; overflow-wrap: anywhere; }
 .ranking-rank { width: 60px; }
-.ranking-solved { width: 52px; }
-.ranking-time { width: 72px; }
+.ranking-value { width: 88px; }
 .ranking-grid-table :is(th,td):nth-child(n+3) { text-align: right; font-variant-numeric: tabular-nums; }
 .ranking-grid-table .is-you { color: #69549f; }
 .ranking-grid-table .is-you td { background: #e8e3f2; }
@@ -59,6 +58,9 @@
 .ranking-grid-table td:last-child { white-space: nowrap; }
 
 .ranking-view { display: grid; gap: 12px; margin-top: 12px; }
+.ranking-metrics { display: flex; gap: 3px; padding: 3px; background: #eae6f1; border-radius: 10px; }
+.ranking-metrics button { flex: 1; min-height: 32px; padding: 4px 12px; border-radius: 8px; font-size: 13px; color: #796c8b; }
+.ranking-metrics button[aria-pressed="true"] { background: #faf8ff; color: #66519e; box-shadow: 0 2px 6px #433b5c0a; }
 .ranking-view > :is(.player-caption, .ranking-empty) { margin: 0; }
 .ranking-filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .ranking-filter-heading .player-caption { margin: 0; font-size: 12px; }

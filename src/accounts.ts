@@ -77,7 +77,7 @@ export function forgetRankedTicket(attemptId: string): void {
 }
 
 const difficulties = [['easy', 'Gentle'], ['medium', 'Focused'], ['hard', 'Intricate']] as const;
-const rankingColumns = '<colgroup><col class="ranking-rank"><col><col class="ranking-solved"><col class="ranking-time"></colgroup>';
+const rankingColumns = '<colgroup><col class="ranking-rank"><col><col class="ranking-value"></colgroup>';
 const trophy = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 3h8v6a4 4 0 0 1-8 0V3ZM8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4M12 13v5m-4 3h8m-7-3h6v3H9z"/></svg>';
 const personIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg>';
 export function mountAccounts(beforeOpen: () => void, afterClose: () => void): void {
@@ -92,7 +92,11 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
     document.body.append(popup); return popup;
   };
   const leaderboard = makePopup('leaderboard-popup', 'Leaderboard', `    <div class="ranking-view">
-      <div class="ranking-filter-heading"><p class="player-caption">All-time puzzles solved</p>
+      <div class="ranking-metrics" role="group" aria-label="Ranking">
+        <button type="button" data-ranking-metric="solved" aria-pressed="true">Most solved</button>
+        <button type="button" data-ranking-metric="time" aria-pressed="false">Best time</button>
+      </div>
+      <div class="ranking-filter-heading"><p class="player-caption">All-time</p>
       <div class="ranking-perspectives" role="group" aria-label="Puzzle perspective">
         <button type="button" data-ranking-perspective="3d" aria-pressed="true">${perspectiveIcon('cube')}3D</button>
         <button type="button" data-ranking-perspective="flat" aria-pressed="false">${perspectiveIcon('flat')}Flat</button>
@@ -101,9 +105,9 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
         ${[3, 4, 5].map(size => `<span class="ranking-matrix-size" data-ranking-size-label="${size}">${size} × ${size}</span>${difficulties.map(([difficulty, label], level) => `<button type="button" data-ranking-size="${size}" data-ranking-difficulty="${difficulty}" aria-label="${size} by ${size}, ${label}" title="${size} by ${size}, ${label}" aria-pressed="false">${complexityIcon(level + 1)}</button>`).join('')}`).join('')}
       </div>
       <table class="ranking-personal ranking-grid-table" aria-label="Your ranking" hidden>${rankingColumns}<tbody></tbody></table>
-      <div class="ranking-table-scroll" role="region" aria-label="Top 100 players" tabindex="0"><table class="ranking-table ranking-grid-table">${rankingColumns}<thead><tr><th>Rank</th><th>Player</th><th>Solved</th><th title="Fastest puzzle, from start to verified completion. Includes breaks and hints.">Best time</th></tr></thead><tbody></tbody></table></div>
+      <div class="ranking-table-scroll" role="region" aria-label="Top 100 players" tabindex="0"><table class="ranking-table ranking-grid-table">${rankingColumns}<thead><tr><th>Rank</th><th>Player</th><th class="ranking-value-heading">Solved</th></tr></thead><tbody></tbody></table></div>
       <p class="ranking-empty" hidden>No solves here yet. Make the first connection.</p>
-      <p class="player-caption">Each puzzle counts once per player. Equal totals share a rank. Showing the top 100.</p>
+      <p class="player-caption ranking-explanation">Each puzzle counts once. Equal totals share a rank. Top 100 players.</p>
     </div>
 `);
   const profile = makePopup('profile-popup', 'Your profile', `    <div class="profile-view">
@@ -124,6 +128,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
   const rankingStatus = leaderboard.querySelector<HTMLElement>('.player-status')!;
   let active: PopupName | null = null, revision = 0, profileRevision = 0;
   let rankingPerspective = '3d', rankingSize: number | null = null, rankingDifficulty: string | null = null;
+  let rankingMetric: 'solved' | 'time' = 'solved';
   const updateRankingControls = () => {
     if (rankingPerspective === 'flat' && rankingSize === 3) rankingSize = 4;
     leaderboard.querySelectorAll<HTMLElement>('[data-ranking-size-label]').forEach(label => {
@@ -143,6 +148,22 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
     });
 
   };
+  leaderboard.querySelectorAll<HTMLButtonElement>('[data-ranking-metric]').forEach(button => button.addEventListener('click', () => {
+    rankingMetric = button.dataset.rankingMetric as 'solved' | 'time';
+    // Compare times within one board size and difficulty from the outset.
+    if (rankingMetric === 'time') {
+      rankingSize ??= rankingPerspective === 'flat' ? 4 : 3;
+      rankingDifficulty ??= 'easy';
+    }
+    leaderboard.querySelectorAll<HTMLButtonElement>('[data-ranking-metric]').forEach(item => {
+      item.setAttribute('aria-pressed', String(item.dataset.rankingMetric === rankingMetric));
+    });
+    find('.ranking-value-heading').textContent = rankingMetric === 'time' ? 'Best time' : 'Solved';
+    find('.ranking-explanation').textContent = rankingMetric === 'time'
+      ? 'Fastest completed puzzle. Equal times share a rank. Top 100 players.'
+      : 'Each puzzle counts once. Equal totals share a rank. Top 100 players.';
+    updateRankingControls(); void ranking();
+  }));
   leaderboard.querySelectorAll<HTMLButtonElement>('[data-ranking-perspective]').forEach(button => button.addEventListener('click', () => {
     rankingPerspective = button.dataset.rankingPerspective!;
     updateRankingControls(); void ranking();
@@ -250,7 +271,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
     const version = ++revision; rankingStatus.textContent = 'Loading players…';
     find('.ranking-table').hidden = true; find('.ranking-table-scroll').hidden = true; find('.ranking-empty').hidden = true; find('.ranking-personal').hidden = true;
     try {
-      const params = new URLSearchParams({ period: 'all', perspective: rankingPerspective });
+      const params = new URLSearchParams({ period: 'all', perspective: rankingPerspective, metric: rankingMetric });
       if (rankingSize !== null) params.set('size', String(rankingSize));
       if (rankingDifficulty !== null) params.set('difficulty', rankingDifficulty);
       const result: Ranking = await popupApi(`/api/leaderboard?${params}`);
@@ -259,7 +280,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
       for (const entry of result.entries) {
         const tr = document.createElement('tr');
         if (entry.id === player?.id) { tr.className = 'is-you'; tr.setAttribute('aria-label', 'Your ranking'); }
-        for (const value of [entry.rank, entry.nickname, entry.solved, formatBestTime(entry.bestTimeMs)]) {
+        for (const value of [entry.rank, entry.nickname, rankingMetric === 'time' ? formatBestTime(entry.bestTimeMs) : entry.solved]) {
           const td = document.createElement('td'); td.textContent = String(value); tr.append(td);
         }
         const profileUrl = normalizeProfileLink(entry.profileUrl);
@@ -276,12 +297,16 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
       find('.ranking-table-scroll').hidden = !result.entries.length;
       find('.ranking-table-scroll').scrollTop = 0;
       find('.ranking-empty').hidden = !!result.entries.length;
-      const personal = find('.ranking-personal'); personal.hidden = !result.me;
-      if (result.me) {
-        personal.setAttribute('aria-label', `Your ranking: Rank ${result.me.rank?.toLocaleString() ?? 'unranked'}, ${result.me.solved.toLocaleString()} solved, best time ${formatBestTime(result.me.bestTimeMs)}`);
+      find('.ranking-empty').textContent = rankingMetric === 'time' ? 'No timed solves here yet.' : 'No solves here yet. Make the first connection.';
+      const personal = find('.ranking-personal');
+      personal.hidden = !result.me?.rank || result.entries.some(entry => entry.id === player?.id);
+      personal.querySelector('tbody')!.replaceChildren();
+      if (result.me && !personal.hidden) {
+        const value = rankingMetric === 'time' ? formatBestTime(result.me.bestTimeMs) : result.me.solved.toLocaleString();
+        personal.setAttribute('aria-label', `Your ranking: Rank ${result.me.rank?.toLocaleString()}, ${rankingMetric === 'time' ? 'best time' : 'solved'} ${value}`);
         const row = document.createElement('tr'); row.className = 'is-you';
-        for (const value of [result.me.rank?.toLocaleString() ?? '—', 'You', result.me.solved.toLocaleString(), formatBestTime(result.me.bestTimeMs)]) {
-          const cell = document.createElement('td'); cell.textContent = value; row.append(cell);
+        for (const text of [result.me.rank?.toLocaleString() ?? '—', 'You', value]) {
+          const cell = document.createElement('td'); cell.textContent = text; row.append(cell);
         }
         personal.querySelector('tbody')!.replaceChildren(row);
       }
