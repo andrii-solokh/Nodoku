@@ -195,11 +195,10 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
           } finally { signingIn = false; }
         },
       });
-      if (!googleButton.childElementCount || signInButtonWidth !== width) {
-        googleButton.replaceChildren();
-        identity.renderButton(googleButton, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width });
-        signInButtonWidth = width;
-      }
+      // A new challenge needs a widget configured with its fresh nonce.
+      googleButton.replaceChildren();
+      identity.renderButton(googleButton, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width });
+      signInButtonWidth = width;
       googleButton.style.visibility = '';
       googleButton.inert = false;
       signInRetry.hidden = true;

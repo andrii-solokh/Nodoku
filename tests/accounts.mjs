@@ -199,6 +199,7 @@ try {
     ]);
     await page.waitForFunction(() => !document.querySelector('.player-google-button').inert);
     assert.equal(calls.filter(call => call.path === '/api/auth/challenge').length, challengeCount + 1, 'Expired challenges are refreshed before reuse');
+    assert.equal(await page.evaluate(() => window.googleRenderCount), renderCount + 1, 'The refreshed widget receives the new challenge configuration');
     await page.evaluate(() => { Date.now = window.originalNow; });
     // Sign-in helpers can mount outside our popup and take focus without a click.
     await page.evaluate(() => {
