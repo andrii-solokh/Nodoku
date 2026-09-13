@@ -158,7 +158,8 @@ export function mountCompletionShare(host: HTMLElement, onShare?: (channel: Shar
         instagram: "https://www.instagram.com/",
         tiktok: "https://www.tiktok.com/",
         whatsapp: `https://wa.me/?${new URLSearchParams({ text: payload.message })}`,
-        telegram: `https://t.me/share/url?${new URLSearchParams({ url: payload.url, text: payload.text })}`,
+        // Telegram’s app handoff preserves form-encoded + signs instead of spaces.
+        telegram: `https://t.me/share/url?url=${encodeURIComponent(payload.url)}&text=${encodeURIComponent(payload.text)}`,
       };
       for (const [network, url] of Object.entries(links))
         host.querySelector<HTMLAnchorElement>(`[data-network="${network}"]`)!.href = url;
