@@ -26,7 +26,7 @@ For ordinary development, `npm run dev` serves the game and the local server ada
 ```sh
 npm ci
 npm run build
-npx wrangler d1 execute nodoku --local --file server/schema.sql
+npm run db:migrate:local
 ```
 
 Create a local `.dev.vars` file in the project root. Set `APP_ORIGIN` to the origin you actually open; for the Pages command below it is `http://localhost:8788`. Add your Stripe sandbox secret key as `STRIPE_SECRET_KEY`. Use `.env.local` instead when desired for the Vite development adapter. Keep credentials out of Git and out of `VITE_*` variables, which are exposed in frontend bundles.
@@ -77,10 +77,10 @@ Replace the empty top-level `vars` object in `wrangler.jsonc` with `APP_ORIGIN` 
 Apply the schema explicitly to the remote database:
 
 ```sh
-npx wrangler d1 execute nodoku --remote --file server/schema.sql
+npm run db:migrate:production
 ```
 
-The project currently ships a schema file rather than numbered D1 migrations. `CREATE TABLE IF NOT EXISTS` supports initial setup; future schema changes require their own migration plan. Do not assume re-running this file upgrades existing columns. Cloudflare documents [D1 creation and SQL execution](https://developers.cloudflare.com/workers/wrangler/commands/d1/).
+The project uses [numbered D1 migrations and CI/CD](migrations.md). Use `npm run db:migrate:production` for production upgrades; `server/schema.sql` is the current schema reference. Do not assume re-running the reference file upgrades existing columns. Cloudflare documents [D1 creation and SQL execution](https://developers.cloudflare.com/workers/wrangler/commands/d1/).
 
 In Stripe's live environment, register an HTTPS webhook destination at your actual origin followed by `/api/stripe-webhook`, selecting the two events above. Store the live secret key and that destination's signing secret using prompted input:
 

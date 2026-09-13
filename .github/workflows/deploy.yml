@@ -1,0 +1,106 @@
+name: Validate and deploy Nodoku
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Keep production releases serial; never interrupt an in-flight migration/deploy.
+concurrency:
+  group: nodoku-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER_SEND_METRICS: 'false'
+
+jobs:
+  validate:
+    name: Tests, build and migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Keep published migrations immutable
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]]; then
+            changed=$(git diff --name-only --diff-filter=DMRT "$BASE_SHA" HEAD -- server/migrations/)
+            if [[ -n "$changed" ]]; then
+              echo '::error::Existing migrations cannot be changed or removed. Add a new numbered SQL file.'
+              printf '%s\n' "$changed"
+              exit 1
+            fi
+          fi
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:migrations:d1
+      - run: npm run build
+      - name: Compile Pages Functions
+        run: npx wrangler pages functions build --outdir "$RUNNER_TEMP/nodoku-functions"
+
+  deploy:
+    name: Migrate and deploy production
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://nodoku.solokh.com
+    env:
+      CLOUDFLARE_ACCOUNT_ID: '480aa6ac5a5c120159e4252a0c33f936'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Verify deployment credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [[ -z "$CLOUDFLARE_API_TOKEN" ]]; then
+            echo '::error::Add CLOUDFLARE_API_TOKEN with D1 Edit and Cloudflare Pages Edit permissions to GitHub Actions secrets.'
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm run build
+      - name: Compile before changing the database
+        run: npx wrangler pages functions build --outdir "$RUNNER_TEMP/nodoku-functions"
+      - name: Refuse a superseded release
+        run: |
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || {
+            echo '::error::Main has advanced. Deploy the newer workflow run instead.'
+            exit 1
+          }
+      - name: Record database recovery point
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          npx wrangler d1 time-travel info nodoku --json > "$RUNNER_TEMP/d1-recovery.json"
+          bookmark=$(jq -er '.bookmark' "$RUNNER_TEMP/d1-recovery.json")
+          printf 'D1 recovery bookmark before migration: %s\n' "$bookmark" >> "$GITHUB_STEP_SUMMARY"
+      - name: Apply pending production migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run db:migrate:production
+      - name: Deploy tested app and Functions
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler pages deploy dist --project-name nodoku --branch main --commit-hash "$GITHUB_SHA"
+      - name: Check live site and database
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors https://nodoku.solokh.com/ --output /dev/null
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors https://nodoku.solokh.com/api/visitors --output /dev/null
