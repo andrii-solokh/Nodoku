@@ -11,18 +11,18 @@
 .player-caption, .ranking-empty, .player-status { color: #7d718e; font-size: 13px; line-height: 1.6; }
 .player-profile > label { display: grid; gap: 8px; font-size: 13px; color: #796c8b; }
 .player-popup input[type="text"], .player-profile input[name="nickname"] { width: 100%; min-width: 0; height: 44px; min-height: 44px; appearance: none; border: 1px solid #dcd4e9; background: #fffaff; border-radius: 10px; padding: 10px; color: #302b48; font: inherit; }
-.ranking-personal { background: #e6dfef; border-radius: 12px; padding: 14px; font-size: 14px; }
-.ranking-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; border-radius: 12px; overflow: hidden; background: #f2eff7; }
-.ranking-table th { font-size: 12px; color: #84768f; font-weight: 400; padding: 12px 8px; }
-.ranking-table td { padding: 14px 8px; border-top: 1px solid #e6dfee; font-size: 14px; overflow-wrap: anywhere; }
-.ranking-table th:first-child { width: 44px; }
-.ranking-table th:nth-child(3) { width: 56px; }
-.ranking-table th:last-child { width: 84px; }
-.ranking-table :is(th,td):nth-child(n+3) { text-align: right; font-variant-numeric: tabular-nums; }
-.ranking-table .is-you { color: #69549f; }
-.ranking-table .is-you td { background: #e8e3f2; }
-.ranking-table .is-you td:first-child { border-radius: 12px 0 0 12px; }
-.ranking-table .is-you td:last-child { border-radius: 0 12px 12px 0; }
+.ranking-personal { margin: 14px 0; }
+.ranking-grid-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; border-radius: 12px; background: #f2eff7; }
+.ranking-grid-table th { font-size: 12px; color: #84768f; font-weight: 400; padding: 12px 8px; }
+.ranking-grid-table td { padding: 14px 8px; border-top: 1px solid #e6dfee; font-size: 14px; overflow-wrap: anywhere; }
+.ranking-rank { width: 60px; }
+.ranking-solved { width: 52px; }
+.ranking-time { width: 72px; }
+.ranking-grid-table :is(th,td):nth-child(n+3) { text-align: right; font-variant-numeric: tabular-nums; }
+.ranking-grid-table .is-you { color: #69549f; }
+.ranking-grid-table .is-you td { background: #e8e3f2; }
+.ranking-grid-table .is-you td:first-child { border-radius: 12px 0 0 12px; }
+.ranking-grid-table .is-you td:last-child { border-radius: 0 12px 12px 0; }
 .player-guest { text-align: center; line-height: 1.6; padding: 12px 0; }
 .player-signin { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 12px; margin: 20px 0 12px; border: 1px solid #747775; border-radius: 24px; background: #fff; color: #1f1f1f; font-size: 14px; font-weight: 500; text-decoration: none; }
 .player-signin img { flex: none; width: 20px; height: 20px; }
@@ -39,7 +39,7 @@
 
 @media (max-width: 760px) {
   .has-player-accounts .home .brand-name { display: none; }
-  .has-player-accounts .home .audience-rotating { width: 80px; }
+  .has-player-accounts .home .audience-rotating { width: 88px; }
   .has-player-accounts .playing .game-header-info { left: 96px; }
 }
 
@@ -54,13 +54,36 @@
 .player-logout svg { width: 20px; height: 20px; }
 
 #leaderboard-popup { width: min(420px, calc(100vw - 24px)); }
-.ranking-table td:last-child { white-space: nowrap; }
+.ranking-grid-table td:last-child { white-space: nowrap; }
 
-.ranking-perspectives { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: #eae6f1; }
-.ranking-perspectives button { flex: 1; min-height: 40px; border-radius: 9px; color: #796c8b; font-size: 13px; }
+.ranking-filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0; }
+.ranking-filter-heading .player-caption { margin: 0; font-size: 12px; }
+.ranking-perspectives { display: flex; flex: 0 0 128px; gap: 2px; padding: 2px; border-radius: 9px; background: #eae6f1; }
+.ranking-perspectives button { display: flex; align-items: center; justify-content: center; gap: 4px; flex: 1; min-height: 28px; padding: 0 8px; border-radius: 7px; color: #796c8b; font-size: 12px; }
 .ranking-perspectives button[aria-pressed="true"] { background: #faf8ff; color: #66519e; box-shadow: 0 2px 6px #433b5c0a; }
-.ranking-matrix { display: grid; grid-template-columns: 48px repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 14px; align-items: center; }
+.ranking-matrix { display: grid; grid-template-columns: 40px repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 8px; align-items: center; }
 .ranking-matrix-size { font-size: 12px; color: #796c8b; }
-.ranking-matrix button { display: flex; justify-content: center; align-items: center; min-height: 44px; min-width: 0; border: 1px solid #e3dcec; border-radius: 10px; color: #9286a5; background: #f3f0f8; }
+.ranking-matrix button { display: flex; justify-content: center; align-items: center; height: 30px; min-height: 30px; min-width: 0; padding: 0; border: 1px solid #e3dcec; border-radius: 7px; color: #9286a5; background: #f3f0f8; }
 .ranking-matrix button:hover { background: #eae4f3; }
 .ranking-matrix button[aria-pressed="true"] { background: #ded5ef; border-color: #9580c6; color: #69549f; }
+
+.profile-link-note { font-size: 11px; color: #8b7e99; }
+.ranking-player-link { color: inherit; text-decoration: underline; text-decoration-color: #b7aacc; text-underline-offset: 3px; }
+.ranking-player-link:hover { color: #69549f; text-decoration-color: currentColor; }
+
+.ranking-grid-table :is(th,td):is(:first-child,:nth-child(3)) { text-align: center; }
+.ranking-table-scroll { max-height: clamp(144px, 36vh, 320px); overflow: auto; overscroll-behavior: contain; border-radius: 12px; }
+.ranking-grid-table th { position: sticky; top: 0; z-index: 1; background: #f2eff7; }
+
+.ranking-matrix .complexity-icon { width: 32px; height: 16px; }
+.ranking-matrix button:focus-visible, .ranking-perspectives button:focus-visible { outline-width: 2px; outline-offset: 1px; }
+
+.ranking-grid-table td:first-child { white-space: nowrap; }
+.ranking-personal td { border-top: 0; }
+.ranking-table-scroll, #leaderboard-popup { scrollbar-width: thin; scrollbar-color: #b6a7ce #efebf5; }
+.ranking-table-scroll::-webkit-scrollbar, #leaderboard-popup::-webkit-scrollbar { width: 6px; height: 6px; }
+.ranking-table-scroll::-webkit-scrollbar-track, #leaderboard-popup::-webkit-scrollbar-track { background: #efebf5; border-radius: 12px; }
+.ranking-table-scroll::-webkit-scrollbar-thumb, #leaderboard-popup::-webkit-scrollbar-thumb { background: #b6a7ce; border-radius: 12px; border: 1px solid #efebf5; }
+.ranking-table-scroll::-webkit-scrollbar-thumb:hover, #leaderboard-popup::-webkit-scrollbar-thumb:hover { background: #9580b9; }
+
+.ranking-perspectives svg { width: 14px; height: 14px; flex: none; }

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Leaderboard preview · Nodoku</title></head>
+<body>
+  <header class="preview-header"><strong>nodoku</strong><div class="header-actions"></div></header>
+  <main class="preview-options">
+    <p>Leaderboard preview · Sample players</p>
+    <label>Your position <select id="preview-rank"><option value="1">1</option><option value="100">100</option><option value="10001">10,001</option></select></label>
+    <p>100 entries. Select a position to compare.</p>
+  </main>
+  <script type="module">
+    import '@fontsource/outfit/400.css';
+    import '@fontsource/outfit/500.css';
+    import '@fontsource/outfit/600.css';
+    import '/src/style.css';
+    import { mountAccounts } from '/src/accounts.ts';
+    const rank = [1, 100, 10001].includes(Number(new URL(location.href).searchParams.get('rank'))) ? Number(new URL(location.href).searchParams.get('rank')) : 10001;
+    const select = document.querySelector('#preview-rank'); select.value = String(rank);
+    select.addEventListener('change', () => { const url = new URL(location.href); url.searchParams.set('rank', select.value); location.href = url.href; });
+    const player = { id: 'preview-you', nickname: 'You' };
+    const first = ['Alex', 'Mira', 'Juniper', 'Noah', 'Sofia', 'Kai', 'Amara', 'Leo', 'Yuki', 'Sam'];
+    const last = ['Chen', 'Rivera', 'Park', 'Reed', 'Novak', 'Silva', 'Morgan', 'Kim', 'Patel', 'Anders'];
+    const entries = Array.from({length:100}, (_, index) => ({
+      id: rank === index + 1 ? player.id : `sample-${index}`,
+      nickname: rank === index + 1 ? 'You' : `${first[index % 10]} ${last[Math.floor(index / 10)]}`,
+      rank: index + 1, solved: 500 - index * 3, bestTimeMs: 28000 + (index * 1793) % 150000,
+    }));
+    const me = { rank, solved: rank <= 100 ? entries[rank - 1].solved : 2, bestTimeMs: rank <= 100 ? entries[rank - 1].bestTimeMs : 135000 };
+    // All requests on this isolated fixture stay in-memory; no accounts or scores are written.
+    window.fetch = async (input, options) => {
+      const path = new URL(String(input), location.href).pathname;
+      if (path === '/api/auth/config') return Response.json({ enabled: true, clientId: 'preview' });
+      if (path === '/api/auth/me') return Response.json({ player });
+      if (path === '/api/leaderboard') return Response.json({ entries, me });
+      if (path === '/api/auth/profile') { Object.assign(player, JSON.parse(options.body)); return Response.json({ player }); }
+      return Response.json({ error: 'This is a sample-data preview.' }, { status: 400 });
+    };
+    mountAccounts(() => {}, () => {});
+    const timer = setInterval(() => { const button = document.querySelector('#leaderboard-button'); if (button && !button.closest('[hidden]')) { clearInterval(timer); button.click(); } }, 20);
+  </script>
+  <style>
+    .preview-header { display:flex;align-items:center;justify-content:space-between;padding:20px 24px; }
+    .preview-header strong { font-size:24px;letter-spacing:-1px; }
+    .preview-header .header-actions { display:flex;gap:12px; }
+    .preview-options { padding:24px;max-width:380px;color:#796c8b; }
+    .preview-options select { padding:8px;border:1px solid #dcd4e9;border-radius:10px;background:#f9f8fc;color:#302b48;font:inherit; }
+    @media(max-width:600px) { .preview-options { padding:8px 16px; } }
+  </style>
+</body>
+</html>

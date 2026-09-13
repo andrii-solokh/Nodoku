@@ -253,3 +253,62 @@ test('historical completions remain untimed until a new timed replay', async t =
   result = await store.accounts.leaderboard(filter, user.id);
   assert.deepEqual(result.me, { solved: 1, rank: 1, bestTimeMs: 30000 });
 });
+
+test('optional profile links normalize, persist, publish, and clear without changing ranks', async t => {
+  const store = new LocalStore(':memory:'); t.after(() => store.close());
+  const token = randomToken(), hash = await tokenHash(token);
+  const person = await store.accounts.signIn('linked-player', hash, Date.now(), 'Mira');
+  const cookie = `__Host-nodoku_session=${token}`;
+  const save = (profileUrl: unknown) => handleApi(req('/api/auth/profile', { nickname: 'Mira', profileUrl }, cookie), env, store);
+  assert.equal((await save('github.com/mira')).status, 200);
+  assert.equal((await store.accounts.current(hash))?.profileUrl, 'https://github.com/mira');
+  const returning = await store.accounts.signIn('linked-player', 'other-session', Date.now(), 'Google Name');
+  assert.equal(returning.profileUrl, 'https://github.com/mira', 'Google login preserves the custom website');
+  await handleApi(req('/api/auth/profile', { nickname: 'Mira Nova' }, cookie), env, store);
+  assert.equal((await store.accounts.current(hash))?.profileUrl, 'https://github.com/mira', 'Older clients preserve an omitted link');
+  for (const invalid of ['javascript:alert(1)', 'data:text/html,test', 'ftp://example.com', 'https://user:pass@example.com', 'not a link', 'https://example.com/\npath', 'https://example.com/' + 'a'.repeat(2048), null, 42]) {
+    assert.equal((await save(invalid)).status, 400);
+    assert.equal((await store.accounts.current(hash))?.profileUrl, 'https://github.com/mira');
+  }
+  for (const [input, expected] of [
+    [' x.com/mira ', 'https://x.com/mira'],
+    ['https://www.linkedin.com/in/mira/', 'https://www.linkedin.com/in/mira/'],
+    ['https://example.org/about?from=nodoku#me', 'https://example.org/about?from=nodoku#me'],
+    ['http://example.org', 'http://example.org/'],
+  ]) {
+    const response = await save(input); assert.equal(response.status, 200);
+    assert.equal((await response.json()).player.profileUrl, expected);
+  }
+  const attempt = randomToken();
+  await store.accounts.issueAttempt(person.id, attempt, settings);
+  await store.accounts.completeAttempt(attempt, settings);
+  const rankings = async () => (await (await handleApi(req('/api/leaderboard'), env, store)).json()).entries;
+  const entries = await rankings();
+  assert.equal(entries[0].profileUrl, 'http://example.org/');
+  assert.equal(entries[0].solved, 1); assert.equal(entries[0].rank, 1);
+  assert.equal((await save('   ')).status, 200);
+  assert.equal((await store.accounts.current(hash))?.profileUrl, undefined);
+  assert.equal((await rankings())[0].profileUrl, undefined);
+  assert.equal((await save('https://github.com/mira')).status, 200);
+  await store.accounts.remove(person.id);
+  assert.equal((await store.accounts.signIn('linked-player', 'new-session')).profileUrl, undefined);
+});
+
+test('personal rank remains available at 10001 while only the top 100 are returned', async t => {
+  const directory = mkdtempSync(join(tmpdir(), 'nodoku-large-ranking-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const file = join(directory, 'accounts.sqlite');
+  const store = new LocalStore(file); t.after(() => store.close());
+  const db = new DatabaseSync(file);
+  db.exec(`
+    WITH RECURSIVE numbers(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM numbers WHERE n < 10001)
+    INSERT INTO players (id, google_sub, nickname, created_at) SELECT 'player-' || n, 'google-' || n, 'Player ' || n, 1 FROM numbers;
+    INSERT INTO ranked_completions (player_id,size,depth,difficulty,seed,completed_at) SELECT id,4,1,'easy',1,1 FROM players;
+    INSERT INTO ranked_completions (player_id,size,depth,difficulty,seed,completed_at) SELECT id,4,1,'easy',2,2 FROM players WHERE id != 'player-10001';
+  `);
+  db.close();
+  const ranking = await store.accounts.leaderboard({ period: 'all', perspective: 'flat', size: 4, difficulty: 'easy' }, 'player-10001');
+  assert.equal(ranking.entries.length, 100);
+  assert.equal(ranking.entries.some(entry => entry.id === 'player-10001'), false);
+  assert.deepEqual(ranking.me, { rank: 10001, solved: 1, bestTimeMs: null });
+});

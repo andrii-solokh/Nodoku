@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import type { Store } from './store.js';
+import { normalizeProfileLink } from '../src/profile-link.js';
 import { Puzzle } from '../src/puzzle.js';
 import type { Player, RankingFilter } from './accounts-store.js';
 
@@ -137,8 +138,10 @@ export async function handleAccountsApi(request: Request, env: Record<string, st
       if (typeof value.nickname !== 'string') throw new ErrorResponse(400, 'Choose a nickname.');
       const nickname = value.nickname.normalize('NFKC').trim();
       if (!/^[\p{L}\p{M}\p{N} _.'-]{1,24}$/u.test(nickname) || !/[\p{L}\p{N}]/u.test(nickname)) throw new ErrorResponse(400, 'Use 1–24 letters, numbers, spaces, or simple punctuation.');
-      await accounts.profile(player.id, nickname);
-      return json({ player: { ...player, nickname } });
+      const profileUrl = value.profileUrl === undefined ? undefined : normalizeProfileLink(value.profileUrl);
+      if (profileUrl === null) throw new ErrorResponse(400, 'Enter a valid website link, such as x.com/yourname.');
+      await accounts.profile(player.id, nickname, profileUrl);
+      return json({ player: { ...player, nickname, ...(profileUrl === undefined ? {} : { profileUrl }) } });
     }
     if (path === '/api/auth/delete') {
       const value = await body(request);
