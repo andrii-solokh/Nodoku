@@ -1,11 +1,13 @@
+import { perspectiveIcon } from './perspective-icons';
+import { normalizeProfileLink } from './profile-link';
 import type { Puzzle } from './puzzle';
 import { timeoutSignal } from './timeout';
 import './accounts.css';
 import { complexityIcon } from './complexity-icon';
 import { loadGoogleIdentity } from './google-signin';
 
-type Player = { id: string; nickname: string; avatarUrl?: string };
-type Ranking = { entries: { id: string; nickname: string; solved: number; rank: number; bestTimeMs: number | null }[]; me: { solved: number; rank: number | null; bestTimeMs: number | null } | null };
+type Player = { id: string; nickname: string; avatarUrl?: string; profileUrl?: string };
+type Ranking = { entries: { id: string; nickname: string; profileUrl?: string; solved: number; rank: number; bestTimeMs: number | null }[]; me: { solved: number; rank: number | null; bestTimeMs: number | null } | null };
 function formatBestTime(ms: number | null | undefined): string {
   if (ms == null || !Number.isFinite(ms) || ms < 0) return '—';
   if (ms < 1000) return '<1s';
@@ -75,6 +77,7 @@ export function forgetRankedTicket(attemptId: string): void {
 }
 
 const difficulties = [['easy', 'Gentle'], ['medium', 'Focused'], ['hard', 'Intricate']] as const;
+const rankingColumns = '<colgroup><col class="ranking-rank"><col><col class="ranking-solved"><col class="ranking-time"></colgroup>';
 const trophy = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 3h8v6a4 4 0 0 1-8 0V3ZM8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4M12 13v5m-4 3h8m-7-3h6v3H9z"/></svg>';
 const personIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg>';
 export function mountAccounts(beforeOpen: () => void, afterClose: () => void): void {
@@ -89,16 +92,16 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
     document.body.append(popup); return popup;
   };
   const leaderboard = makePopup('leaderboard-popup', 'Leaderboard', `    <div class="ranking-view">
-      <p class="player-caption">All-time puzzles solved</p>
+      <div class="ranking-filter-heading"><p class="player-caption">All-time puzzles solved</p>
       <div class="ranking-perspectives" role="group" aria-label="Puzzle perspective">
-        <button type="button" data-ranking-perspective="3d" aria-pressed="true">3D</button>
-        <button type="button" data-ranking-perspective="flat" aria-pressed="false">Flat</button>
-      </div>
+        <button type="button" data-ranking-perspective="3d" aria-pressed="true">${perspectiveIcon('cube')}3D</button>
+        <button type="button" data-ranking-perspective="flat" aria-pressed="false">${perspectiveIcon('flat')}Flat</button>
+      </div></div>
       <div class="ranking-matrix" role="group" aria-label="Grid size and complexity">
         ${[3, 4, 5].map(size => `<span class="ranking-matrix-size" data-ranking-size-label="${size}">${size} × ${size}</span>${difficulties.map(([difficulty, label], level) => `<button type="button" data-ranking-size="${size}" data-ranking-difficulty="${difficulty}" aria-label="${size} by ${size}, ${label}" title="${size} by ${size}, ${label}" aria-pressed="false">${complexityIcon(level + 1)}</button>`).join('')}`).join('')}
       </div>
-      <p class="ranking-personal" hidden></p>
-      <table class="ranking-table"><thead><tr><th>Rank</th><th>Player</th><th>Solved</th><th title="Fastest puzzle, from start to verified completion. Includes breaks and hints.">Best time</th></tr></thead><tbody></tbody></table>
+      <table class="ranking-personal ranking-grid-table" aria-label="Your ranking" hidden>${rankingColumns}<tbody></tbody></table>
+      <div class="ranking-table-scroll" role="region" aria-label="Top 100 players" tabindex="0"><table class="ranking-table ranking-grid-table">${rankingColumns}<thead><tr><th>Rank</th><th>Player</th><th>Solved</th><th title="Fastest puzzle, from start to verified completion. Includes breaks and hints.">Best time</th></tr></thead><tbody></tbody></table></div>
       <p class="ranking-empty" hidden>No solves here yet. Make the first connection.</p>
       <p class="player-caption">Each puzzle counts once per player. Equal totals share a rank. Showing the top 100.</p>
     </div>
@@ -106,6 +109,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
   const profile = makePopup('profile-popup', 'Your profile', `    <div class="profile-view">
       <div class="player-guest"><p>Keep your achievements across devices and join the leaderboard.</p><div class="player-google-button"></div><button type="button" class="player-signin" disabled><img src="/google-g.png" width="20" height="20" alt=""><span>Loading Google…</span></button><p class="player-caption">You can always play as a guest.</p></div>
       <form class="player-profile" hidden><label>Public nickname<input name="nickname" minlength="1" maxlength="24" required autocomplete="nickname"></label>
+        <label>Link (optional)<input type="text" name="profileUrl" inputmode="url" maxlength="2048" autocomplete="url" autocapitalize="none" spellcheck="false" placeholder="x.com/yourname" aria-describedby="profile-link-note"><span id="profile-link-note" class="profile-link-note">Shown on the leaderboard</span></label>
         <div class="player-profile-actions">
           <button class="start-button" type="submit">Save</button>
           <button class="icon-button player-logout" type="button" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M16 8l4 4-4 4M8 12h12"/></svg></button>
@@ -217,30 +221,48 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
     }
     if (player) {
       find<HTMLInputElement>('[name="nickname"]').value = player.nickname;
+      find<HTMLInputElement>('[name="profileUrl"]').value = player.profileUrl ?? '';
     }
   };
   async function ranking() {
     const version = ++revision; rankingStatus.textContent = 'Loading players…';
-    find('.ranking-table').hidden = true; find('.ranking-empty').hidden = true; find('.ranking-personal').hidden = true;
+    find('.ranking-table').hidden = true; find('.ranking-table-scroll').hidden = true; find('.ranking-empty').hidden = true; find('.ranking-personal').hidden = true;
     try {
       const params = new URLSearchParams({ period: 'all', perspective: rankingPerspective });
       if (rankingSize !== null) params.set('size', String(rankingSize));
       if (rankingDifficulty !== null) params.set('difficulty', rankingDifficulty);
       const result: Ranking = await popupApi(`/api/leaderboard?${params}`);
       if (revision !== version) return;
-      const rows = find('tbody'); rows.replaceChildren();
+      const rows = find('.ranking-table tbody'); rows.replaceChildren();
       for (const entry of result.entries) {
         const tr = document.createElement('tr');
         if (entry.id === player?.id) { tr.className = 'is-you'; tr.setAttribute('aria-label', 'Your ranking'); }
         for (const value of [entry.rank, entry.nickname, entry.solved, formatBestTime(entry.bestTimeMs)]) {
           const td = document.createElement('td'); td.textContent = String(value); tr.append(td);
         }
+        const profileUrl = normalizeProfileLink(entry.profileUrl);
+        if (profileUrl) {
+          const link = document.createElement('a');
+          link.className = 'ranking-player-link'; link.href = profileUrl; link.textContent = entry.nickname;
+          link.target = '_blank'; link.rel = 'noopener noreferrer nofollow ugc';
+          link.setAttribute('aria-label', `${entry.nickname} — ${new URL(profileUrl).hostname} (opens in a new tab)`);
+          tr.children[1].replaceChildren(link);
+        }
         rows.append(tr);
       }
       find('.ranking-table').hidden = !result.entries.length;
+      find('.ranking-table-scroll').hidden = !result.entries.length;
+      find('.ranking-table-scroll').scrollTop = 0;
       find('.ranking-empty').hidden = !!result.entries.length;
       const personal = find('.ranking-personal'); personal.hidden = !result.me;
-      if (result.me) personal.textContent = `You · ${result.me.solved} solved${result.me.rank ? ` · Rank ${result.me.rank}` : ''}${result.me.bestTimeMs != null ? ` · Best ${formatBestTime(result.me.bestTimeMs)}` : ''}`;
+      if (result.me) {
+        personal.setAttribute('aria-label', `Your ranking: Rank ${result.me.rank?.toLocaleString() ?? 'unranked'}, ${result.me.solved.toLocaleString()} solved, best time ${formatBestTime(result.me.bestTimeMs)}`);
+        const row = document.createElement('tr'); row.className = 'is-you';
+        for (const value of [result.me.rank?.toLocaleString() ?? '—', 'You', result.me.solved.toLocaleString(), formatBestTime(result.me.bestTimeMs)]) {
+          const cell = document.createElement('td'); cell.textContent = value; row.append(cell);
+        }
+        personal.querySelector('tbody')!.replaceChildren(row);
+      }
       rankingStatus.textContent = '';
     } catch (error) { if (revision === version) rankingStatus.textContent = (error as Error).message; }
   }
@@ -298,7 +320,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
   find('form').addEventListener('submit', event => {
     event.preventDefault();
     void action(async () => {
-      const result = await api('/api/auth/profile', { nickname: find<HTMLInputElement>('[name="nickname"]').value });
+      const result = await api('/api/auth/profile', { nickname: find<HTMLInputElement>('[name="nickname"]').value, profileUrl: find<HTMLInputElement>('[name="profileUrl"]').value });
       player = result.player; updateProfile(); status.textContent = 'Profile saved.';
     });
   });

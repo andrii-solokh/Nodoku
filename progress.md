@@ -2152,6 +2152,7 @@ TODO / Note
 - Added `docs/story-script.md`: a complete, implementation-neutral 15-relay story arc for Nodoku. It introduces Nia, the Curator, and the Static; gives every relay a start card, completion fragment, next hook, and small archive/audio reveal; and ends cleanly at relay 15.
 - Optional post-ending Echoes are explicitly non-punitive. No game behavior, production configuration, or implementation files were changed.
 - Revised the visual direction after reviewing the current home board: story is expressed only through Nodoku-like node arrangements, connection pulses, rings, mirrored patterns, and the existing pale studio palette. Generated images are preview-only; no artwork was added to the project.
+- Drafted a 15-level progression for the Signal Archive story: every level now has board direction, puzzle purpose, square-character beat, completion reveal, and a player-facing hook. It distinguishes current mechanics from later prototype mechanics; no gameplay code was changed.
 
 ## Leaderboard category matrix and rounded table (2026-09-13)
 - Added a 3×3 grid-size/complexity selector using the same extracted complexity SVG helper as the home configurator. 3D/Flat controls select perspective; All puzzles resets categories. Every selection requests matching all-time ranks, solve counts and best times from the existing API filters.
@@ -2165,3 +2166,31 @@ TODO / Note
 ## Flat leaderboard sizes (2026-09-13)
 - Matched the configurator: Flat hides/disables the 3×3 matrix row, showing only 4×4 and 5×5. Switching from selected 3D size 3 to Flat selects size 4 with the same difficulty, so no unavailable Flat category is requested.
 - Build and WebKit UI checks at 320/1440px pass, including visible rows, switching perspectives, selection fallback and request filters. Local preview rebuilt.
+
+## Optional public profile link (2026-09-13)
+- Added one optional Link field to profiles. Bare domains gain HTTPS; HTTP/HTTPS links are normalized, unsafe schemes and URL credentials rejected, and an empty field removes the saved link. Google sign-in and older nickname-only saves preserve it.
+- Additive player_links table stores the URL separately. Account reads and public leaderboard entries include it; linked nicknames open a new tab with noopener/noreferrer. Client-side validation also prevents unsafe API values from becoming links. Account deletion removes the link.
+- Build, nine account tests and desktop/mobile WebKit account checks pass. Verified persistence, normalization, rejection, clearing, unchanged ranks, and safe rendering; inspected 320px profile screenshot. Restarted local preview and verified account config/leaderboard APIs return 200. Apply the additive schema before production deployment; no commit/deploy performed.
+
+## Large leaderboard preview and number alignment (2026-09-13)
+- Centered Rank and Solved headers/values. Added a bounded scroll area with sticky column headings, leaving the personal summary above the top 100; formatted large personal rank/count values with separators.
+- Added isolated Vite fixture tests/fixtures/leaderboard-preview.html with 100 sample entries and selectable personal rank 1/100/10,001. All fixture requests remain in memory; real scores and profiles are untouched. Requested opening the rank-10,001 preview in Codex and provided navigable preview URLs.
+- Build, ten account tests (including an actual 10,001-player SQLite case), fixture checks at 1440/390/320px, and existing account UI checks at 1440/320 pass. Inspected sticky headings and rank summary after scrolling to row 100. Local preview rebuilt; no commit/deploy.
+
+## Compact leaderboard filters (2026-09-13)
+- Placed the all-time caption and compact 3D/Flat switch on one row. Reduced matrix rows to 30px, spacing to 4px and symbols to 32×16px; tightened focus rings and corner radii.
+- Build and large-leaderboard WebKit checks at 1440/390/320px pass. Inspected the mobile preview: filter area is substantially shorter while ranks, sticky headings and scrolling remain intact. Local and sample previews updated.
+
+## Matching personal row and scrollbar (2026-09-13)
+- Rendered the personal ranking as a highlighted four-column row (rank, You, solves, best time) with the same table cell styling and shared column widths as the top 100. Widened rank to fit 10,001 without wrapping and retained an accessible summary label.
+- Added thin lavender scrollbar styling with rounded thumb/track for the leaderboard and popup, using standard and WebKit rules.
+- Build, 100-entry previews at 1440/390/320px, and account UI checks at 320/1440 pass. Inspected rank 10,001 mobile screenshot. Local previews updated; no commit/deploy.
+
+## Matching perspective icons (2026-09-13)
+- Shared the configurator’s cube/grid SVG paths with leaderboard perspective buttons. Added compact 14px icons beside 3D/Flat and widened the segmented switch slightly to fit.
+- Build and leaderboard preview checks at 1440/390/320px pass; local previews updated.
+
+## Restore desktop statistics information on mobile (2026-09-13)
+- Removed the home mobile rule hiding Preview and the gameplay rule hiding the activity counter/divider. Mobile now exposes the same scope, online count and current activity metric as desktop, with a fixed gameplay counter width to avoid shifts.
+- Increased the compact account-enabled home counter width slightly to contain the restored content. Inspected 320px home/game captures.
+- Build and audience browser suite pass: mobile/desktop layouts, scope/counter visibility, polling/lifecycle and error recovery. Made the audience fixture explicitly disable accounts instead of inheriting local OAuth configuration; its account-independent desktop layout otherwise overlapped when local account controls were enabled. No desktop account-layout change made here. Local preview rebuilt.

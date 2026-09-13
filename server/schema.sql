@@ -118,3 +118,8 @@ CREATE TABLE IF NOT EXISTS ranked_solve_times (
   completed_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ranked_solve_times_player ON ranked_solve_times(player_id, completed_at);
+
+CREATE TABLE IF NOT EXISTS player_links (
+  player_id TEXT PRIMARY KEY NOT NULL,
+  url TEXT NOT NULL
+);

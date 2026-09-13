@@ -46,9 +46,9 @@ try {
         me: { solved: 3, rank: 1, bestTimeMs: u.searchParams.get('perspective') === 'flat' ? 30000 : 50000 },
       });
       if (path === '/api/leaderboard') return reply({ entries: u.searchParams.get('size') === '5' ? [] : [
-        { id: 'other', nickname: 'Juniper', solved: 18, rank: 1, bestTimeMs: 65000 },
+        { id: 'other', nickname: 'Juniper', profileUrl: 'https://github.com/juniper', solved: 18, rank: 1, bestTimeMs: 65000 },
         ...(player ? [{ ...player, solved: 12, rank: 2, bestTimeMs: 125000 }] : []),
-        { id: 'third', nickname: 'Player <b>safe</b>', solved: 12, rank: 2, bestTimeMs: null },
+        { id: 'third', nickname: 'Player <b>safe</b>', profileUrl: 'javascript:alert(1)', solved: 12, rank: 2, bestTimeMs: null },
       ], me: player ? { solved: 12, rank: 2, bestTimeMs: 125000 } : null });
       if (path === '/api/ranked-attempts') return reply({ ticket: 'a'.repeat(64), playerId: player.id });
       if (path === '/api/analytics-config') return reply({});
@@ -78,23 +78,28 @@ try {
     assert.ok(popupBounds.y >= triggerBounds.y + triggerBounds.height);
     assert.ok(popupBounds.x >= 0 && popupBounds.x + popupBounds.width <= width);
     assert.equal(await page.locator('.ranking-table b').count(), 0, 'Public nicknames are rendered as text');
-    assert.match(await page.locator('.ranking-personal').textContent(), /12 solved · Rank 2/);
+    const website = dialog.locator('.ranking-player-link');
+    assert.equal(await website.count(), 1, 'Unsafe website schemes stay plain text');
+    assert.equal(await website.getAttribute('href'), 'https://github.com/juniper');
+    assert.equal(await website.getAttribute('target'), '_blank');
+    assert.match(await website.getAttribute('rel'), /noopener noreferrer/);
+    assert.deepEqual(await page.locator('.ranking-personal td').allTextContents(), ['2', 'You', '12', '2:05']);
     await page.screenshot({ path: `output/web-game/accounts/leaderboard-${width}.png`, fullPage: true });
     assert.equal(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth), true);
     assert.equal(await dialog.locator('select').count(), 0, 'Categories use the matrix rather than dropdowns');
     assert.ok(calls.some(call => call.path === '/api/leaderboard' && call.search === '?period=all&perspective=3d'));
     assert.deepEqual(await page.locator('.ranking-table th').allTextContents(), ['Rank', 'Player', 'Solved', 'Best time']);
-    assert.deepEqual(await dialog.locator('tbody td:last-child').allTextContents(), ['1:05', '2:05', '—']);
+    assert.deepEqual(await dialog.locator('.ranking-table tbody td:last-child').allTextContents(), ['1:05', '2:05', '—']);
     assert.equal(await dialog.locator('[data-ranking-size]').count(), 9);
     const category = dialog.locator('[data-ranking-size="4"][data-ranking-difficulty="medium"]');
     await category.click();
-    await page.waitForFunction(() => document.querySelector('.ranking-personal').textContent.includes('Best 0:50'));
+    await page.waitForFunction(() => document.querySelector('.ranking-personal td:last-child')?.textContent === '0:50');
     assert.ok(calls.some(call => call.search === '?period=all&perspective=3d&size=4&difficulty=medium'));
     assert.equal(await category.getAttribute('aria-pressed'), 'true');
     assert.equal(await dialog.locator('[data-ranking-perspective="3d"]').getAttribute('aria-pressed'), 'true');
     assert.deepEqual(await dialog.locator('[data-ranking-perspective]').allTextContents(), ['3D', 'Flat']);
     assert.doesNotMatch(await dialog.innerText(), /Gentle|Focused|Intricate|All puzzles/);
-    assert.deepEqual(await dialog.locator('tbody td').allTextContents(), ['1', 'Mira', '3', '0:50']);
+    assert.deepEqual(await dialog.locator('.ranking-table tbody td').allTextContents(), ['1', 'Mira', '3', '0:50']);
     const corners = await dialog.locator('.ranking-table').evaluate(table => ({
       table: getComputedStyle(table).borderTopLeftRadius,
       left: getComputedStyle(table.querySelector('.is-you td:first-child')).borderTopLeftRadius,
@@ -104,7 +109,7 @@ try {
     await page.waitForTimeout(250); // Let the selected-button color transition finish for the visual check.
     await page.screenshot({ path: `output/web-game/accounts/matrix-${width}.png`, fullPage: true });
     await dialog.locator('[data-ranking-perspective="flat"]').click();
-    await page.waitForFunction(() => document.querySelector('.ranking-personal').textContent.includes('Best 0:30'));
+    await page.waitForFunction(() => document.querySelector('.ranking-personal td:last-child')?.textContent === '0:30');
     assert.ok(calls.some(call => call.search === '?period=all&perspective=flat&size=4&difficulty=medium'));
     assert.equal(await dialog.locator('[data-ranking-size]:visible').count(), 6);
     assert.equal(await dialog.locator('[data-ranking-size-label="3"]').isHidden(), true);
@@ -117,18 +122,23 @@ try {
     await dialog.locator('[data-ranking-size="3"][data-ranking-difficulty="easy"]').click();
     await dialog.locator('.ranking-table .is-you').waitFor();
     assert.equal(await dialog.locator('[data-ranking-size][aria-pressed="true"]').count(), 1);
-    assert.match(await dialog.locator('.ranking-personal').textContent(), /12 solved · Rank 2/);
+    assert.deepEqual(await dialog.locator('.ranking-personal td').allTextContents(), ['2', 'You', '12', '2:05']);
     await dialog.locator('[data-ranking-perspective="flat"]').click();
-    await page.waitForFunction(() => document.querySelector('.ranking-personal').textContent.includes('Best 0:30'));
+    await page.waitForFunction(() => document.querySelector('.ranking-personal td:last-child')?.textContent === '0:30');
     assert.equal(await dialog.locator('[data-ranking-size="4"][data-ranking-difficulty="easy"]').getAttribute('aria-pressed'), 'true');
     assert.equal(calls.some(call => call.path === '/api/leaderboard' && call.search.includes('perspective=flat&size=3')), false);
     await page.locator('#account-button').click();
     assert.equal(await dialog.isHidden(), true, 'Opening profile closes the leaderboard');
     await page.locator('[name="nickname"]').fill('Mira Nova');
+    await page.locator('[name="profileUrl"]').fill('https://www.linkedin.com/in/mira/');
     assert.equal(await page.locator('[name="listed"]').count(), 0);
     await page.locator('.player-profile [type="submit"]').click();
     await page.waitForFunction(() => document.querySelector('#profile-popup .player-status').textContent === 'Profile saved.');
     assert.equal(player.nickname, 'Mira Nova');
+    assert.equal(player.profileUrl, 'https://www.linkedin.com/in/mira/');
+    await page.locator('#profile-popup .player-close').click();
+    await page.locator('#account-button').click();
+    assert.equal(await page.locator('[name="profileUrl"]').inputValue(), player.profileUrl);
     await page.screenshot({ path: `output/web-game/accounts/profile-${width}.png`, fullPage: true });
     await page.locator('.player-popup:not([hidden]) .player-close').click();
     await page.locator('#start-button').click();

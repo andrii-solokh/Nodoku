@@ -1473,8 +1473,7 @@ a {
   .home .visitor-home strong { font-size: 11px; }
   .home .audience-link { flex-direction: column; align-items: flex-end; gap: 1px; }
   .home .audience-rotating { width: 112px; justify-content: flex-end; }
-  .home .audience-divider,
-  .home .visitor-scope { display: none; }
+  .home .audience-divider { display: none; }
   .site-header {
     height: 80px;
     padding: 0 6vw;
@@ -1619,15 +1618,9 @@ a {
     width: auto;
     text-align: right;
   }
-  .playing .visitor-game .audience-link,
-  .playing .visitor-game .audience-rotating {
-    justify-content: flex-end;
-    width: auto;
-  }
-  .playing .visitor-game .audience-divider,
-  .playing .visitor-game .audience-rotating {
-    display: none;
-  }
+  .playing .visitor-game .audience-link { justify-content: flex-end; }
+  .playing .visitor-game .audience-rotating { justify-content: flex-end; width: 140px; }
+
   .status-toast {
     bottom: 86px;
     font-size: 12px;

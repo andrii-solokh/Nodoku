@@ -56,6 +56,7 @@ async function fixture({ clock = false, deferInitial = false } = {}) {
       daily: [], sizes: [], difficulties: [],
     } });
   });
+  await page.route('**/api/auth/config', route => route.fulfill({ json: { enabled: false } }));
   await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors: [] } }));
   await page.goto(url);
   if (!deferInitial) await counts(page, 12, 1234);
@@ -66,6 +67,8 @@ async function layout(page, mode, label) {
   assert.equal(await widget.isVisible(), true, `${label}: current-screen audience is visible`);
   assert.equal(await page.locator(mode === 'playing' ? '.visitor-home' : '.visitor-game').isVisible(), false, `${label}: other-screen audience is hidden`);
   assert.match(await widget.textContent(), /Online/);
+  assert.equal(await widget.locator('.visitor-scope').isVisible(), true, `${label}: local preview label matches desktop`);
+  assert.equal(await widget.locator('.audience-rotating').isVisible(), true, `${label}: activity metric matches desktop`);
   assert.match(await widget.textContent(), /Visitors/);
   assert.equal(await page.locator('#game-instruction').count(), 0, 'Old game instructions are removed');
   const boxes = await widget.evaluate(element => {
@@ -86,7 +89,7 @@ async function layout(page, mode, label) {
   assert.ok(boxes.scrollWidth <= boxes.width + 1, `${label}: no horizontal page overflow`);
   assert.ok(boxes.widget.width > 0 && boxes.widget.height > 0 && boxes.widget.x >= 0 && boxes.widget.x + boxes.widget.width <= boxes.width + 1, `${label}: audience fits horizontally`);
   for (const piece of boxes.pieces) {
-    assert.ok(piece.x >= boxes.widget.x - 1 && piece.x + piece.width <= boxes.widget.x + boxes.widget.width + 1, `${label}: audience values fit their widget`);
+    assert.ok(piece.x >= boxes.widget.x - 1 && piece.x + piece.width <= boxes.widget.x + boxes.widget.width + 1, `${label}: audience values fit their widget ${JSON.stringify({ widget: boxes.widget, piece })}`);
   }
   if (mode === 'playing') {
     assert.equal(boxes.inGameHeader, true, 'Game audience replaces the instruction area in the header');

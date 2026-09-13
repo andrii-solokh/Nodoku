@@ -1,11 +1,12 @@
 import type { SqlExecutor } from './store.js';
 import type { PuzzleSettings } from '../src/puzzle.js';
 
-export type Player = { id: string; nickname: string; avatarUrl?: string };
+export type Player = { id: string; nickname: string; avatarUrl?: string; profileUrl?: string };
 export type RankingFilter = { period: '7d' | 'all'; perspective: 'all' | 'flat' | '3d'; size: number | null; difficulty: string | null };
 const DAY = 86_400_000;
 function player(row: Record<string, unknown> | undefined): Player | null {
   return row ? { id: String(row.id), nickname: String(row.nickname),
+    ...(row.profile_url ? { profileUrl: String(row.profile_url) } : {}),
     ...(row.avatar_url ? { avatarUrl: String(row.avatar_url) } : {}) } : null;
 }
 
@@ -37,26 +38,30 @@ export class AccountsStore {
       { sql: 'INSERT INTO player_avatars (player_id, url) SELECT id, ? FROM players WHERE google_sub = ? AND ? IS NOT NULL', values: [avatarUrl ?? null, sub, avatarUrl ?? null] },
       { sql: 'DELETE FROM player_sessions WHERE expires_at <= ?', values: [now] },
       { sql: 'INSERT INTO player_sessions (token_hash, player_id, expires_at) SELECT ?, id, ? FROM players WHERE google_sub = ?', values: [sessionHash, now + 30 * DAY, sub] },
-      { sql: 'SELECT p.id, p.nickname, a.url AS avatar_url FROM players p LEFT JOIN player_avatars a ON a.player_id = p.id WHERE p.google_sub = ?', values: [sub] },
+      { sql: 'SELECT p.id, p.nickname, a.url AS avatar_url, l.url AS profile_url FROM players p LEFT JOIN player_avatars a ON a.player_id = p.id LEFT JOIN player_links l ON l.player_id = p.id WHERE p.google_sub = ?', values: [sub] },
     ]);
     return player(result[result.length - 1][0])!;
   }
 
   async current(hash: string, now = Date.now()): Promise<Player | null> {
-    const rows = await this.sql.execute({ sql: 'SELECT p.id, p.nickname, a.url AS avatar_url FROM players p JOIN player_sessions s ON s.player_id = p.id LEFT JOIN player_avatars a ON a.player_id = p.id WHERE s.token_hash = ? AND s.expires_at > ?', values: [hash, now] });
+    const rows = await this.sql.execute({ sql: 'SELECT p.id, p.nickname, a.url AS avatar_url, l.url AS profile_url FROM players p JOIN player_sessions s ON s.player_id = p.id LEFT JOIN player_avatars a ON a.player_id = p.id LEFT JOIN player_links l ON l.player_id = p.id WHERE s.token_hash = ? AND s.expires_at > ?', values: [hash, now] });
     return player(rows[0]);
   }
   async logout(hash: string): Promise<void> {
     await this.sql.execute({ sql: 'DELETE FROM player_sessions WHERE token_hash = ?', values: [hash] });
   }
-  async profile(id: string, nickname: string): Promise<void> {
+  async profile(id: string, nickname: string, profileUrl?: string): Promise<void> {
     await this.sql.transaction([
       { sql: 'UPDATE players SET nickname = ? WHERE id = ?', values: [nickname, id] },
+      ...(profileUrl === undefined ? [] : [
+        { sql: 'DELETE FROM player_links WHERE player_id = ?', values: [id] },
+        { sql: "INSERT INTO player_links (player_id, url) SELECT id, ? FROM players WHERE id = ? AND ? != ''", values: [profileUrl, id, profileUrl] },
+      ]),
       { sql: 'INSERT OR IGNORE INTO player_custom_nicknames (player_id) SELECT id FROM players WHERE id = ?', values: [id] },
     ]);
   }
   async remove(id: string): Promise<void> {
-    await this.sql.transaction(['player_sessions', 'player_avatars', 'player_custom_nicknames', 'ranked_attempts', 'ranked_solve_times', 'ranked_completions', 'players'].map(table => ({
+    await this.sql.transaction(['player_sessions', 'player_avatars', 'player_links', 'player_custom_nicknames', 'ranked_attempts', 'ranked_solve_times', 'ranked_completions', 'players'].map(table => ({
       sql: `DELETE FROM ${table} WHERE ${table === 'players' ? 'id' : 'player_id'} = ?`, values: [id],
     })));
   }
@@ -100,18 +105,19 @@ export class AccountsStore {
     if (filter.perspective !== 'all') conditions.push(filter.perspective === 'flat' ? 'c.depth = 1' : 'c.depth > 1');
     if (filter.size !== null) { conditions.push('c.size = ?'); values.push(filter.size); }
     if (filter.difficulty !== null) { conditions.push('c.difficulty = ?'); values.push(filter.difficulty); }
-    const counts = `SELECT p.id, p.nickname, COUNT(c.player_id) AS solved, MIN(t.best_time_ms) AS best_time_ms FROM players p JOIN ranked_completions c ON c.player_id = p.id
+    const counts = `SELECT p.id, p.nickname, l.url AS profile_url, COUNT(c.player_id) AS solved, MIN(t.best_time_ms) AS best_time_ms FROM players p JOIN ranked_completions c ON c.player_id = p.id
+      LEFT JOIN player_links l ON l.player_id = p.id
       LEFT JOIN (SELECT player_id, size, depth, difficulty, seed, MIN(elapsed_ms) AS best_time_ms
         FROM ranked_solve_times GROUP BY player_id, size, depth, difficulty, seed) t
         ON t.player_id = c.player_id AND t.size = c.size AND t.depth = c.depth AND t.difficulty = c.difficulty AND t.seed = c.seed
-      WHERE ${conditions.join(' AND ')} GROUP BY p.id, p.nickname`;
-    const ranked = `WITH scores AS (${counts}), ranked AS (SELECT id, nickname, solved, best_time_ms, RANK() OVER (ORDER BY solved DESC) AS rank FROM scores)`;
+      WHERE ${conditions.join(' AND ')} GROUP BY p.id, p.nickname, l.url`;
+    const ranked = `WITH scores AS (${counts}), ranked AS (SELECT id, nickname, profile_url, solved, best_time_ms, RANK() OVER (ORDER BY solved DESC) AS rank FROM scores)`;
     const result = await this.sql.transaction([
       { sql: `${ranked} SELECT * FROM ranked ORDER BY rank, nickname COLLATE NOCASE, id LIMIT 100`, values },
       { sql: `${ranked} SELECT * FROM ranked WHERE id = ?`, values: [...values, currentId ?? ''] },
       { sql: `SELECT COUNT(*) AS solved FROM ranked_completions c WHERE c.player_id = ? AND ${conditions.join(' AND ')}`, values: [currentId ?? '', ...values] },
     ]);
-    const row = (r: Record<string, unknown>) => ({ id: String(r.id), nickname: String(r.nickname), solved: Number(r.solved), rank: Number(r.rank), bestTimeMs: r.best_time_ms == null ? null : Number(r.best_time_ms) });
+    const row = (r: Record<string, unknown>) => ({ id: String(r.id), nickname: String(r.nickname), ...(r.profile_url ? { profileUrl: String(r.profile_url) } : {}), solved: Number(r.solved), rank: Number(r.rank), bestTimeMs: r.best_time_ms == null ? null : Number(r.best_time_ms) });
     return { period: filter.period, entries: result[0].map(row), me: currentId ? { solved: Number(result[2][0].solved), rank: result[1][0] ? Number(result[1][0].rank) : null, bestTimeMs: result[1][0]?.best_time_ms == null ? null : Number(result[1][0].best_time_ms) } : null };
   }
 }

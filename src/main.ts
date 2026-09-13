@@ -1,3 +1,4 @@
+import { perspectivePaths } from "./perspective-icons";
 import { complexityIcon } from "./complexity-icon";
 import "@fontsource/outfit/300.css";
 import "@fontsource/outfit/400.css";
@@ -21,8 +22,7 @@ import { mountAccounts, prepareRankedAttempt } from "./accounts";
 import { captureAnalytics, startAnalytics, subscribeFeatureFlag } from "./analytics";
 
 const paths: Record<string, string> = {
-  cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>',
-  flat: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 4v16M4 12h16"/>',
+  ...perspectivePaths,
   play: '<path d="m9 5 10 7-10 7Z" fill="currentColor" stroke="none"/>',
   pause: '<path d="M9 5v14M15 5v14" stroke-width="3"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1-1.5 2M12 16h.01"/>',
