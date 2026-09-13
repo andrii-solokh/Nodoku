@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
-import { GameAudio } from "../src/sound.ts";
+import { FILL_NOTE_INTERVAL_MS, GameAudio } from "../src/sound.ts";
 import { MELODIES, melodyCompletionCount, melodyNote, melodyStepMs, midiToFrequency, type MelodyName } from "../src/melodies.ts";
 
 class Parameter {
@@ -123,6 +123,45 @@ test("the first mobile connection plays after an asynchronous gesture resume", a
   );
 });
 
+test("a later gesture retries an unresolved iPhone audio unlock", async t => {
+  const first = deferred<void>();
+  const second = deferred<void>();
+  const { audio, context } = setup(t, undefined, "suspended");
+  Context.resumeResult = first.promise;
+  audio.play("connect", { melodyIndex: 2 });
+  Context.resumeResult = second.promise;
+  audio.unlock();
+  second.resolve();
+  await flush();
+  assert.equal(context().state, "running");
+  assert.deepEqual(fundamentals(context()).map(note => note.frequency.events[0].value), [midiToFrequency(65)]);
+  first.resolve();
+  await flush();
+  assert.equal(fundamentals(context()).length, 1, "A stale resume never replays the gesture");
+});
+
+test("optional playback audio session is requested only when SFX are enabled", t => {
+  const { audio, context } = setup(t);
+  const session = { type: "auto" };
+  const descriptor = Object.getOwnPropertyDescriptor(navigator, "audioSession");
+  Object.defineProperty(navigator, "audioSession", { configurable: true, value: session });
+  t.after(() => {
+    if (descriptor) Object.defineProperty(navigator, "audioSession", descriptor);
+    else Reflect.deleteProperty(navigator, "audioSession");
+  });
+  audio.setEnabled(false);
+  audio.unlock();
+  assert.equal(session.type, "auto");
+  audio.setEnabled(true);
+  audio.play("connect");
+  assert.equal(session.type, "playback");
+  assert.equal(fundamentals(context()).length, 1);
+  Object.defineProperty(session, "type", { get() { return "auto"; }, set() { throw new Error("Unsupported"); } });
+  context().advance(1);
+  assert.doesNotThrow(() => audio.play("connect"));
+  assert.equal(fundamentals(context()).length, 2, "Session API failures leave regular Web Audio available");
+});
+
 test("rapid separate connections and bulk fill keep consecutive notes with a bounded queue", t => {
   const { audio, context } = setup(t);
   audio.play("connect", { melodyIndex: 0 });
@@ -135,6 +174,27 @@ test("rapid separate connections and bulk fill keep consecutive notes with a bou
   for (let index = 6; index < 100; index++) audio.play("connect", { melodyIndex: index, count: 999 });
   assert.ok(fundamentals(context()).length <= 9);
   assert.ok(context().oscillators.every(source => source.startTime <= .6 + 1e-9));
+});
+
+test("fast fills retain full note tails at 100ms spacing and hand completion off after the last beat", t => {
+  const { audio, context } = setup(t);
+  audio.setConfig({ ...config, noteDurationMs: 1000 });
+  audio.play("connect", { melodyIndex: 20, count: 6, sequenceNoteIntervalMs: FILL_NOTE_INTERVAL_MS });
+  context().advance(.02);
+  audio.play("connect", { melodyIndex: 26, count: 2, sequenceNoteIntervalMs: FILL_NOTE_INTERVAL_MS });
+  const notes = fundamentals(context());
+  assert.equal(notes.length, 8);
+  for (const [index, note] of notes.entries()) {
+    assert.ok(Math.abs(note.startTime - index * .1) < 1e-9);
+    assert.equal(note.frequency.events[0].value, midiToFrequency(melodyNote("odeToJoy", 20 + index)));
+    assert.ok(Math.abs(note.stopTimes[0] - note.startTime - 1.015) < 1e-9, "Fast attacks preserve the configured one-second decay and release");
+    assert.equal(note.stopTimes.length, 1, "Another fill does not cut an earlier note short");
+  }
+  audio.play("complete", { melodyIndex: 28 });
+  assert.ok(Math.abs(fundamentals(context())[8].startTime - .8) < 1e-9);
+  assert.ok(notes.every(note => note.stopTimes.length === 1), "Completion lets the existing tails ring out");
+  audio.stop();
+  assert.ok(context().oscillators.every(note => note.stopTimes.at(-1) <= .028));
 });
 
 test("a scored fill retains every dotted, short, and held note beyond the rapid-input queue limit", t => {
@@ -238,7 +298,7 @@ test("queued fill completion waits for all batches and preserves silent beats", 
   assert.ok(context().currentTime + duration / 1000 > fundamentals(context()).at(-1)!.stopTimes[0]);
 });
 
-test("completion preserves the scored fill and waits its full last beat before fixed-paced continuation", t => {
+test("completion preserves the scored fill and waits its full last beat before scored continuation", t => {
   const { audio, context } = setup(t);
   audio.play("connect", { melodyIndex: 24, count: 4, sequenceTempoBpm: 96 });
   const fill = [...context().oscillators];
@@ -249,13 +309,13 @@ test("completion preserves the scored fill and waits its full last beat before f
   const continuation = fundamentals(context()).slice(4);
   assert.equal(continuation.length, 2);
   assert.ok(Math.abs(continuation[0].startTime - 2.8125) < 1e-9, "The last dotted beat finishes before the continuation attack");
-  assert.ok(Math.abs(continuation[1].startTime - continuation[0].startTime - .24) < 1e-9, "Player continuation retains fixed configured spacing");
+  assert.ok(Math.abs(continuation[1].startTime - continuation[0].startTime - .12) < 1e-9, "The short cadence note lasts half the configured base interval");
   assert.deepEqual(fill.map(source => source.stopTimes), originalStops);
-  assert.equal(duration, 3492.5);
+  assert.equal(duration, 3372.5);
   assert.ok(duration / 1000 > continuation.at(-1)!.stopTimes[0]);
 });
 
-test("a short final fill beat is authoritative even when fixed completion spacing is longer", t => {
+test("a short final fill beat is authoritative even when completion base spacing is longer", t => {
   const { audio, context } = setup(t);
   audio.setConfig({ ...config, connectionMelody: "furElise" });
   audio.play("connect", { melodyIndex: 8, count: 3, sequenceTempoBpm: 96 });
@@ -265,7 +325,7 @@ test("a short final fill beat is authoritative even when fixed completion spacin
   const notes = fundamentals(context()).slice(3);
   assert.equal(notes[0].startTime, .78125, "The final sixteenth lasts 156.25ms, not the later continuation's 240ms spacing");
   assert.ok(Math.abs(notes[1].startTime - notes[0].startTime - .24) < 1e-9);
-  assert.equal(duration, 4821.25);
+  assert.equal(duration, 5781.25);
 });
 
 test("the final score interval stays reserved after its short oscillator ends, while an exact cadence adds nothing", t => {
@@ -367,10 +427,32 @@ test("completion finishes the current phrase after a final fill without stopping
   assert.equal(continuation.length, 24, "A phrase ends at its cadence, unaffected by the six-note input burst cap");
   assert.deepEqual(continuation.map(source => source.frequency.events[0].value), MELODIES.odeToJoy.notes.slice(6, 30).map(midiToFrequency));
   assert.ok(continuation[0].startTime >= notes.at(-2)!.startTime + .24 - 1e-9);
-  assert.ok(continuation.every((source, index) => Math.abs(source.startTime - continuation[0].startTime - index * .24) < 1e-9));
+  let elapsed = 0;
+  for (const [offset, source] of continuation.entries()) {
+    assert.ok(Math.abs(source.startTime - continuation[0].startTime - elapsed) < 1e-9);
+    elapsed += MELODIES.odeToJoy.beats[6 + offset] * .24;
+  }
   assert.ok(hold / 1000 >= continuation.at(-1)!.stopTimes[0], "The home hold covers the queued handoff and full last note");
   audio.stop();
   assert.ok(context().oscillators.every(source => source.stopTimes.at(-1)! <= .008));
+});
+
+test("changing completion interval applies to the next ending without shortening note tails", t => {
+  const { audio, context } = setup(t);
+  audio.unlock();
+  for (const interval of [400, 80]) {
+    audio.setConfig({ ...config, completionNoteIntervalMs: interval, noteDurationMs: 1000 });
+    const before = context().oscillators.length;
+    audio.play("complete", { melodyIndex: 1 });
+    const notes = context().oscillators.slice(before).filter((_source, index) => index % 2 === 0);
+    assert.ok(notes.length > 2);
+    let elapsed = 0;
+    for (const [offset, note] of notes.entries()) {
+      assert.ok(Math.abs(note.startTime - notes[0].startTime - elapsed) < 1e-9);
+      elapsed += MELODIES.odeToJoy.beats[1 + offset] * interval / 1000;
+    }
+    assert.ok(notes.every(note => Math.abs(note.stopTimes[0] - note.startTime - 1.015) < 1e-9), 'Full one-second tails survive faster attacks');
+  }
 });
 
 test("every melody position across two loops stops at the next phrase ending with exact count and duration", t => {
@@ -391,9 +473,13 @@ test("every melody position across two loops stops at the next phrase ending wit
       const notes = context().oscillators.slice(before).filter((_source, index) => index % 2 === 0);
       assert.equal(notes.length, count, `${name} next index ${index}`);
       assert.deepEqual(notes.map(source => source.frequency.events[0].value), Array.from({ length: count }, (_, offset) => midiToFrequency(melodyNote(name, index + offset))));
-      assert.ok(notes.every((source, index) => Math.abs(source.startTime - index * .08) < 1e-9));
+      let elapsedMs = 0;
+      for (const [offset, source] of notes.entries()) {
+        assert.ok(Math.abs(source.startTime - elapsedMs / 1000) < 1e-9);
+        if (offset < count - 1) elapsedMs += MELODIES[name].beats[(index + offset) % length] / MELODIES[name].beats[0] * 80;
+      }
       assert.ok(notes.every(source => source.stopTimes.length === 1), "All notes in a long phrase remain scheduled");
-      assert.equal(duration, count ? (count - 1) * 80 + 320 + 120 : 0);
+      assert.equal(duration, count ? elapsedMs + 320 + 120 : 0);
       if (count) assert.equal(notes.at(-1)!.frequency.events[0].value, midiToFrequency(name === "odeToJoy" ? 60 : 69), "The last note resolves to the phrase's tonic");
     }
   }

@@ -2,7 +2,8 @@ import type { GameConfig } from "./config";
 import { MELODIES, melodyCompletionCount, melodyNote, melodyStepMs, midiToFrequency } from "./melodies";
 
 export type GameSound = "rotate" | "connect" | "disconnect" | "complete";
-export type SoundOptions = { unlock?: boolean; melodyIndex?: number; count?: number; rhythmTempoBpm?: number; sequenceTempoBpm?: number };
+export type SoundOptions = { unlock?: boolean; melodyIndex?: number; count?: number; rhythmTempoBpm?: number; sequenceTempoBpm?: number; sequenceNoteIntervalMs?: number };
+export const FILL_NOTE_INTERVAL_MS = 100;
 type EffectsConfig = Pick<GameConfig["sound"], "connectionMelody" | "noteDurationMs" | "melodyVolume" | "completionSound" | "completionNoteIntervalMs">;
 
 type Voice = {
@@ -35,15 +36,13 @@ export class GameAudio {
   private rotationLoad?: AbortController;
   private enabled = false;
   private disposed = false;
-  private resuming = false;
   private resumePromise?: Promise<void>;
   private pendingSound?: { kind: GameSound; options: SoundOptions };
-  private warmed = false;
   private voices = new Set<Voice>();
   private lastPlayed: Partial<Record<GameSound, number>> = {};
   private nextMelodyAt = 0;
   private lastConnectionAt = -Infinity;
-  private connectionSequence: { voice: Voice; end: number; tempo: number } | null = null;
+  private connectionSequence: { voice: Voice; end: number; tempo: number; intervalMs?: number } | null = null;
   private config: EffectsConfig = {
     connectionMelody: "odeToJoy", noteDurationMs: 320, melodyVolume: .7,
     completionSound: true, completionNoteIntervalMs: 240,
@@ -115,7 +114,7 @@ export class GameAudio {
     const handoff = (this.completionStart(now, index, tempo) - now) * 1000;
     if (this.config.connectionMelody === "classic") return handoff + 1100;
     let phraseMs = 0;
-    for (let offset = 0; offset < count - 1; offset++) phraseMs += this.noteStepMs(index + offset, tempo);
+    for (let offset = 0; offset < count - 1; offset++) phraseMs += this.completionStepMs(index + offset, tempo);
     return handoff + phraseMs + this.noteDurationMs(index + count - 1, tempo) + 120;
   }
 
@@ -129,13 +128,22 @@ export class GameAudio {
     if (this.config.connectionMelody === "classic") return Math.max(now, Math.min(now + .75, this.lastConnectionAt + .12));
     const previous = index > 0 ? index - 1 : MELODIES[this.config.connectionMelody].notes.length - 1;
     const connectionEnd = this.connectionSequence?.end
-      ?? this.lastConnectionAt + this.noteStepMs(previous, tempo) / 1000;
+      ?? this.lastConnectionAt + this.completionStepMs(previous, tempo) / 1000;
     return Math.max(now, this.nextMelodyAt, connectionEnd);
   }
 
   private noteStepMs(index: number, tempo?: number): number {
     return tempo !== undefined && this.config.connectionMelody !== "classic"
       ? melodyStepMs(this.config.connectionMelody, index, tempo) : this.config.completionNoteIntervalMs;
+  }
+
+  private completionStepMs(index: number, tempo?: number): number {
+    const melody = this.config.connectionMelody;
+    if (melody === "classic" || tempo !== undefined) return this.noteStepMs(index, tempo);
+    // The admin interval sets the opening note's pace; retain the score's
+    // relative durations and rests instead of flattening every onset.
+    return this.config.completionNoteIntervalMs
+      * melodyStepMs(melody, index) / melodyStepMs(melody, 0);
   }
 
   private noteDurationMs(index: number, tempo?: number): number {
@@ -154,6 +162,13 @@ export class GameAudio {
   /** Call synchronously from a pointer or keyboard gesture. */
   unlock(): void {
     if (!this.enabled || this.disposed || typeof window === "undefined") return;
+    // Safari otherwise routes Web Audio through the ringer/silent channel.
+    // Keep this optional: older browsers do not expose Audio Session yet.
+    try {
+      const session = typeof navigator === "undefined" ? undefined
+        : (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+      if (session && session.type !== "playback") session.type = "playback";
+    } catch { /* An unsupported audio-session policy must not prevent sound. */ }
     try {
       if (!this.context) {
         const AudioContextClass = window.AudioContext
@@ -165,17 +180,18 @@ export class GameAudio {
           if (context.state !== "running") this.stop();
         });
       }
-      if (this.context.state !== "running" && this.context.state !== "closed" && !this.resuming) {
-        this.resuming = true;
+      if (this.context.state !== "running" && this.context.state !== "closed") {
         // iOS can require an actual source to be started in the trusted gesture
         // which resumes Web Audio. It remains silent and is never a game sound.
         this.warmContext(this.context);
+        // A pointerdown resume may remain pending on iOS. Allow the trusted
+        // touchend (or a later gesture) to retry rather than locking out audio.
         const resume = Promise.resolve(this.context.resume()).catch(() => {}).then(() => {
+          if (this.resumePromise !== resume) return;
           if (this.context?.state === "running") this.flushPendingSound();
           else this.pendingSound = undefined;
         }).finally(() => {
           if (this.resumePromise === resume) this.resumePromise = undefined;
-          this.resuming = false;
         });
         this.resumePromise = resume;
       }
@@ -228,7 +244,9 @@ export class GameAudio {
     if (kind === "connect" && this.config.connectionMelody !== "classic") {
       const pending = this.connectionSequence && this.connectionSequence.end > now ? this.connectionSequence : null;
       if (!pending) this.connectionSequence = null;
-      const sequenceTempo = pending?.tempo ?? scoreTempo(options.sequenceTempoBpm);
+      const intervalMs = pending?.intervalMs ?? (Number.isFinite(options.sequenceNoteIntervalMs)
+        ? Math.max(60, Math.min(1000, options.sequenceNoteIntervalMs!)) : undefined);
+      const sequenceTempo = pending?.tempo ?? scoreTempo(options.sequenceTempoBpm) ?? (intervalMs !== undefined ? 96 : undefined);
       if (sequenceTempo !== undefined) {
         // Append each move to the same scored phrase. Reusing its voice keeps
         // rapid fills from evicting earlier notes through the voice limit.
@@ -239,12 +257,16 @@ export class GameAudio {
         for (let offset = 0; offset < count; offset++) {
           const start = phraseStart + elapsedMs / 1000;
           const frequency = midiToFrequency(melodyNote(this.config.connectionMelody, index + offset));
-          this.melodyTone(voice, start, frequency, this.noteDurationMs(index + offset, sequenceTempo));
+          const stepMs = intervalMs ?? this.noteStepMs(index + offset, sequenceTempo);
+          // Fast fills change attack spacing, not the player's chosen decay.
+          const durationMs = intervalMs !== undefined ? this.config.noteDurationMs
+            : this.noteDurationMs(index + offset, sequenceTempo);
+          this.melodyTone(voice, start, frequency, durationMs);
           this.lastConnectionAt = start;
-          elapsedMs += this.noteStepMs(index + offset, sequenceTempo);
+          elapsedMs += stepMs;
         }
         this.nextMelodyAt = phraseStart + elapsedMs / 1000;
-        this.connectionSequence = { voice, end: this.nextMelodyAt, tempo: sequenceTempo };
+        this.connectionSequence = { voice, end: this.nextMelodyAt, tempo: sequenceTempo, intervalMs };
         return;
       }
       for (let offset = 0; offset < count; offset++) {
@@ -293,7 +315,7 @@ export class GameAudio {
           for (let offset = 0; offset < completionCount; offset++) {
             const frequency = midiToFrequency(melodyNote(this.config.connectionMelody, index + offset));
             this.melodyTone(voice, start + elapsedMs / 1000, frequency, this.noteDurationMs(index + offset, tempo));
-            elapsedMs += this.noteStepMs(index + offset, tempo);
+            elapsedMs += this.completionStepMs(index + offset, tempo);
           }
           break;
         }
@@ -322,8 +344,7 @@ export class GameAudio {
   }
 
   private warmContext(context: AudioContext): void {
-    if (this.warmed || typeof context.createBuffer !== "function") return;
-    this.warmed = true;
+    if (typeof context.createBuffer !== "function") return;
     try {
       const source = context.createBufferSource();
       const gain = context.createGain();

@@ -124,7 +124,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     },
     tempoBpm: {
       label: "Melody tempo", kind: "number", min: 40, max: 180, step: 1, unit: "BPM", integer: true,
-      description: "Quarter-note beats per minute for the home melody, its completion, and double-tap fills. Higher values play faster. Individual moves still set their own rhythm.",
+      description: "Quarter-note beats per minute for the home melody and its completion. Higher values play faster. Player completion uses Completion note interval; double-tap fills use fast note spacing.",
     },
     initialDelayMs: milliseconds("Wait before starting", 0, 5000),
     stepDelayMs: { ...milliseconds("Pause between connections", 50, 5000), description: "Pause after animations in Fixed delay mode. Melody rhythm uses the score and tempo instead." },
@@ -222,7 +222,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     },
     completionNoteIntervalMs: {
       ...milliseconds("Completion note interval", 80, 1000),
-      description: "Time between completion melody notes while playing or using Fixed delay. Home Melody rhythm uses its tempo instead. Original connection sound keeps its usual chime timing.",
+      description: "Base pace for completion melodies: one quarter note in Ode to Joy or one sixteenth note in Für Elise. Short notes, held beats, and pauses follow the score. Lower values play faster. Home Melody rhythm uses its tempo instead.",
     },
     showAmbientMusic: { label: "Show ambient music", kind: "boolean", description: "Show the music button and let players listen to Moonlight. Hidden by default; turning this off also stops ambient playback." },
     ambientVolume: { label: "Ambient music volume", kind: "number", min: 0, max: 1, step: .01, description: "Volume of Moonlight, controlled separately from sound effects. Set to 0 to silence background music." },
