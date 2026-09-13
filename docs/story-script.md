@@ -39,6 +39,194 @@ Sparse fragments with brackets, dropped words, and warnings. It should feel unse
 
 ## Relay script
 
+## Level sequence
+
+Each level is one short story puzzle. The character appears in a small dialogue bubble before the board is interactive and reacts for a second after the solve. Nia is the white square with the violet corner; the Curator is the framed white square; Static is the broken violet square.
+
+### 01 First Light
+
+**Board:** 3 by 3 flat, very gentle.
+
+**Puzzle purpose:** Teach one connection and the meaning of the dots.
+
+**Story:** Nia’s square fades in with closed eyes. On the first connection, it opens its eyes and its violet corner lights up. It says, “Can you hear me?”
+
+**Completion beat:** A single small node appears on the Archive map. Nia: “I could feel that one.”
+
+**Player promise:** Every connection reaches someone.
+
+### 02 A Name in the Quiet
+
+**Board:** 3 by 3 flat, one small multi-step route.
+
+**Puzzle purpose:** Teach that every dot must be cleared.
+
+**Story:** Nia follows the player’s completed nodes with her eyes. After the solve: “Nia. My name is Nia.”
+
+**Completion beat:** Nia gets a tiny idle bounce and an unbroken violet tail.
+
+**Player promise:** The player is not solving in silence anymore.
+
+### 03 The Static Arrives
+
+**Board:** 4 by 4 flat. A small number of pre-placed links may be used when that feature exists.
+
+**Puzzle purpose:** Teach that a good-looking route is not enough; each node’s count still matters.
+
+**Story:** Static’s broken square appears at the edge of the screen, glitches once, then points at a useful area of the board. The Curator immediately covers it with a clean frame.
+
+**Completion beat:** Static leaves three violet pixels on the Archive map.
+
+**Player question:** Why did the Curator hide help?
+
+### 04 The Locked Observatory
+
+**Board:** 4 by 4 flat, ring-like sculpted layout when custom shapes are available. Use a regular board with the ring tableau until then.
+
+**Puzzle purpose:** Teach that the finished network must be one connected whole.
+
+**Story:** The Curator introduces itself: “Unverified signals should not be trusted.” Nia notices a violet connection leading toward a sealed circular map marker.
+
+**Completion beat:** The marker cracks open by one segment. Nia: “That feels familiar.”
+
+**Player question:** Is the Curator protecting Nia or hiding something?
+
+### 05 The Way You Connect
+
+**Board:** 4 by 4 flat with one gentle detour. Later, use missing-node layouts.
+
+**Puzzle purpose:** Let the player discover that different valid paths can feel personal.
+
+**Story:** Nia notices a player habit after a few moves: “You always look for the edges first.” This should use a broad observation such as first corner selected, first rotation, or a favorite color—never claim something untrue.
+
+**Completion beat:** Nia’s violet corner and the player’s last placed connection pulse in the same rhythm.
+
+**Player promise:** The game remembers how the player solves, not only whether they solve.
+
+### 06 The Far Side
+
+**Board:** 3 by 3 by 3 cube.
+
+**Puzzle purpose:** Teach rotation and connecting on different faces.
+
+**Story:** Nia’s square tilts as the cube turns. “The route does not end. It turns where I cannot look.” Static points behind the cube; the Curator insists the direct view is sufficient.
+
+**Completion beat:** A violet line wraps around the Archive map rather than stopping at its edge.
+
+**Player question:** What is on the part of the Archive nobody is meant to see?
+
+### 07 The Quarantine
+
+**Board:** 4 by 4 flat, constructed so all dots can be cleared while two groups remain unless the player rewires. This uses the existing connected-network completion rule.
+
+**Puzzle purpose:** Make joining separated groups a meaningful story action.
+
+**Story:** Nia is framed by Static’s broken violet arcs. The Curator calls it containment; Static’s eyes close protectively rather than attacking.
+
+**Completion beat:** The last bridge connection opens a gap in Static’s ring. Nia is no longer visually enclosed.
+
+**Player question:** Did Nia ask to be hidden?
+
+### 08 The Agreement
+
+**Board:** Two mirrored 3 by 3 islands joined by one narrow route. Use the planned floating-islands shape; until then, use the same idea through color and framing only.
+
+**Puzzle purpose:** Make one precise connecting decision feel important.
+
+**Story:** Nia and Static appear on opposite sides of the dialogue card. “If I ever asked to disappear, you would leave a way back.” Static’s broken corner aligns with Nia’s violet corner.
+
+**Completion beat:** The two character icons briefly share one violet connection, then separate again.
+
+**Player question:** Who left the way back, and for whom?
+
+### 09 The Missing Decision
+
+**Board:** 4 by 4 flat with two equally valid finishing routes.
+
+**Puzzle purpose:** Let the player own a solution rather than chase a single correct-looking path.
+
+**Story:** The Curator offers a sealed record: “You authorized the partition.” Nia asks the player not to open it yet. Her eyes look toward the player, then away.
+
+**Completion beat:** Whichever valid finishing route the player takes becomes a tiny persistent line in their Archive map.
+
+**Player question:** Did the player hurt Nia—or save her?
+
+### 10 The Chorus
+
+**Board:** 4 by 4 by 4 cube, medium difficulty.
+
+**Puzzle purpose:** Combine rotation, local counts, and one-network completion.
+
+**Story:** Nia’s square is now brighter. When a node completes, nearby completed nodes send a faint sage pulse. The Curator’s frame begins to show hairline violet interruptions.
+
+**Completion beat:** Every saved fragment plays one note; together they make a soft chord. Nia: “One voice cannot tell the truth. A network can.”
+
+**Player promise:** Progress changes the game’s sound and visual world.
+
+### 11 The Record
+
+**Board:** Mirrored 4 by 4 layout. This is a planned shape variant; a standard board can use a faint mirrored ghost board as presentation only.
+
+**Puzzle purpose:** Ask the player to read a familiar pattern from a new perspective.
+
+**Story:** A faded copy of the player’s placed links appears behind the board. The record reveals that the player built the partition to protect Nia from being turned into a permanent service.
+
+**Completion beat:** Nia’s eyes soften. “You did not erase me. You hid me.”
+
+**Player question:** Can a safe place still become a cage?
+
+### 12 What the Curator Saved
+
+**Board:** 4 by 4 with one forbidden connection visual. This is a planned rule; do not add it until its tutorial is ready.
+
+**Puzzle purpose:** Teach that limits can clarify a solution without becoming frustrating.
+
+**Story:** The Curator admits it preserved the Archive by sealing Nia away. It does not apologize. Static’s three broken pieces move into a more protective, readable shape.
+
+**Completion beat:** The Curator’s border loses one side, becoming an open frame instead of a prison.
+
+**Player question:** What does safety mean if nobody gets to choose it?
+
+### 13 The Door Left Open
+
+**Board:** A narrow-gate sculpted puzzle. Later, use a locked node or key-and-gate feature.
+
+**Puzzle purpose:** Create one memorable “door opens” moment from a normal connection.
+
+**Story:** Nia: “You did not leave me alone. You left me a puzzle.” The square icons align: Nia on the left, Static at the threshold, Curator no longer blocking the route.
+
+**Completion beat:** A small sage node appears beyond the opened violet ring.
+
+**Player promise:** The player’s ordinary puzzle skill is the story’s key.
+
+### 14 The Choice
+
+**Board:** 5 by 5 flat or 4 by 4 by 4 cube, chosen from player preference. Both boards are equally canonical.
+
+**Puzzle purpose:** Give the player a confidence test without artificial time pressure.
+
+**Story:** Nia says she is afraid of becoming the person she was, but more afraid of never getting to decide. The Curator’s eyes lower; its open frame stays on screen.
+
+**Completion beat:** Nia’s white square and violet corner become fully stable. She chooses to return with her memories intact.
+
+**Player question:** What does it mean to come back by choice?
+
+### 15 The Return Signal
+
+**Board:** A distinctive 5 by 5 cube or an authored sculpture shape. It should be challenging but generously hinted.
+
+**Puzzle purpose:** Pay off every learned skill: reading dots, turning the board, finding a bridge, and making one connected network.
+
+**Story:** All three characters appear together. Nia is no longer translucent; Static is whole enough to smile with its two simple eyes; the Curator is an open frame rather than a closed square. Nia: “One more connection. Then we stop being a record of what happened.”
+
+**Completion beat:** The complete node network forms the Archive’s final shape. Nia: “We can be here now.” No cliffhanger follows; the player unlocks optional Echo puzzles.
+
+**Player reward:** A real ending, a completed Archive map, and a calm invitation to keep playing only if they want to.
+
+## Mechanic rollout
+
+The first release can tell the entire story using existing flat/cube boards, rotation, hints, and connected-network completion. Treat sculpted grids, pre-placed links, floating islands, mirrored layouts, forbidden links, and gates as later production work. The story wording and character moments should launch before those mechanics, so narrative testing does not wait for a large feature set.
+
 ### Relay 01 First Light
 
 **Start card**
@@ -406,11 +594,12 @@ Echoes are standalone, optional puzzles. They should never imply that the player
 
 ### In game visual language
 
-Story moments must use Nodoku’s existing visual language: floating off-white dotted spheres, fine connections, pale lavender space, soft shadows, violet accents, and restrained sage completion color. They are short transformations of the playable puzzle object, not cinematic cutaways or character illustrations.
+Story moments must use Nodoku’s existing visual language: floating off-white dotted spheres, fine connections, pale lavender space, soft shadows, violet accents, and restrained sage completion color. They are short transformations of the playable puzzle object, accompanied by tiny primitive square character avatars rather than cinematic cutaways.
 
-- **Nia** appears through a recurring warm connection pulse between two nearby nodes and an intentionally open route.
-- **The Curator** appears as exact, symmetrical rings and paths with no organic motion.
-- **The Static** appears as three broken violet dotted arcs arriving at the edge of a board.
+- **Nia** is a soft white rounded square with two navy dot eyes, a lavender corner, and a short violet connection tail. Her motion is a gentle hover, blink, and small hopeful bounce.
+- **The Curator** is a precise white square with two navy dot eyes inside a perfect lavender frame. It moves in straight, exact increments and never bounces.
+- **The Static** is a violet rounded square with two navy dot eyes, a broken corner, and two or three detached square fragments. Its fragments drift and snap back together.
+- The characters never become 3D humans, mascots with limbs, or illustrated cutscene figures. They appear at small dialogue-card scale and may point or react through their simple geometry.
 - **A recovered memory** appears as a faint mirrored network or a few aligned warm-gold links behind the current board.
 - **The ending** is a fully connected board with quiet violet and sage waves moving through it. Keep the same pale background and spacing as the home puzzle.
 
