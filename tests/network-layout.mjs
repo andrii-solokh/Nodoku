@@ -16,7 +16,7 @@ const browser = await chromium.launch();
 const errors = [];
 const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text()));
 async function settle(page) {
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await page.evaluate(() => new Promise(resolve => window.layoutTestFrame(() => window.layoutTestFrame(resolve))));
 }
 async function geometry(page) {
   return page.evaluate(() => ({
@@ -38,6 +38,12 @@ try {
     await page.goto(url, {waitUntil:'domcontentloaded'});
     await page.locator('#network-status').waitFor();
     await page.locator('#app-loader').waitFor({state:'hidden'});
+    // Stop continuous decorative rendering in software WebGL. Native layout,
+    // ResizeObserver, actual controls and camera fitting remain active.
+    await page.evaluate(() => {
+      window.layoutTestFrame = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = () => 0;
+    });
     for (const [width,height] of [[1440,900],[1200,850],[900,1200],[390,844],[320,568],[844,390]]) {
       const label = `${name}-${width}x${height}`;
       await page.setViewportSize({width,height});

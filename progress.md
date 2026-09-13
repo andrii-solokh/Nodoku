@@ -2209,3 +2209,4 @@ TODO / Note
 - Removed those geometry overrides. The notice now floats independently, with compact layouts for short portrait and landscape screens, and shorter guidance text.
 - Added test:network-layout covering real undo/redo visibility changes, longer text, canvas/board/camera/scroll invariance, control access, and node clearance across six viewports for flat and cube puzzles. Wired this browser regression into the CI deployment gate.
 - Production build passes; layout browser verification is in progress. The older broad connectivity script stops on its selected-node material/highlight assertion; this change does not modify selection/material logic.
+- Final local regression passes all 12 flat/cube viewport cases against the production build. The harness pauses continuous decorative RAF rendering after startup, while retaining native layout, ResizeObserver, real controls and camera fitting, to keep software-WebGL checks reliable.
