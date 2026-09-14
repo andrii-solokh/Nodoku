@@ -2231,3 +2231,9 @@ TODO / Note
 - Migrate the old identified-browser setup once without merging a potentially shared browser's historical events into a player. Refresh account state after cross-tab auth changes and visibility return; ignore stale profile/account reads.
 - Freeze the analytics distinct ID alongside the original session/timestamp in pending completion payloads. Server completions use that bounded advisory identity without changing visitor statistics, puzzle verification or ranked-ticket authorization. Guest server events disable person processing; account events enable it.
 - Validation: 236 unit tests, production build, actual PostHog SDK browser identity test, and 320px account/sign-in UI flows pass. The SDK test covers guest linking, nickname properties, logout, direct switching and same-account reload/session continuity, with all remote requests intercepted. Added it to CI.
+
+## Mobile completion overlay (2026-09-14)
+- Confirmed origin/main explicitly places the completion card below the game area on compact layouts, making it unreachable on mobile because gameplay itself does not scroll.
+- Phone layouts now center the completion card over the puzzle. Its width and maximum height remain inside the game viewport, with internal scrolling for unusually short screens. Desktop side placement and larger compact placement are unchanged.
+- Extended the real completion browser regression to assert that phone cards overlap the board without leaving the game area or viewport, while the puzzle geometry stays fixed.
+- Validation passes in Chromium at 1440/1200/390/320px, Chromium at 320×568, and WebKit at 390/320px. Expanded sharing, keyboard and button actions, next-puzzle flow, board stability and console errors are covered. All 236 unit tests and the production build pass. Added the completion regression to the CI layout gate.

@@ -5,6 +5,7 @@ import { Puzzle } from '../src/puzzle.ts';
 import { followHint } from './helpers/follow-hint.mjs';
 
 const url = process.env.TEST_URL || 'http://127.0.0.1:4173';
+const height = Number(process.env.TEST_HEIGHT || 850);
 await mkdir('output/web-game/completion-moment', { recursive: true });
 const browser = await (process.env.TEST_BROWSER === 'webkit' ? webkit : chromium).launch();
 try {
@@ -12,7 +13,7 @@ try {
     const settings = { size: 3, depth: 3, difficulty: 'easy', seed: 17 };
     const puzzle = new Puzzle(settings);
     for (const edge of puzzle.solution.slice(0, -1)) puzzle.toggle(...edge);
-    const page = await browser.newPage({ viewport: { width, height: 850 }, hasTouch: width < 700 });
+    const page = await browser.newPage({ viewport: { width, height }, hasTouch: width < 700 });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     let completions = 0;
@@ -50,6 +51,14 @@ try {
       assert.ok(result.x > rightmostNode, 'Right-side result stays clear of the puzzle');
       const rotation = await page.locator('.game-main .rotation-tools').boundingBox();
       assert.ok(result.y + result.height < rotation.y, 'Rotation controls remain available below the result');
+    } else if (width <= 700) {
+      const area = await page.locator('.game-main').boundingBox();
+      assert.ok(result.y < board.y + board.height && result.y + result.height > board.y,
+        'Phone result overlays the puzzle');
+      assert.ok(result.y >= area.y && result.y + result.height <= area.y + area.height,
+        'Phone result stays fully inside the game area');
+      assert.ok(result.x >= 0 && result.x + result.width <= width,
+        'Phone result stays fully inside the viewport');
     } else {
       assert.ok(result.y >= board.y + board.height, 'Compact result sits below the board');
     }
@@ -57,13 +66,15 @@ try {
     await page.keyboard.press('ArrowRight');
     await page.evaluate(() => window.advanceTime(1200));
     assert.notDeepEqual((await state()).view, initial.view, 'Keyboard rotation still works');
-    const beforeDrag = (await state()).view;
-    const node = (await state()).nodes.find(node => node.screen.pickable);
-    await page.mouse.move(node.screen.x, node.screen.y);
-    await page.mouse.down();
-    await page.mouse.move(node.screen.x + 80, node.screen.y + 35, { steps: 8 });
-    await page.mouse.up();
-    assert.notDeepEqual((await state()).view, beforeDrag, 'Dragging even a filled sphere rotates the finished puzzle');
+    if (width > 700) {
+      const beforeDrag = (await state()).view;
+      const node = (await state()).nodes.find(node => node.screen.pickable);
+      await page.mouse.move(node.screen.x, node.screen.y);
+      await page.mouse.down();
+      await page.mouse.move(node.screen.x + 80, node.screen.y + 35, { steps: 8 });
+      await page.mouse.up();
+      assert.notDeepEqual((await state()).view, beforeDrag, 'Dragging even a filled sphere rotates the finished puzzle');
+    }
     assert.deepEqual((await state()).edges, initial.edges, 'Review cannot disconnect the solved network');
     await page.locator('[data-rotate="left"]').click();
     await page.evaluate(() => window.advanceTime(1200));
@@ -90,6 +101,6 @@ try {
     assert.equal(await page.locator('#app').evaluate(el => el.classList.contains('is-complete')), false);
     assert.deepEqual(errors, []);
     await page.close();
-    console.log(`${width}px: side/below panel, rotation, stable solved graph, no scroll/focus trap and next puzzle passed`);
+    console.log(`${width}px: side/overlay/below panel, rotation, stable solved graph, no scroll/focus trap and next puzzle passed`);
   }
 } finally { await browser.close(); }
