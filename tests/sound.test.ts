@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
-import { FILL_NOTE_INTERVAL_MS, GameAudio } from "../src/sound.ts";
+import { FILL_MELODY_TEMPO_BPM, FILL_NOTE_INTERVAL_MS, GameAudio } from "../src/sound.ts";
 import { MELODIES, melodyCompletionCount, melodyNote, melodyStepMs, midiToFrequency, type MelodyName } from "../src/melodies.ts";
 
 class Parameter {
@@ -210,6 +210,19 @@ test("a scored fill retains every dotted, short, and held note beyond the rapid-
   audio.play("rotate");
   assert.equal(context().oscillators.length, 8);
   assert.ok(notes.every(source => source.stopTimes.length === 1), "No-op additions and silent rotations leave the phrase alone");
+});
+
+test("the gameplay fill tempo shortens the melody while preserving its rhythmic proportions", t => {
+  const { audio, context } = setup(t);
+  audio.play("connect", { melodyIndex: 12, count: 4, sequenceTempoBpm: FILL_MELODY_TEMPO_BPM });
+  const notes = fundamentals(context());
+  assert.deepEqual(notes.map(source => source.startTime), [0, .375, .5, 1]);
+  assert.deepEqual(
+    notes.map(source => source.frequency.events[0].value),
+    [64, 62, 62, 64].map(midiToFrequency),
+  );
+  assert.ok(Math.abs(notes[1].stopTimes[0] - notes[1].startTime - .1275) < 1e-9,
+    "the short note ends before the next attack instead of overlapping it");
 });
 
 test("scored fills preserve Elise rest intervals, wrap pitches, and retain a full six-note batch", t => {

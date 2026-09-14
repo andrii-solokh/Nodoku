@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium, webkit } from 'playwright';
-import { FILL_NOTE_INTERVAL_MS } from '../src/sound.ts';
+import { FILL_MELODY_TEMPO_BPM } from '../src/sound.ts';
 import { Puzzle } from '../src/puzzle.ts';
 import { melodyCompletionCount, melodyNote, melodyStepMs, midiToFrequency } from '../src/melodies.ts';
 
@@ -147,16 +147,20 @@ async function silentTurns(page) {
   }
   assert.deepEqual(await page.evaluate(() => window.__audio.decodes), [], 'Manual turns never decode a rotation recording');
 }
-function assertScoredFill(events, index, count, tempo, label, queuedStart) {
+function assertScoredFill(events, index, count, label, queuedStart) {
   const notes = melodySources(events);
   assert.equal(notes.length, count, `${label}: one melody note per added connection`);
   assert.deepEqual(notes.map(note => round(note.frequency)), Array.from({ length: count }, (_, offset) => round(midiToFrequency(melodyNote('odeToJoy', index + offset)))), `${label}: pitches continue from the actual player index`);
   if (queuedStart === undefined) assert.ok(Math.abs(notes[0].when - notes[0].now) < .05, `${label}: the first note starts immediately`);
-  else assert.ok(Math.abs(notes[0].when - Math.max(notes[0].now, queuedStart)) < 1e-6, `${label}: notes wait for the previous phrase's last beat`);
+  else {
+    const expected = Math.max(notes[0].now, queuedStart);
+    const tolerance = queuedStart > notes[0].now ? 1e-6 : .05;
+    assert.ok(Math.abs(notes[0].when - expected) < tolerance, `${label}: notes wait for the previous phrase's last beat`);
+  }
   let elapsed = 0;
   for (let offset = 0; offset < notes.length; offset++) {
-    assert.ok(Math.abs(notes[offset].when - notes[0].when - elapsed) < 1e-6, `${label}: note ${offset + 1} uses the fast fill interval`);
-    elapsed += FILL_NOTE_INTERVAL_MS / 1000;
+    assert.ok(Math.abs(notes[offset].when - notes[0].when - elapsed) < 1e-6, `${label}: note ${offset + 1} preserves the accelerated score rhythm`);
+    elapsed += melodyStepMs('odeToJoy', index + offset, FILL_MELODY_TEMPO_BPM) / 1000;
   }
   assert.ok(notes.every(note => note.state === 'running'), `${label}: sources use a native running AudioContext`);
   return notes;
@@ -167,8 +171,8 @@ async function doubleTapRhythm() {
   let current = await state(page);
   const center = current.nodes.find(node => node.id === 5);
   assert.equal(center.remaining, 4, 'The seeded center can add four links in one fill');
-  const tempo = current.config.demo.tempoBpm;
-  assert.deepEqual([12, 13, 14].map(index => melodyStepMs('odeToJoy', index, tempo) * tempo / 60000), [1.5, .5, 2], 'The fixture crosses dotted, short, and held score values');
+  const tempo = FILL_MELODY_TEMPO_BPM;
+  assert.deepEqual([12, 13, 14].map(index => melodyStepMs('odeToJoy', index, tempo)), [375, 125, 500], 'The accelerated fill preserves dotted, short, and held score values');
   let before = await sounds(page);
   await page.mouse.dblclick(center.screen.x, center.screen.y);
   current = await state(page);
@@ -176,12 +180,14 @@ async function doubleTapRhythm() {
   assert.equal(current.nodes.find(node => node.id === 5).remaining, 0);
   assert.equal(current.selected, null);
   assert.equal((await storage(page)).melodyStep, 16, 'The full fill persists its four-note advance immediately');
-  const firstFill = assertScoredFill((await sounds(page)).slice(before.length), 12, 4, tempo, 'Dotted fill');
+  const firstFill = assertScoredFill((await sounds(page)).slice(before.length), 12, 4, 'Dotted fill');
   const fillStops = await page.evaluate(() => window.__audio.stops);
   for (const note of firstFill) {
     const stop = fillStops.find(stop => stop.sourceId === note.sourceId);
-    assert.ok(Math.abs(stop.when - note.when - current.config.sound.noteDurationMs / 1000 - .015) < 1e-6,
-      'Fast fills preserve the full configured note decay');
+    const offset = firstFill.indexOf(note);
+    const duration = Math.min(current.config.sound.noteDurationMs, melodyStepMs('odeToJoy', 12 + offset, tempo) * .9);
+    assert.ok(Math.abs(stop.when - note.when - duration / 1000 - .015) < 1e-6,
+      'Accelerated fills leave a musical gap before the next attack');
   }
   const output = 'output/web-game/double-tap-rhythm';
   await mkdir(output, { recursive: true });
@@ -209,7 +215,7 @@ async function doubleTapRhythm() {
   before = await sounds(page);
   const empty = (await state(page)).nodes.find(node => node.id === 5);
   await page.mouse.dblclick(empty.screen.x, empty.screen.y);
-  const secondFill = assertScoredFill((await sounds(page)).slice(before.length), 16, 4, tempo, 'Second fill');
+  const secondFill = assertScoredFill((await sounds(page)).slice(before.length), 16, 4, 'Second fill');
   assert.equal((await storage(page)).melodyStep, 20);
   current = await state(page);
   const nextNode = current.nodes.find(node => node.id === 15);
@@ -219,17 +225,17 @@ async function doubleTapRhythm() {
   const afterFill = await state(page);
   const added = afterFill.edges.length - current.edges.length;
   assert.ok(added > 0, 'Another double tap changes the board immediately');
-  const secondEnd = secondFill.at(-1).when + FILL_NOTE_INTERVAL_MS / 1000;
-  const queuedFill = assertScoredFill((await sounds(page)).slice(before.length), 20, added, tempo, 'Queued fill', secondEnd);
-  assert.ok(queuedFill[0].when - queuedFill[0].now <= .4, 'A second fill waits at most one short burst');
+  const secondEnd = secondFill.at(-1).when + melodyStepMs('odeToJoy', 19, tempo) / 1000;
+  const queuedFill = assertScoredFill((await sounds(page)).slice(before.length), 20, added, 'Queued fill', secondEnd);
+  assert.ok(queuedFill[0].when - queuedFill[0].now <= 1, 'A second fill waits for the previous accelerated beat');
   const newStops = await page.evaluate(before => window.__audio.stops.slice(before), stopsBeforeQueue);
   assert.ok(secondFill.every(note => !newStops.some(stop => stop.sourceId === note.sourceId)), 'Appending a fill never cuts off earlier notes');
   const [a, b] = [0, 1].map(id => afterFill.nodes.find(node => node.id === id));
   before = await sounds(page);
   await pairClick(page, a, b);
   assert.equal((await state(page)).edges.length, afterFill.edges.length + 1, 'A later connection is applied without waiting for the fill audio');
-  const queuedEnd = queuedFill.at(-1).when + FILL_NOTE_INTERVAL_MS / 1000;
-  const next = assertScoredFill((await sounds(page)).slice(before.length), 20 + added, 1, tempo, 'Next manual move', queuedEnd);
+  const queuedEnd = queuedFill.at(-1).when + melodyStepMs('odeToJoy', 20 + added - 1, tempo) / 1000;
+  const next = assertScoredFill((await sounds(page)).slice(before.length), 20 + added, 1, 'Next manual move', queuedEnd);
   assert.equal((await storage(page)).melodyStep, 21 + added);
   await writeFile(`${output}/native-audio.json`, JSON.stringify({ tempo, firstFill, secondFill, queuedFill, next, melodyStep: 21 + added }, null, 2));
   await restart(page);
@@ -407,7 +413,7 @@ try {
   const added = (await state(page)).edges.length;
   assert.ok(added >= 2, 'A double tap adds multiple connections');
   assert.deepEqual(melodyNotes((await sounds(page)).slice(before.length)), ode.slice(0, added), 'A double tap schedules the next note for every connection it adds');
-  assertScoredFill((await sounds(page)).slice(before.length), 0, added, s.config.demo.tempoBpm, 'Double tap');
+  assertScoredFill((await sounds(page)).slice(before.length), 0, added, 'Double tap');
   assert.equal((await storage(page)).melodyStep, added, 'Double-tap melody progress matches its actual connection count');
   await page.close();
 
@@ -491,7 +497,7 @@ try {
   console.log(homeSmoke
     ? 'Passed: returning home cancels the unfinished completion phrase before the home demo starts its own melody.'
     : doubleTapSmoke
-    ? 'Passed: native double-click fills update four links immediately, use fast 100ms spacing at the saved melody index, persist the full count, queue subsequent fills and manual moves, keep selection responsive, and retain the falling removal effect.'
+    ? 'Passed: native double-click fills update four links immediately, preserve accelerated melody rhythm and rests at the saved melody index, persist the full count, queue subsequent fills and manual moves, keep selection responsive, and retain the falling removal effect.'
     : completionSmoke
     ? 'Passed: continuation through the next phrase ending, scored rhythm at the configured pace, exact-cadence silence with its last-note tail preserved, no replay or player-index consumption, and mute cancellation.'
     : rotationSmoke
