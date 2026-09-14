@@ -137,12 +137,23 @@ test('verified completions retain browser session attribution on delayed deliver
   assert.equal(captures[0].event, 'puzzle_completed');
   assert.equal(captures[0].properties.$session_id, analytics.sessionId);
   assert.equal(captures[0].properties.distinct_id, visitorA);
+  assert.equal(captures[0].properties.$process_person_profile, false);
   assert.equal(captures[0].properties.app, 'nodoku');
   assert.equal(captures[0].properties.$host, new URL(env.APP_ORIGIN).host);
   assert.equal(captures[0].properties.$pathname, '/');
   assert.equal(captures[0].properties.$current_url, new URL('/', env.APP_ORIGIN).href);
   assert.equal(captures[0].timestamp, analytics.timestamp);
   assert.equal(captures[0].properties.connection_count, solved().edges.length);
+  const distinctId = `player:${crypto.randomUUID()}`;
+  for (const [index, metadata] of [{ ...analytics, distinctId }, { distinctId }].entries()) {
+    const response = await handleApi(request('/api/completions', {
+      ...completion(solved({ seed: 40 + index }).serialize()), analytics: metadata,
+    }), analyticsEnv, store);
+    assert.equal(response.status, 200);
+    assert.equal(captures.at(-1).properties.distinct_id, distinctId);
+    assert.equal(captures.at(-1).properties.$process_person_profile, true);
+    assert.equal(captures.at(-1).properties.$session_id, index === 0 ? analytics.sessionId : undefined);
+  }
   // Old clients and damaged optional metadata still save verified puzzle results.
   for (const [index, value] of [undefined, { sessionId: 'bad', timestamp: analytics.timestamp }].entries()) {
     const response = await handleApi(request('/api/completions', {
@@ -155,7 +166,7 @@ test('verified completions retain browser session attribution on delayed deliver
   }
   const incomplete = solved({ seed: 99 }); incomplete.undo();
   assert.equal((await handleApi(request('/api/completions', { ...completion(incomplete.serialize()), analytics }), analyticsEnv, store)).status, 400);
-  assert.equal(captures.length, 3);
+  assert.equal(captures.length, 5);
 });
 
 test('UTC periods count distinct visitors, keep daily counts nonadditive and bound all-time charts', async t => {

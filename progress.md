@@ -2224,3 +2224,10 @@ TODO / Note
 - Added app, $host, root $pathname and $current_url from the origin already validated by the completion endpoint. No client-supplied arbitrary URL, query string or fabricated session is recorded.
 - Extended the completion capture regression to assert website context alongside the original browser session/timestamp and deduplication. All 232 unit tests and the production build pass.
 - The PostHog connector cannot access Nodoku; the browser event explorer repeatedly times out. Could not establish whether every sessionless event behind the warning is historical. Existing sessionless events are not rewritten by this change.
+
+## PostHog player identification (2026-09-14)
+- Verified origin/main identified a locally generated browser UUID and never updated analytics during Google sign-in or logout.
+- Resolve the account before optional analytics startup; identify with the stable namespaced Nodoku player ID and public nickname. Keep guests anonymous, preserve sessions on same-account reload, and reset device/session identity on logout or direct account switches.
+- Migrate the old identified-browser setup once without merging a potentially shared browser's historical events into a player. Refresh account state after cross-tab auth changes and visibility return; ignore stale profile/account reads.
+- Freeze the analytics distinct ID alongside the original session/timestamp in pending completion payloads. Server completions use that bounded advisory identity without changing visitor statistics, puzzle verification or ranked-ticket authorization. Guest server events disable person processing; account events enable it.
+- Validation: 236 unit tests, production build, actual PostHog SDK browser identity test, and 320px account/sign-in UI flows pass. The SDK test covers guest linking, nickname properties, logout, direct switching and same-account reload/session continuity, with all remote requests intercepted. Added it to CI.

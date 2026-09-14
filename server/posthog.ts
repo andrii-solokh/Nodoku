@@ -1,3 +1,11 @@
+/** Analytics identity is advisory metadata; it never authorizes account or ranking writes. */
+export function completionDistinctId(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object') return;
+  const { distinctId } = value as Record<string, unknown>;
+  if (typeof distinctId === 'string'
+    && /^(?:player:)?[\da-f]{8}-[\da-f]{4}-[47][\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(distinctId)) return distinctId.toLowerCase();
+}
+
 type Properties = Record<string, string | number | boolean>;
 
 /** Optional attribution must never invalidate an otherwise verified completion. */

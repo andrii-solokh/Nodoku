@@ -48,6 +48,8 @@ jobs:
       - run: npm run build
       - name: Install browser for layout regression
         run: npx playwright install --with-deps chromium
+      - name: Check PostHog account identity
+        run: npm run test:analytics-identity
       - name: Check puzzle layout stability
         run: |
           npm run preview -- --port 4173 > "$RUNNER_TEMP/network-layout-preview.log" 2>&1 &
