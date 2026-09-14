@@ -12,7 +12,7 @@ import { BoardScene } from "./scene";
 import { HomeDemo } from "./demo";
 import { mountSponsorship, setSponsorshipConfig } from "./sponsorship";
 import { getConfig, subscribeConfig } from "./config";
-import { FILL_NOTE_INTERVAL_MS, GameAudio } from "./sound";
+import { FILL_MELODY_TEMPO_BPM, GameAudio } from "./sound";
 import { MELODIES, resolveMelody } from "./melodies";
 import { AmbientAudio } from "./ambient";
 import moonlightUrl from "./assets/moonlight-scott-buckley.mp3?url";
@@ -540,12 +540,12 @@ function celebrateOnboarding(message: string, advance: () => void) {
 function tone(
   kind: "connect" | "disconnect" | "complete",
   count = 1,
-  sequenceNoteIntervalMs?: number,
+  sequenceTempoBpm?: number,
 ) {
   const melodyIndex = melodyStep;
   if (kind === "connect") melodyStep += count;
   if (soundEnabled && !document.hidden)
-    gameAudio.play(kind, { melodyIndex, count, sequenceNoteIntervalMs });
+    gameAudio.play(kind, { melodyIndex, count, sequenceTempoBpm });
 }
 function updateSound() {
   gameAudio.setEnabled(soundEnabled && !document.hidden);
@@ -749,7 +749,7 @@ function onDoubleTap(id: number, input: "double_tap" | "modifier_click" = "doubl
       celebrateOnboarding("Neighbors connected", () => { onboardingStep = 4; });
     } else if (isOnboardingPractice()) {
       tone(result.removed ? "disconnect" : "connect", result.count,
-        result.removed ? undefined : FILL_NOTE_INTERVAL_MS);
+        result.removed ? undefined : FILL_MELODY_TEMPO_BPM);
       refreshOnboardingPractice();
     } else if (!completeOnboarding2dIfSolved()) renderOnboarding();
     return;
@@ -768,7 +768,7 @@ function onDoubleTap(id: number, input: "double_tap" | "modifier_click" = "doubl
       result.removed ? result.count : 0,
     );
     tone(result.removed ? "disconnect" : "connect", result.count,
-      result.removed ? undefined : FILL_NOTE_INTERVAL_MS);
+      result.removed ? undefined : FILL_MELODY_TEMPO_BPM);
   }
   updateGame();
   if (!result.changed)

@@ -4,6 +4,7 @@ import { MELODIES, resolveMelody, type ConnectionMelody, melodyCompletionCount, 
 export type GameSound = "rotate" | "connect" | "disconnect" | "complete";
 export type SoundOptions = { unlock?: boolean; melodyIndex?: number; count?: number; rhythmTempoBpm?: number; sequenceTempoBpm?: number; sequenceNoteIntervalMs?: number };
 export const FILL_NOTE_INTERVAL_MS = 100;
+export const FILL_MELODY_TEMPO_BPM = 240;
 type EffectsConfig = Pick<GameConfig["sound"], "noteDurationMs" | "melodyVolume" | "completionSound" | "completionNoteIntervalMs"> & { connectionMelody: ConnectionMelody };
 
 type Voice = {
@@ -26,7 +27,7 @@ const MAX_NOTE_LEAD = .6;
 const MAX_VOICES = 12;
 const MAX_BURST = 6;
 const melodyIndex = (options: SoundOptions) => Number.isSafeInteger(options.melodyIndex) && options.melodyIndex! >= 0 ? options.melodyIndex! : 0;
-const scoreTempo = (value?: number) => Number.isFinite(value) ? Math.max(40, Math.min(180, value!)) : undefined;
+const scoreTempo = (value?: number, maximum = 180) => Number.isFinite(value) ? Math.max(40, Math.min(maximum, value!)) : undefined;
 
 /** Gesture-unlocked game sounds with ordered connection phrases. */
 export class GameAudio {
@@ -246,7 +247,7 @@ export class GameAudio {
       if (!pending) this.connectionSequence = null;
       const intervalMs = pending?.intervalMs ?? (Number.isFinite(options.sequenceNoteIntervalMs)
         ? Math.max(60, Math.min(1000, options.sequenceNoteIntervalMs!)) : undefined);
-      const sequenceTempo = pending?.tempo ?? scoreTempo(options.sequenceTempoBpm) ?? (intervalMs !== undefined ? 96 : undefined);
+      const sequenceTempo = pending?.tempo ?? scoreTempo(options.sequenceTempoBpm, FILL_MELODY_TEMPO_BPM) ?? (intervalMs !== undefined ? 96 : undefined);
       if (sequenceTempo !== undefined) {
         // Append each move to the same scored phrase. Reusing its voice keeps
         // rapid fills from evicting earlier notes through the voice limit.

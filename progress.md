@@ -2237,3 +2237,8 @@ TODO / Note
 - Phone layouts now center the completion card over the puzzle. Its width and maximum height remain inside the game viewport, with internal scrolling for unusually short screens. Desktop side placement and larger compact placement are unchanged.
 - Extended the real completion browser regression to assert that phone cards overlap the board without leaving the game area or viewport, while the puzzle geometry stays fixed.
 - Validation passes in Chromium at 1440/1200/390/320px, Chromium at 320×568, and WebKit at 390/320px. Expanded sharing, keyboard and button actions, next-puzzle flow, board stability and console errors are covered. All 236 unit tests and the production build pass. Added the completion regression to the CI layout gate.
+
+## Double-tap melody rhythm (2026-09-14)
+- Replaced the fixed 100ms onset spacing used by double-tap fills with an accelerated 240 BPM score tempo.
+- Double-tap notes now retain each melody's relative short, dotted, held, and rest intervals while remaining faster than regular playback; short notes also end before the following attack instead of overlapping it.
+- Native Web Audio interaction coverage passes in Chromium and WebKit, including queued fills, manual moves, removal, persistence, and console errors.
