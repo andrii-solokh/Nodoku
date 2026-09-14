@@ -57,6 +57,7 @@ jobs:
           trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
           curl --fail --silent --show-error --retry 30 --retry-delay 1 --retry-connrefused http://127.0.0.1:4173/ --output /dev/null
           npm run test:network-layout
+          npm run test:completion-moment
       - name: Compile Pages Functions
         run: npx wrangler pages functions build --outdir "$RUNNER_TEMP/nodoku-functions"
 
