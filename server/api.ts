@@ -334,11 +334,18 @@ export async function handleApi(request: Request, env: Env, store: Store): Promi
         connections: puzzle.edges.length, dots: puzzle.nodes.reduce((sum, node) => sum + node.required, 0),
       });
       const analytics = completionAnalytics(body.analytics);
+      // checkOrigin has already verified this browser origin. Web Analytics
+      // filters conversion events by $host, even when they share a session.
+      const page = new URL('/', request.headers.get('Origin')!);
       if (accountsEnabled(env) && store.accounts && typeof body.rankedTicket === 'string' && /^[a-f0-9]{64}$/.test(body.rankedTicket)) {
         await store.accounts.completeAttempt(await tokenHash(body.rankedTicket), puzzle.settings);
       }
       if (recorded) await capturePostHog(env, 'puzzle_completed', id, {
         ...(analytics ? { $session_id: analytics.sessionId } : {}),
+        app: 'nodoku',
+        $host: page.host,
+        $pathname: page.pathname,
+        $current_url: page.href,
         grid_size: size,
         depth,
         perspective: depth === 1 ? 'flat' : '3d',

@@ -137,6 +137,10 @@ test('verified completions retain browser session attribution on delayed deliver
   assert.equal(captures[0].event, 'puzzle_completed');
   assert.equal(captures[0].properties.$session_id, analytics.sessionId);
   assert.equal(captures[0].properties.distinct_id, visitorA);
+  assert.equal(captures[0].properties.app, 'nodoku');
+  assert.equal(captures[0].properties.$host, new URL(env.APP_ORIGIN).host);
+  assert.equal(captures[0].properties.$pathname, '/');
+  assert.equal(captures[0].properties.$current_url, new URL('/', env.APP_ORIGIN).href);
   assert.equal(captures[0].timestamp, analytics.timestamp);
   assert.equal(captures[0].properties.connection_count, solved().edges.length);
   // Old clients and damaged optional metadata still save verified puzzle results.
