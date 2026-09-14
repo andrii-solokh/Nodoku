@@ -2217,3 +2217,10 @@ TODO / Note
 - Reserve the same summary height while syncing and after loading. Guest sign-in remains available in the new position.
 - Validation: all 232 unit tests passed, followed by 9 focused tests after final lifecycle changes; production build passes. Five isolated browser scenarios cover improved, first, unchanged, guest, and unavailable rankings at desktop/390px/320px, stable loading height, and the exact leaderboard destination.
 - Inspected screenshots of the isolated component and the real built game with a solved board and mocked account/completion responses. The real completion card showed both rank changes above the next action with no page errors. An earlier pointer-solving browser attempt timed out under host load; the final real-game solved-state check passed.
+
+## Completion Web Analytics context (2026-09-14)
+- Verified origin/main already forwards valid browser session IDs on verified completion events, including delayed uploads. Its server events omit website context.
+- Inspected the live Nodoku Web Analytics query: conversion goal puzzle_completed is filtered by event $host = nodoku.solokh.com. Missing $host prevents server completions from matching that domain filter, independently of session attribution.
+- Added app, $host, root $pathname and $current_url from the origin already validated by the completion endpoint. No client-supplied arbitrary URL, query string or fabricated session is recorded.
+- Extended the completion capture regression to assert website context alongside the original browser session/timestamp and deduplication. All 232 unit tests and the production build pass.
+- The PostHog connector cannot access Nodoku; the browser event explorer repeatedly times out. Could not establish whether every sessionless event behind the warning is historical. Existing sessionless events are not rewritten by this change.
