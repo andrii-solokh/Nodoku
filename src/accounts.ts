@@ -1,3 +1,4 @@
+import { setAnalyticsPlayer } from './analytics';
 import { perspectiveIcon } from './perspective-icons';
 import { normalizeProfileLink } from './profile-link';
 import type { Puzzle } from './puzzle';
@@ -83,6 +84,21 @@ let player: Player | null = null;
 let ready: Promise<void> | undefined;
 const tickets = new Map<string, Promise<string | undefined>>();
 const PREFIX = 'nodoku.ranked-attempt.v1.';
+const AUTH_CHANGED = 'nodoku.auth.changed';
+let playerRevision = 0;
+function setPlayer(value: Player | null, broadcast = false): void {
+  ++playerRevision;
+  player = value;
+  setAnalyticsPlayer(value);
+  if (broadcast) {
+    try { localStorage.setItem(AUTH_CHANGED, crypto.randomUUID()); } catch { /* Storage is optional. */ }
+  }
+}
+async function refreshPlayer(): Promise<void> {
+  const revision = playerRevision;
+  const value = await api('/api/auth/me');
+  if (revision === playerRevision) setPlayer(value.player);
+}
 async function api(path: string, body?: unknown, signal?: AbortSignal) {
   const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', signal: signal ?? timeoutSignal(8000),
     ...(body !== undefined ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) });
@@ -94,8 +110,9 @@ function initialize(): Promise<void> {
   return ready ??= (async () => {
     try {
       const config = await api('/api/auth/config'); enabled = config.enabled === true; clientId = config.clientId;
-      if (enabled) player = (await api('/api/auth/me')).player;
+      if (enabled) await refreshPlayer();
     } catch { enabled = false; }
+    finally { setAnalyticsPlayer(player); }
   })();
 }
 
@@ -107,7 +124,7 @@ export function prepareRankedAttempt(puzzle: Puzzle, attemptId: string): void {
     await initialize();
     if (!enabled) return;
     // Another tab may have signed out or switched accounts since initialization.
-    try { player = (await api('/api/auth/me')).player; } catch { return; }
+    try { await refreshPlayer(); } catch { return; }
     if (!player) return;
     const playerId = player.id;
     try {
@@ -271,7 +288,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
           status.textContent = 'Signing in…';
           try {
             const result = await api('/api/auth/google', { credential });
-            player = result.player; updateProfile();
+            setPlayer(result.player, true); updateProfile();
             status.textContent = '';
             if (active === 'profile') find<HTMLInputElement>('[name="nickname"]').focus({ preventScroll: true });
             if (active === 'leaderboard') void ranking();
@@ -401,7 +418,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
     status.textContent = ''; updateProfile(); position();
     popups[name].querySelector<HTMLButtonElement>('.player-close')!.focus({ preventScroll: true });
     const version = ++profileRevision;
-    try { const result = await popupApi('/api/auth/me'); if (version === profileRevision) { player = result.player; updateProfile(); } } catch { /* Keep the available profile. */ }
+    try { const revision = playerRevision; const result = await popupApi('/api/auth/me'); if (version === profileRevision && revision === playerRevision) { setPlayer(result.player); updateProfile(); } } catch { /* Keep the available profile. */ }
     if (active === name && version === profileRevision) {
       if (name === 'leaderboard') void ranking();
       else if (!player) void prepareSignIn();
@@ -431,8 +448,10 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
   find('form').addEventListener('submit', event => {
     event.preventDefault();
     void action(async () => {
+      const revision = playerRevision;
       const result = await api('/api/auth/profile', { nickname: find<HTMLInputElement>('[name="nickname"]').value, profileUrl: find<HTMLInputElement>('[name="profileUrl"]').value });
-      player = result.player; updateProfile(); status.textContent = 'Profile saved.';
+      if (revision !== playerRevision) return;
+      setPlayer(result.player, true); updateProfile(); status.textContent = 'Profile saved.';
     });
   });
   async function action(work: () => Promise<void>) {
@@ -443,7 +462,7 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
   }
   async function signOut() {
     await api('/api/auth/logout', {});
-    player = null; signInExpiresAt = 0; tickets.clear(); updateProfile();
+    setPlayer(null, true); signInExpiresAt = 0; tickets.clear(); updateProfile();
     if (active === 'profile') void prepareSignIn();
     try {
       for (const key of Object.keys(localStorage)) if (key.startsWith(PREFIX)) localStorage.removeItem(key);
@@ -492,6 +511,12 @@ export function mountAccounts(beforeOpen: () => void, afterClose: () => void): v
     }
   }
   window.addEventListener('nodoku:completion-ranking', renderCompletionRanking);
+  const syncPlayer = async () => {
+    if (!enabled || document.hidden) return;
+    try { await refreshPlayer(); updateProfile(); } catch { /* Retain the last verified state. */ }
+  };
+  window.addEventListener('storage', event => { if (event.key === AUTH_CHANGED) void syncPlayer(); });
+  document.addEventListener('visibilitychange', () => { void syncPlayer(); });
   void initialize().then(() => {
     controls.hidden = !enabled; document.body.classList.toggle('has-player-accounts', enabled); updateProfile();
     const invite = document.createElement('div'); invite.className = 'completion-account'; invite.setAttribute('aria-live', 'polite');

@@ -14,6 +14,7 @@ test('ranked client keeps original tickets on reload and refreshes account befor
   let playerId = 'player-a', issues = 0;
   const runtime = () => {
     const context = createContext({
+      setAnalyticsPlayer: () => {},
       URLSearchParams,
       timeoutSignal: () => undefined,
       localStorage: { getItem: (key: string) => storage.get(key), setItem: (key: string, value: string) => storage.set(key, value), removeItem: (key: string) => storage.delete(key) },
@@ -60,6 +61,7 @@ function rankRuntime(storage = new Map<string, string>()) {
   let playerId = 'player-a';
   let failing = false;
   const context = createContext({
+      setAnalyticsPlayer: () => {},
     URLSearchParams, Event, Date: { now: () => now }, timeoutSignal: () => undefined,
     window: { dispatchEvent: () => {} },
     localStorage: { getItem: (key: string) => storage.get(key), setItem: (key: string, value: string) => storage.set(key, value), removeItem: (key: string) => storage.delete(key) },
@@ -128,4 +130,25 @@ test('a snapshot captured at completion is not presented as the earlier ranking'
   const runtime = rankRuntime(); await runtime.start(); await runtime.finish();
   assert.equal(runtime.state().before, undefined);
   assert.deepEqual(runtime.state().after, { solved: 18, time: 42 });
+});
+
+
+test('verified account refresh reaches analytics and stale responses cannot restore a signed-out player', async () => {
+  const identified: any[] = [];
+  let respond: (response: Response) => void;
+  const ctx = createContext({
+    setAnalyticsPlayer: (player: any) => identified.push(player),
+    timeoutSignal: () => undefined,
+    fetch: () => new Promise<Response>(resolve => { respond = resolve; }),
+  });
+  runInContext(source, ctx);
+  const refreshing = ctx.refreshPlayer();
+  ctx.setPlayer(null);
+  respond!(Response.json({ player: { id: 'old-player', nickname: 'Old player' } }));
+  await refreshing;
+  assert.deepEqual(identified, [null]);
+  const next = ctx.refreshPlayer();
+  respond!(Response.json({ player: { id: 'new-player', nickname: 'New player' } }));
+  await next;
+  assert.equal(identified.at(-1).id, 'new-player');
 });

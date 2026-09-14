@@ -45,6 +45,7 @@
     "test:connection-colors": "node --import tsx tests/connection-colors.mjs",
     "test:gum-materials": "node --import tsx tests/gum-materials.mjs",
     "test:accounts": "node tests/accounts.mjs",
+    "test:analytics-identity": "node tests/analytics-identity.mjs",
     "db:migrate:local": "wrangler d1 migrations apply nodoku --local",
     "db:migrate:production": "wrangler d1 migrations apply nodoku --remote",
     "test:migrations:d1": "node tests/d1-migrations.mjs"

@@ -1,12 +1,12 @@
 import { timeoutSignal } from "./timeout";
 import { Puzzle } from "./puzzle";
 import { getVisitorId } from "./visitor";
-import { getAnalyticsSessionId } from "./analytics";
+import { getAnalyticsSessionId, getAnalyticsDistinctId } from "./analytics";
 import { getRankedTicket, forgetRankedTicket, refreshCompletionRanking } from "./accounts";
 
 const PREFIX = "nodoku.completion.pending.v1.";
 const UUID = /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i;
-type Completion = { visitorId: string; attemptId: string; game: object; rankedTicket?: string; analytics?: { sessionId: string; timestamp: string } };
+type Completion = { visitorId: string; attemptId: string; game: object; rankedTicket?: string; analytics?: { sessionId?: string; distinctId?: string; timestamp: string } };
 const pending = new Map<string, Completion>();
 const sent = new Set<string>();
 let flushing = false;
@@ -81,10 +81,11 @@ export function recordCompletion(puzzle: Puzzle, attemptId: string): void {
   if (sent.has(attemptId)) { void refreshCompletionRanking(attemptId); return; }
   if (pending.has(attemptId)) return;
   const sessionId = getAnalyticsSessionId();
+  const distinctId = getAnalyticsDistinctId();
   const payload: Completion = {
     visitorId: getVisitorId(), attemptId,
     // Freeze attribution at the solve, not at a later offline retry or reload.
-    ...(sessionId ? { analytics: { sessionId, timestamp: new Date().toISOString() } } : {}),
+    ...(sessionId || distinctId ? { analytics: { sessionId, distinctId, timestamp: new Date().toISOString() } } : {}),
     // Only the final board is needed to verify its clues and connected network.
     game: { version: 1, settings: { ...puzzle.settings }, edges: puzzle.edges.map(edge => [...edge]), history: [] },
   };

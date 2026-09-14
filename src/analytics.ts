@@ -1,5 +1,4 @@
 import { timeoutSignal } from "./timeout";
-import { getVisitorId } from "./visitor";
 
 type EventProperties = Record<string, string | number | boolean | undefined>;
 type AnalyticsConfig = { projectApiKey: string; apiHost: string };
@@ -9,6 +8,41 @@ let starting: Promise<void> | null = null;
 let posthog: (typeof import("posthog-js"))["default"] | null = null;
 const queuedEvents: Array<{ event: string; properties: EventProperties }> = [];
 const featureFlagListeners = new Map<string, Set<(enabled: boolean) => void>>();
+
+type AnalyticsPlayer = { id: string; nickname: string };
+let analyticsPlayer: AnalyticsPlayer | null = null;
+let resolveIdentity: () => void;
+const identityReady = new Promise<void>(resolve => { resolveIdentity = resolve; });
+
+/** Auth is resolved separately from the optional SDK, including failed/disabled auth. */
+export function setAnalyticsPlayer(player: AnalyticsPlayer | null): void {
+  if (analyticsPlayer && analyticsPlayer.id !== player?.id) queuedEvents.length = 0;
+  analyticsPlayer = player;
+  resolveIdentity();
+  if (initialized) applyAnalyticsIdentity();
+}
+
+function applyAnalyticsIdentity(): void {
+  if (!posthog) return;
+  try {
+    const desired = analyticsPlayer ? `player:${analyticsPlayer.id}` : undefined;
+    const previous = posthog.get_distinct_id();
+    // Old versions explicitly identified a browser UUID. Never merge that shared
+    // browser's history into an account. Migrate once to genuine anonymous IDs.
+    if (posthog.get_property('nodoku_identity_version') !== 2
+      || (previous.startsWith('player:') && previous !== desired)) posthog.reset(true);
+    if (analyticsPlayer) posthog.identify(desired!, { name: analyticsPlayer.nickname });
+    posthog.register({ app: 'nodoku', nodoku_identity_version: 2 });
+  } catch { /* Optional analytics must never break sign-in or sign-out. */ }
+}
+
+/** Capture this at the action, so retries cannot inherit a later account. */
+export function getAnalyticsDistinctId(): string | undefined {
+  try {
+    return initialized ? posthog?.get_distinct_id()
+      : analyticsPlayer ? `player:${analyticsPlayer.id}` : undefined;
+  } catch { return undefined; }
+}
 
 function publishFeatureFlags(): void {
   for (const [key, listeners] of featureFlagListeners) {
@@ -37,6 +71,7 @@ export function startAnalytics(): void {
     .then(async config => {
       if (!validConfig(config)) return;
       const { default: instance } = await import("posthog-js");
+      await identityReady;
       posthog = instance;
       instance.init(config.projectApiKey, {
         api_host: config.apiHost,
@@ -44,8 +79,7 @@ export function startAnalytics(): void {
         // integrations must still point at the US Cloud application.
         ui_host: "https://us.posthog.com",
         autocapture: false,
-        // Capture one explicit pageview once our Nodoku visitor ID and app label are
-        // registered. This keeps Web Analytics and replay sessions on the same identity.
+        // Capture a pageview after resolving account identity and registering the app.
         capture_pageview: false,
         capture_pageleave: true,
         person_profiles: "identified_only",
@@ -63,11 +97,9 @@ export function startAnalytics(): void {
           canvasCapture: { resolutionScale: 0.6 },
         },
       });
-      // This UUID is created locally by Nodoku and contains no profile data.
-      instance.identify(getVisitorId());
-      instance.register({ app: "nodoku" });
-      instance.capture("$pageview");
       initialized = true;
+      applyAnalyticsIdentity();
+      instance.capture("$pageview");
       instance.onFeatureFlags(() => publishFeatureFlags());
       publishFeatureFlags();
       for (const queued of queuedEvents) send(queued.event, queued.properties);

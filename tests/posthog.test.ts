@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { createContext, runInContext } from 'node:vm';
 import { Puzzle } from '../src/puzzle.ts';
-import { capturePostHog, completionAnalytics } from '../server/posthog.ts';
+import { capturePostHog, completionAnalytics, completionDistinctId } from '../server/posthog.ts';
 
 test('server analytics is optional and sends only the verified completion summary', async t => {
   const requests: Array<{ url: string; body: Record<string, unknown> }> = [];
@@ -52,12 +52,12 @@ test('completion queue freezes attribution through offline storage, reload, and 
     .replace(/^import .*;\n/gm, '').replace(/export /g, '');
   const visitorId = crypto.randomUUID();
   const firstSession = '0198abc0-0000-7000-8000-000000000001';
-  function client(sessionId: string | undefined, online: boolean) {
+  function client(sessionId: string | undefined, online: boolean, distinctId?: string) {
     const window = Object.assign(new EventTarget(), { clearTimeout() {}, setTimeout() { return 1; } });
     const document = Object.assign(new EventTarget(), { hidden: false });
     const context = createContext({
       window, document, navigator: { onLine: online }, Event, crypto, Puzzle,
-      getVisitorId: () => visitorId, getAnalyticsSessionId: () => sessionId,
+      getVisitorId: () => visitorId, getAnalyticsSessionId: () => sessionId, getAnalyticsDistinctId: () => distinctId,
       getRankedTicket: async () => undefined, forgetRankedTicket: () => {}, refreshCompletionRanking: async () => {},
       timeoutSignal: () => undefined,
       localStorage: {
@@ -76,14 +76,16 @@ test('completion queue freezes attribution through offline storage, reload, and 
   const puzzle = new Puzzle({ size: 2, depth: 1, difficulty: 'easy', seed: 7 });
   for (const edge of puzzle.solution) puzzle.toggle(...edge);
   const attempt = crypto.randomUUID();
-  const first = client(firstSession, false);
+  const originalPlayer = `player:${crypto.randomUUID()}`;
+  const first = client(firstSession, false, originalPlayer);
   first.recordCompletion(puzzle, attempt);
   const saved = JSON.parse([...storage.values()][0]);
   assert.equal(saved.analytics.sessionId, firstSession);
+  assert.equal(saved.analytics.distinctId, originalPlayer);
   assert.ok(Number.isFinite(Date.parse(saved.analytics.timestamp)));
   assert.equal(requests.length, 0);
   // A later page/session must send the saved solve attribution, not its own ID.
-  client('0198abc1-0000-7000-8000-000000000002', true).startCompletionTracking();
+  client('0198abc1-0000-7000-8000-000000000002', true, `player:${crypto.randomUUID()}`).startCompletionTracking();
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(requests.length, 1);
   assert.deepEqual(requests[0].analytics, saved.analytics);
@@ -103,4 +105,66 @@ test('session getter handles analytics loading and unavailable SDKs without inve
   assert.equal(context.getAnalyticsSessionId(), 'sdk-session');
   runInContext('posthog = { get_session_id: () => { throw new Error("Unavailable"); } };', context);
   assert.equal(context.getAnalyticsSessionId(), undefined);
+});
+
+
+test('completion identity accepts only bounded analytics IDs, independently of session availability', () => {
+  for (const distinctId of [crypto.randomUUID(), `player:${crypto.randomUUID()}`, '0198abc0-0000-7000-8000-000000000001']) {
+    assert.equal(completionDistinctId({ distinctId }), distinctId);
+  }
+  for (const value of [null, {}, { distinctId: 'someone@example.com' }, { distinctId: 'undefined' }, { distinctId: 123 }, { distinctId: 'player:admin' }]) {
+    assert.equal(completionDistinctId(value), undefined);
+  }
+});
+
+function identityRuntime(sdk: any) {
+  const source = stripTypeScriptTypes(readFileSync('src/analytics.ts', 'utf8'))
+    .replace(/^import .*;\n/gm, '').replace(/export /g, '');
+  const context = createContext({ sdk });
+  runInContext(source, context);
+  runInContext('posthog = sdk; initialized = true;', context);
+  return context;
+}
+
+test('identity migration, login, nickname updates, logout and account switching stay separate', () => {
+  let id = 'old-identified-browser';
+  let properties: Record<string, unknown> = {};
+  let resets = 0;
+  const identifications: any[] = [];
+  const sdk = {
+    get_distinct_id: () => id,
+    get_property: (key: string) => properties[key],
+    reset: (device: boolean) => { assert.equal(device, true); id = `anonymous-${++resets}`; properties = {}; },
+    identify: (next: string, values: object) => { identifications.push({ from: id, to: next, ...values }); id = next; },
+    register: (values: object) => Object.assign(properties, values),
+  };
+  const ctx = identityRuntime(sdk);
+  ctx.setAnalyticsPlayer(null);
+  assert.equal(resets, 1);
+  assert.equal(identifications.length, 0, 'Guests remain anonymous');
+  ctx.setAnalyticsPlayer({ id: 'a', nickname: 'Alice' });
+  assert.deepEqual(identifications.at(-1), { from: 'anonymous-1', to: 'player:a', name: 'Alice' });
+  ctx.setAnalyticsPlayer({ id: 'a', nickname: 'New nickname' });
+  assert.equal(resets, 1);
+  assert.equal(identifications.at(-1).name, 'New nickname');
+  // Restoring the same verified account preserves its session/identity.
+  identityRuntime(sdk).setAnalyticsPlayer({ id: 'a', nickname: 'New nickname' });
+  assert.equal(resets, 1);
+  ctx.setAnalyticsPlayer(null);
+  assert.equal(ctx.getAnalyticsDistinctId(), 'anonymous-2');
+  ctx.setAnalyticsPlayer({ id: 'b', nickname: 'Bob' });
+  assert.equal(identifications.at(-1).from, 'anonymous-2');
+  ctx.setAnalyticsPlayer({ id: 'a', nickname: 'Alice' });
+  assert.equal(identifications.at(-1).from, 'anonymous-3', 'Direct switches never merge two accounts');
+});
+
+test('account state is available before the optional SDK and SDK failures never block logout', () => {
+  const ctx = identityRuntime({ get_distinct_id: () => { throw new Error('Blocked'); } });
+  assert.doesNotThrow(() => ctx.setAnalyticsPlayer(null));
+  assert.equal(ctx.getAnalyticsDistinctId(), undefined);
+  runInContext('initialized = false;', ctx);
+  ctx.setAnalyticsPlayer({ id: 'a', nickname: 'Alice' });
+  assert.equal(ctx.getAnalyticsDistinctId(), 'player:a');
+  ctx.setAnalyticsPlayer(null);
+  assert.equal(ctx.getAnalyticsDistinctId(), undefined);
 });

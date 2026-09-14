@@ -1,0 +1,11 @@
+<!doctype html><html><head><title>Analytics identity test</title></head><body>
+<script type="module">
+import sdk from 'posthog-js';
+import { startAnalytics, setAnalyticsPlayer, getAnalyticsDistinctId, getAnalyticsSessionId, captureAnalytics } from '/src/analytics.ts';
+window.identityTest = {
+  sdk, getAnalyticsDistinctId, getAnalyticsSessionId, captureAnalytics,
+  player(value) { sessionStorage.setItem('identity-player', JSON.stringify(value)); setAnalyticsPlayer(value); },
+};
+setAnalyticsPlayer(JSON.parse(sessionStorage.getItem('identity-player') || 'null'));
+startAnalytics();
+</script></body></html>

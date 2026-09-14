@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import type { Order, Store } from './store.js';
 import type { StatisticsPeriod } from './statistics.js';
 import { Puzzle } from '../src/puzzle.js';
-import { capturePostHog, completionAnalytics } from './posthog.js';
+import { capturePostHog, completionAnalytics, completionDistinctId } from './posthog.js';
 import { accountsEnabled, handleAccountsApi, tokenHash } from './accounts-api.js';
 
 type Env = Record<string, string | undefined>;
@@ -334,13 +334,15 @@ export async function handleApi(request: Request, env: Env, store: Store): Promi
         connections: puzzle.edges.length, dots: puzzle.nodes.reduce((sum, node) => sum + node.required, 0),
       });
       const analytics = completionAnalytics(body.analytics);
+      const distinctId = completionDistinctId(body.analytics) ?? id;
       // checkOrigin has already verified this browser origin. Web Analytics
       // filters conversion events by $host, even when they share a session.
       const page = new URL('/', request.headers.get('Origin')!);
       if (accountsEnabled(env) && store.accounts && typeof body.rankedTicket === 'string' && /^[a-f0-9]{64}$/.test(body.rankedTicket)) {
         await store.accounts.completeAttempt(await tokenHash(body.rankedTicket), puzzle.settings);
       }
-      if (recorded) await capturePostHog(env, 'puzzle_completed', id, {
+      if (recorded) await capturePostHog(env, 'puzzle_completed', distinctId, {
+        $process_person_profile: distinctId.startsWith('player:'),
         ...(analytics ? { $session_id: analytics.sessionId } : {}),
         app: 'nodoku',
         $host: page.host,
