@@ -368,6 +368,32 @@ try {
   el<HTMLButtonElement>("start-button").disabled = true;
   throw error;
 }
+const gameMain = app.querySelector<HTMLElement>(".game-main")!;
+let backgroundRotationPointer: number | null = null;
+gameMain.addEventListener("pointerdown", event => {
+  if (mode !== "playing" || event.target !== gameMain ||
+    (event.pointerType === "mouse" && event.button !== 0)) return;
+  if (!scene.beginBackgroundRotation(event.pointerId, event.clientX, event.clientY)) return;
+  backgroundRotationPointer = event.pointerId;
+  gameMain.setPointerCapture(event.pointerId);
+  event.preventDefault();
+});
+gameMain.addEventListener("pointermove", event => {
+  if (event.pointerId !== backgroundRotationPointer) return;
+  scene.moveBackgroundRotation(event.pointerId, event.clientX, event.clientY);
+  event.preventDefault();
+});
+const finishBackgroundRotation = (event: PointerEvent) => {
+  if (event.pointerId !== backgroundRotationPointer) return;
+  const commit = event.type === "pointerup";
+  backgroundRotationPointer = null;
+  scene.endBackgroundRotation(event.pointerId, event.clientX, event.clientY, commit);
+  if (gameMain.hasPointerCapture(event.pointerId)) gameMain.releasePointerCapture(event.pointerId);
+  event.preventDefault();
+};
+gameMain.addEventListener("pointerup", finishBackgroundRotation);
+gameMain.addEventListener("pointercancel", finishBackgroundRotation);
+gameMain.addEventListener("lostpointercapture", finishBackgroundRotation);
 function demoSoundOptions(kind: "connect" | "complete") {
   const config = getConfig();
   const connections = demo.puzzle?.edges.length ?? 0;

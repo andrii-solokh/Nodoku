@@ -424,6 +424,7 @@ a {
   height: calc(100dvh - 60px);
   min-height: 0;
   position: relative;
+  touch-action: none;
 }
 .onboarding-main {
   display: none;
