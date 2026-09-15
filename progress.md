@@ -2263,3 +2263,20 @@ TODO / Note
 - Raised synthesized melody-note fundamental and overtone gains by 2.5x (about +8 dB) while preserving the saved 0–100% Melody volume control and leaving rotation, disconnect, ambient, and Classic effects unchanged.
 - Validation: all 42 audio-engine tests and production build pass; required web-game Playwright pass completed and screenshot inspected at output/web-game/louder-notes/shot-0.png.
 - The standalone browser sound script stops on its existing default-melody assertion: origin/main config selects `library`, while origin/main test still expects `odeToJoy`; the loudness change is not involved.
+
+2026-09-15 cumulative activity counters
+- Removed the game-header override that replaced server totals for Connections and Nodes filled with the active puzzle's progress after its first action.
+- Game actions still select the relevant metric, but both home and game headers now always render the all-time values returned by `/api/statistics?period=all`.
+- The Chromium and WebKit regression now solves a puzzle, starts another, makes a connection, and confirms the cumulative server total and all-time accessibility label survive the puzzle boundary. Both engines pass, as does the production build.
+- Ran the required web-game client, inspected its gameplay screenshot and rendered state, and found no console-error artifact.
+
+2026-09-15 mobile game information layout
+- Stacked the online count and active all-time statistic beneath the rightmost profile control on mobile.
+- Moved the existing complexity icon, progress bar, and percentage beneath the portrait puzzle without duplicating state or changing desktop/landscape layout.
+- Added responsive geometry assertions for the stacked activity and centered below-puzzle progress row.
+
+2026-09-15 double-tap melody tempo
+- Added a live Studio Sound control for double-tap tempo, validated from 40–240 BPM and migrated into older configuration files.
+- Replaced the fixed 180 BPM node-fill tempo with the configured value and set a more musical 132 BPM default.
+- Double-tap playback still preserves the selected melody's relative note lengths and rests; single links, the home demo, and completion timing remain independently controlled.
+- All 238 unit/server tests and the native Chromium/WebKit double-tap audio regressions pass; Studio was visually inspected with the control updating live and no browser errors.
