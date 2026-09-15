@@ -48,6 +48,10 @@
   .has-player-accounts .playing .game-header-info { left: 96px; }
 }
 
+@media (max-width: 760px) and (orientation: portrait) {
+  .has-player-accounts .playing .game-header-info { left: 50%; }
+}
+
 .player-google-slot { display: grid; height: 40px; margin: 20px 0 12px; }
 .player-google-button, .player-signin { grid-area: 1 / 1; width: 100%; min-width: 0; }
 .player-google-button { min-height: 40px; }

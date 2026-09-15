@@ -320,7 +320,7 @@ test("legacy configs gain sound defaults and save every melody without changing 
   writeFileSync(path, original);
   let current = await (await call()).json();
   assert.deepEqual(current.config, {
-    ...legacy, sound: { connectionMelody: "odeToJoy", noteDurationMs: 320, melodyVolume: .7, completionSound: true, completionNoteIntervalMs: 240, showAmbientMusic: false, ambientVolume: .18 },
+    ...legacy, sound: { connectionMelody: "odeToJoy", noteDurationMs: 320, melodyVolume: .7, fillTempoBpm: 132, completionSound: true, completionNoteIntervalMs: 240, showAmbientMusic: false, ambientVolume: .18 },
   });
   assert.equal(readFileSync(path, "utf8"), original, "loading a legacy config does not rewrite the file");
   for (const [index, connectionMelody] of ["odeToJoy", "furElise", "classic"].entries()) {
@@ -426,6 +426,26 @@ test("legacy sound configs gain completion defaults and save their bounds withou
     assert.deepEqual(JSON.parse(readFileSync(path, "utf8")), next);
     const { completionSound: _enabled, completionNoteIntervalMs: _interval, ...sound } = next.sound;
     assert.deepEqual({ ...next, sound }, legacy, "saving completion controls preserves every other tuning value");
+  }
+});
+
+test("existing sound configs gain a controllable double-tap tempo", async t => {
+  const { call, path } = fixture(t);
+  const legacy = structuredClone(baseline);
+  delete legacy.sound.fillTempoBpm;
+  const original = `${JSON.stringify(legacy)}\n`;
+  writeFileSync(path, original);
+  const current = await (await call()).json();
+  assert.equal(current.config.sound.fillTempoBpm, 132);
+  assert.equal(readFileSync(path, "utf8"), original, "reading the default does not rewrite the owner file");
+  for (const fillTempoBpm of [40, 108, 240]) {
+    const next = { ...current.config, sound: { ...current.config.sound, fillTempoBpm } };
+    assert.equal((await call("PUT", { config: next, revision: current.revision })).status, 200);
+    assert.equal(JSON.parse(readFileSync(path, "utf8")).sound.fillTempoBpm, fillTempoBpm);
+    current.revision = (await (await call()).json()).revision;
+  }
+  for (const fillTempoBpm of [39, 241, 132.5, "132", null, false, {}, NaN, Infinity]) {
+    assert.throws(() => validateConfig({ ...current.config, sound: { ...current.config.sound, fillTempoBpm } }));
   }
 });
 

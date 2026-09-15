@@ -97,6 +97,13 @@ try {
   await page.locator("#config-sound-connectionMelody").selectOption("furElise");
   await page.locator("#config-sound-noteDurationMs").fill("540");
   await page.locator("#config-sound-melodyVolume").fill("0.45");
+  for (const invalid of ["39", "241", "132.5"]) {
+    await page.locator("#config-sound-fillTempoBpm").fill(invalid);
+    assert.equal(await page.locator("#admin-save").isEnabled(), false, "invalid double-tap tempo cannot be saved");
+    assert.equal((await state(page)).config.sound.fillTempoBpm, originalConfig.sound.fillTempoBpm);
+  }
+  await page.locator("#config-sound-fillTempoBpm").fill("108");
+  assert.equal((await state(page)).config.sound.fillTempoBpm, 108, "double-tap tempo previews immediately");
   assert.equal(await page.locator("#config-sound-completionNotes").count(), 0, "the retired note count is absent from Studio");
   const completionToggle = page.locator("#config-sound-completionSound");
   assert.equal(await completionToggle.getAttribute("type"), "checkbox");
@@ -110,7 +117,7 @@ try {
   assert.equal(await page.locator("#admin-save").isEnabled(), false, "completion intervals below 80ms cannot be saved");
   assert.equal((await state(page)).config.sound.completionNoteIntervalMs, originalConfig.sound.completionNoteIntervalMs);
   await page.locator("#config-sound-completionNoteIntervalMs").fill("360");
-  const sound = { ...originalConfig.sound, connectionMelody: "furElise", noteDurationMs: 540, melodyVolume: .45, completionSound: true, completionNoteIntervalMs: 360 };
+  const sound = { ...originalConfig.sound, connectionMelody: "furElise", noteDurationMs: 540, melodyVolume: .45, fillTempoBpm: 108, completionSound: true, completionNoteIntervalMs: 360 };
   assert.deepEqual((await state(page)).config.sound, sound, "sound settings preview immediately");
   await page.locator("#config-sound-melodyVolume").fill("1.1");
   assert.equal(await page.locator("#admin-save").isEnabled(), false, "out-of-range melody volume cannot be saved");

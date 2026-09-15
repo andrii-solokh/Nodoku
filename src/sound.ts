@@ -4,9 +4,10 @@ import { MELODIES, resolveMelody, type ConnectionMelody, melodyCompletionCount, 
 export type GameSound = "rotate" | "connect" | "disconnect" | "complete";
 export type SoundOptions = { unlock?: boolean; melodyIndex?: number; count?: number; rhythmTempoBpm?: number; sequenceTempoBpm?: number; sequenceNoteIntervalMs?: number };
 export const FILL_NOTE_INTERVAL_MS = 100;
-// Keep node fills brisk without turning short score values into indistinct clicks.
-// 180 BPM is still almost twice the normal 96 BPM playback speed.
-export const FILL_MELODY_TEMPO_BPM = 180;
+// Keep node fills brisk without flattening the selected melody's scored rhythm.
+// 132 BPM is faster than normal 96 BPM playback while leaving rests audible.
+export const FILL_MELODY_TEMPO_BPM = 132;
+const MAX_SEQUENCE_TEMPO_BPM = 240;
 type EffectsConfig = Pick<GameConfig["sound"], "noteDurationMs" | "melodyVolume" | "completionSound" | "completionNoteIntervalMs"> & { connectionMelody: ConnectionMelody };
 
 type Voice = {
@@ -251,7 +252,7 @@ export class GameAudio {
       if (!pending) this.connectionSequence = null;
       const intervalMs = pending?.intervalMs ?? (Number.isFinite(options.sequenceNoteIntervalMs)
         ? Math.max(60, Math.min(1000, options.sequenceNoteIntervalMs!)) : undefined);
-      const sequenceTempo = pending?.tempo ?? scoreTempo(options.sequenceTempoBpm, FILL_MELODY_TEMPO_BPM) ?? (intervalMs !== undefined ? 96 : undefined);
+      const sequenceTempo = pending?.tempo ?? scoreTempo(options.sequenceTempoBpm, MAX_SEQUENCE_TEMPO_BPM) ?? (intervalMs !== undefined ? 96 : undefined);
       if (sequenceTempo !== undefined) {
         // Append each move to the same scored phrase. Reusing its voice keeps
         // rapid fills from evicting earlier notes through the voice limit.

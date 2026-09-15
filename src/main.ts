@@ -12,7 +12,7 @@ import { BoardScene } from "./scene";
 import { HomeDemo } from "./demo";
 import { mountSponsorship, setSponsorshipConfig } from "./sponsorship";
 import { getConfig, subscribeConfig } from "./config";
-import { FILL_MELODY_TEMPO_BPM, GameAudio } from "./sound";
+import { GameAudio } from "./sound";
 import { MELODIES, resolveMelody } from "./melodies";
 import { AmbientAudio } from "./ambient";
 import moonlightUrl from "./assets/moonlight-scott-buckley.mp3?url";
@@ -775,7 +775,7 @@ function onDoubleTap(id: number, input: "double_tap" | "modifier_click" = "doubl
       celebrateOnboarding("Neighbors connected", () => { onboardingStep = 4; });
     } else if (isOnboardingPractice()) {
       tone(result.removed ? "disconnect" : "connect", result.count,
-        result.removed ? undefined : FILL_MELODY_TEMPO_BPM);
+        result.removed ? undefined : getConfig().sound.fillTempoBpm);
       refreshOnboardingPractice();
     } else if (!completeOnboarding2dIfSolved()) renderOnboarding();
     return;
@@ -794,7 +794,7 @@ function onDoubleTap(id: number, input: "double_tap" | "modifier_click" = "doubl
       result.removed ? result.count : 0,
     );
     tone(result.removed ? "disconnect" : "connect", result.count,
-      result.removed ? undefined : FILL_MELODY_TEMPO_BPM);
+      result.removed ? undefined : getConfig().sound.fillTempoBpm);
   }
   updateGame();
   if (!result.changed)
