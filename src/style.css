@@ -1605,21 +1605,29 @@ a {
     position: absolute;
     left: 50%;
     top: 50%;
+    bottom: auto;
     transform: translate(-50%, -50%);
+    flex-direction: column;
     align-items: center;
     gap: 3px;
     text-align: center;
     pointer-events: none;
   }
   .playing .game-activity {
-    top: 64px;
+    top: 58px;
     right: 16px;
     left: auto;
     width: auto;
     text-align: right;
   }
-  .playing .visitor-game .audience-link { justify-content: flex-end; }
-  .playing .visitor-game .audience-rotating { justify-content: flex-end; width: 140px; }
+  .playing .visitor-game .audience-link {
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-start;
+    gap: 1px;
+  }
+  .playing .visitor-game .audience-divider { display: none; }
+  .playing .visitor-game .audience-rotating { justify-content: flex-end; width: auto; }
 
   .status-toast {
     bottom: 86px;
@@ -1735,6 +1743,15 @@ a {
   .game-stage { top: 76px; bottom: max(200px, calc(env(safe-area-inset-bottom) + 188px)); }
   .puzzle-melody { top: 40px; font-size: 13px; }
   .game-tip { bottom: max(140px, calc(env(safe-area-inset-bottom) + 128px)); }
+  .playing .game-header-info {
+    position: fixed;
+    top: auto;
+    bottom: max(190px, calc(env(safe-area-inset-bottom) + 178px));
+    transform: translateX(-50%);
+    flex-direction: row;
+    gap: 9px;
+    z-index: 2;
+  }
   .playing #keyboard-button { display: none; }
   .game-toolbar {
     inset: 0;

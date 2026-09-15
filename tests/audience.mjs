@@ -80,6 +80,11 @@ async function layout(page, mode, label) {
       width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth,
       widget: rect(element), header: rect(document.querySelector('.site-header')),
       help: rect(document.querySelector('#help-button')),
+      online: rect(element.querySelector('.audience-online')),
+      rotating: rect(element.querySelector('.audience-rotating')),
+      gameInfo: rect(document.querySelector('.game-header-info')),
+      gameStage: rect(document.querySelector('#game-stage')),
+      gameTip: rect(document.querySelector('#game-tip')),
       inGameHeader: !!element.closest('.site-header #game-activity'),
       inHomeHeader: !!element.closest('.site-header #home-activity'),
       pieces: [...element.querySelectorAll('strong, .visitor-scope')].filter(node => node.getClientRects().length).map(rect),
@@ -92,8 +97,17 @@ async function layout(page, mode, label) {
     assert.ok(piece.x >= boxes.widget.x - 1 && piece.x + piece.width <= boxes.widget.x + boxes.widget.width + 1, `${label}: audience values fit their widget ${JSON.stringify({ widget: boxes.widget, piece })}`);
   }
   if (mode === 'playing') {
-    assert.equal(boxes.inGameHeader, true, 'Game audience replaces the instruction area in the header');
-    assert.ok(boxes.widget.y >= boxes.header.y - 1 && boxes.widget.y + boxes.widget.height <= boxes.header.y + boxes.header.height + 48, `${label}: game audience stays in the header's responsive instruction area`);
+    assert.equal(boxes.inGameHeader, true, 'Game audience remains connected to the header');
+    if (boxes.width <= 760 && boxes.height >= boxes.width) {
+      assert.ok(boxes.widget.y >= boxes.header.y + boxes.header.height - 2, `${label}: game audience begins below the profile row`);
+      assert.ok(boxes.width - boxes.widget.x - boxes.widget.width <= 18, `${label}: game audience aligns below the rightmost profile control`);
+      assert.ok(boxes.online.y + boxes.online.height <= boxes.rotating.y + 1, `${label}: online count sits above the statistic`);
+      assert.ok(boxes.gameInfo.y >= boxes.gameStage.y + boxes.gameStage.height - 16, `${label}: complexity and progress sit below the puzzle stage`);
+      assert.ok(boxes.gameInfo.y + boxes.gameInfo.height <= boxes.gameTip.y, `${label}: puzzle progress stays above the gameplay tip`);
+      assert.ok(Math.abs(boxes.gameInfo.x + boxes.gameInfo.width / 2 - boxes.width / 2) <= 1, `${label}: puzzle progress is centered below the board`);
+    } else {
+      assert.ok(boxes.widget.y >= boxes.header.y - 1 && boxes.widget.y + boxes.widget.height <= boxes.header.y + boxes.header.height + 48, `${label}: game audience stays in the compact header area`);
+    }
   } else {
     assert.equal(boxes.inHomeHeader, true, 'Home audience is mounted in the header');
     if (boxes.width <= 760) {
@@ -305,7 +319,7 @@ try {
   assert.equal(publicLoads, 2, 'Ordinary GET polling does not reload the open statistics page');
   await direct.close();
   assert.deepEqual(errors, [], 'No uncaught browser errors');
-  console.log('Passed: desktop centered activity and mobile activity before help, game header layouts, selected-node UI, refresh identity/counts, 30s presence and 60s statistics polling, validation/error recovery, lifecycle pause/resume, stale responses, stable event-driven stats without idle rotation, and UTC-day visitor registration.');
+  console.log('Passed: desktop centered activity, mobile activity stacked beneath profile, below-puzzle progress layout, selected-node UI, refresh identity/counts, 30s presence and 60s statistics polling, validation/error recovery, lifecycle pause/resume, stale responses, stable event-driven stats without idle rotation, and UTC-day visitor registration.');
 } finally {
   await browser.close();
   await fs.writeFile(`${out}/errors.json`, JSON.stringify(errors, null, 2));
