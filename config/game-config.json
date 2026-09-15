@@ -46,6 +46,7 @@
     "connectionMelody": "library",
     "noteDurationMs": 1000,
     "melodyVolume": 1,
+    "fillTempoBpm": 132,
     "completionSound": true,
     "completionNoteIntervalMs": 200,
     "showAmbientMusic": false,

@@ -48,6 +48,7 @@ export interface GameConfig {
     connectionMelody: MelodySelection;
     noteDurationMs: number;
     melodyVolume: number;
+    fillTempoBpm: number;
     completionSound: boolean;
     completionNoteIntervalMs: number;
     showAmbientMusic: boolean;
@@ -126,7 +127,7 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     },
     tempoBpm: {
       label: "Melody tempo", kind: "number", min: 40, max: 180, step: 1, unit: "BPM", integer: true,
-      description: "Quarter-note beats per minute for the home melody and its completion. Higher values play faster. Player completion uses Completion note interval; double-tap fills use fast note spacing.",
+      description: "Quarter-note beats per minute for the home melody and its completion. Higher values play faster. Player fills and completion have separate controls in Sound.",
     },
     initialDelayMs: milliseconds("Wait before starting", 0, 5000),
     stepDelayMs: { ...milliseconds("Pause between connections", 50, 5000), description: "Pause after animations in Fixed delay mode. Melody rhythm uses the score and tempo instead." },
@@ -218,6 +219,10 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     },
     noteDurationMs: { ...milliseconds("Note duration", 100, 1000), description: "Length of each synthesized melody note." },
     melodyVolume: { label: "Melody volume", kind: "number", min: 0, max: 1, step: .05, description: "Relative melody volume. Set to 0 to silence melody notes." },
+    fillTempoBpm: {
+      label: "Double-tap tempo", kind: "number", min: 40, max: 240, step: 1, unit: "BPM", integer: true,
+      description: "Tempo for notes played when double-tap fills several connections. The melody's relative note lengths and rests are preserved.",
+    },
     completionSound: {
       label: "Play completion ending", kind: "boolean",
       description: "Continue to the next musical phrase ending. If the last move already finishes a phrase, no extra notes play.",
@@ -292,6 +297,7 @@ function migrateSound(value: unknown, present: boolean): Record<string, unknown>
     throw new Error("Invalid value for completion notes.");
   }
   return {
+    fillTempoBpm: 132,
     completionSound: hasLegacyCount ? (completionNotes as number) > 0 : true,
     completionNoteIntervalMs: 240, showAmbientMusic: false, ambientVolume: .18, ...current,
   };
