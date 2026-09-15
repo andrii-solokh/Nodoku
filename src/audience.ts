@@ -40,8 +40,7 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
   let statisticsUpdatedAt = -Infinity;
   let timer: number | undefined;
   let metricIndex = 0;
-  let activity: (PuzzleActivity & { showProgress: boolean }) | null = currentPuzzleActivity
-    ? { ...currentPuzzleActivity, showProgress: false } : null;
+  let activity: PuzzleActivity | null = currentPuzzleActivity;
   let active: AbortController | null = null;
   let away = false;
   let statistics: StatisticsData | null = null;
@@ -66,29 +65,21 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
     const metric = metrics[metricIndex];
     const presence = onlineCount === null ? 'Online count unavailable' : `${format.format(onlineCount)} online`;
     for (const widget of widgets) {
-      const { value, scope } = metricValue(widget, metric.key);
+      const { value, scope } = metricValue(metric.key);
       const total = value === undefined ? `${metric.label} unavailable` : `${format.format(value)} ${metric.label.toLowerCase()} ${scope}`;
       widget.querySelector('button')!.setAttribute('aria-label', `${statistics?.scope === 'local' ? 'Local preview. ' : ''}${presence}, ${total}. Open statistics`);
     }
   }
 
-  function metricValue(widget: HTMLElement, key: typeof metrics[number]['key']) {
-    if (widget.classList.contains('visitor-game') && activity?.showProgress && !activity.solved) {
-      if (key === 'connectionsCompleted') return { value: activity.connections, scope: 'in this puzzle' };
-      if (key === 'nodesFilled') return { value: activity.nodesFilled, scope: 'in this puzzle' };
-    }
+  function metricValue(key: typeof metrics[number]['key']) {
     return { value: statistics?.totals[key], scope: 'all time' };
   }
-  function renderMetrics(previous?: PuzzleActivity | null) {
+  function renderMetrics() {
     for (const widget of widgets) {
       for (const metric of metrics) {
         const counter = widget.querySelector<HTMLElement>(`.audience-${metric.key}`)!;
-        const { value, scope } = metricValue(widget, metric.key);
-        const samePuzzle = previous && activity?.attemptId === previous.attemptId;
-        const from = samePuzzle && scope === 'in this puzzle'
-          ? metric.key === 'nodesFilled' ? previous.nodesFilled : metric.key === 'connectionsCompleted' ? previous.connections : undefined
-          : undefined;
-        renderCounter(counter.querySelector('strong')!, value, value === undefined ? '—' : value >= 100_000 ? compact.format(value) : format.format(value), { animate: metric.key === metrics[metricIndex].key, from });
+        const { value, scope } = metricValue(metric.key);
+        renderCounter(counter.querySelector('strong')!, value, value === undefined ? '—' : value >= 100_000 ? compact.format(value) : format.format(value), { animate: metric.key === metrics[metricIndex].key });
         counter.title = value === undefined ? `${metric.label} are temporarily unavailable` : `${format.format(value)} ${metric.label.toLowerCase()} · ${scope}`;
         counter.classList.toggle('is-unavailable', value === undefined);
       }
@@ -109,12 +100,12 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
       && next.connections === activity.connections && next.nodesFilled === activity.nodesFilled && next.solved === activity.solved) return;
     const previous = activity;
     const samePuzzle = next && next.attemptId === previous?.attemptId;
-    activity = next ? { ...next, showProgress: !!samePuzzle } : null;
+    activity = next;
     // One action has one result: solving outranks filling, which outranks linking.
     const key = !activity || !samePuzzle || activity.solved ? 'puzzlesSolved'
       : activity.nodesFilled !== previous?.nodesFilled ? 'nodesFilled' : 'connectionsCompleted';
     showMetric(key);
-    renderMetrics(samePuzzle ? previous : null);
+    renderMetrics();
   });
   function online(value: number | null, scope?: string) {
     onlineCount = value;
@@ -159,7 +150,7 @@ export function mountAudience(widgets: HTMLElement[], visitorId: string, options
       const changed = statistics && metrics.find(metric => result.totals[metric.key] !== statistics!.totals[metric.key]);
       statistics = result;
       statisticsUpdatedAt = Date.now();
-      if (changed && (!activity?.showProgress || activity.solved)) showMetric(changed.key);
+      if (changed) showMetric(changed.key);
       renderMetrics();
     } catch {
       if (active === controller && !document.hidden && !away) { statistics = null; renderMetrics(); }
