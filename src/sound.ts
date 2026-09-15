@@ -4,7 +4,9 @@ import { MELODIES, resolveMelody, type ConnectionMelody, melodyCompletionCount, 
 export type GameSound = "rotate" | "connect" | "disconnect" | "complete";
 export type SoundOptions = { unlock?: boolean; melodyIndex?: number; count?: number; rhythmTempoBpm?: number; sequenceTempoBpm?: number; sequenceNoteIntervalMs?: number };
 export const FILL_NOTE_INTERVAL_MS = 100;
-export const FILL_MELODY_TEMPO_BPM = 240;
+// Keep node fills brisk without turning short score values into indistinct clicks.
+// 180 BPM is still almost twice the normal 96 BPM playback speed.
+export const FILL_MELODY_TEMPO_BPM = 180;
 type EffectsConfig = Pick<GameConfig["sound"], "noteDurationMs" | "melodyVolume" | "completionSound" | "completionNoteIntervalMs"> & { connectionMelody: ConnectionMelody };
 
 type Voice = {
@@ -26,6 +28,8 @@ const NOTE_GAP = .075;
 const MAX_NOTE_LEAD = .6;
 const MAX_VOICES = 12;
 const MAX_BURST = 6;
+const MELODY_FUNDAMENTAL_GAIN = .3;
+const MELODY_OVERTONE_GAIN = .045;
 const melodyIndex = (options: SoundOptions) => Number.isSafeInteger(options.melodyIndex) && options.melodyIndex! >= 0 ? options.melodyIndex! : 0;
 const scoreTempo = (value?: number, maximum = 180) => Number.isFinite(value) ? Math.max(40, Math.min(maximum, value!)) : undefined;
 
@@ -427,8 +431,8 @@ export class GameAudio {
 
   private melodyTone(voice: Voice, start: number, frequency: number, durationMs: number): void {
     const duration = durationMs / 1000;
-    this.tone(voice, start, frequency, frequency, duration, .12 * this.config.melodyVolume);
-    this.tone(voice, start, frequency * 2, frequency * 2, Math.min(.18, duration * .55), .018 * this.config.melodyVolume);
+    this.tone(voice, start, frequency, frequency, duration, MELODY_FUNDAMENTAL_GAIN * this.config.melodyVolume);
+    this.tone(voice, start, frequency * 2, frequency * 2, Math.min(.18, duration * .55), MELODY_OVERTONE_GAIN * this.config.melodyVolume);
   }
 
   private stopAll(): void {

@@ -216,12 +216,12 @@ test("the gameplay fill tempo shortens the melody while preserving its rhythmic 
   const { audio, context } = setup(t);
   audio.play("connect", { melodyIndex: 12, count: 4, sequenceTempoBpm: FILL_MELODY_TEMPO_BPM });
   const notes = fundamentals(context());
-  assert.deepEqual(notes.map(source => source.startTime), [0, .375, .5, 1]);
+  assert.deepEqual(notes.map(source => source.startTime), [0, .5, 2 / 3, 4 / 3]);
   assert.deepEqual(
     notes.map(source => source.frequency.events[0].value),
     [64, 62, 62, 64].map(midiToFrequency),
   );
-  assert.ok(Math.abs(notes[1].stopTimes[0] - notes[1].startTime - .1275) < 1e-9,
+  assert.ok(Math.abs(notes[1].stopTimes[0] - notes[1].startTime - .165) < 1e-9,
     "the short note ends before the next attack instead of overlapping it");
 });
 
