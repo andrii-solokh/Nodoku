@@ -13,7 +13,9 @@ const rotationSmoke = process.argv.includes('--rotation-smoke');
 const completionSmoke = process.argv.includes('--completion-smoke');
 const doubleTapSmoke = process.argv.includes('--double-tap-smoke');
 const homeSmoke = process.argv.includes('--home-smoke');
-const settings = { size: 4, depth: 1, difficulty: 'easy', seed: 123 };
+// The tracked Library setting resolves seed 120 to Ode to Joy, keeping these
+// native-audio assertions deterministic without overriding production config.
+const settings = { size: 4, depth: 1, difficulty: 'easy', seed: 120 };
 const state = async page => JSON.parse(await page.evaluate(() => window.render_game_to_text()));
 const sounds = page => page.evaluate(() => window.__audio.starts);
 const count = (events, frequency) => events.filter(event => event.frequency === frequency).length;
@@ -103,7 +105,9 @@ async function fixture(edges = [], melodyStep = 0) {
   }, { settings, edges, melodyStep });
   await page.goto(url);
   await page.locator('#resume-button').click();
-  assert.equal((await state(page)).config.sound.connectionMelody, 'odeToJoy', 'Default connection melody is Ode to Joy');
+  const current = await state(page);
+  assert.equal(current.config.sound.connectionMelody, 'library', 'Default connection melody rotates through the library');
+  assert.equal(current.melody, 'odeToJoy', 'The fixture seed deterministically selects Ode to Joy');
   return page;
 }
 async function enable(page) {
@@ -172,7 +176,11 @@ async function doubleTapRhythm() {
   const center = current.nodes.find(node => node.id === 5);
   assert.equal(center.remaining, 4, 'The seeded center can add four links in one fill');
   const tempo = FILL_MELODY_TEMPO_BPM;
-  assert.deepEqual([12, 13, 14].map(index => melodyStepMs('odeToJoy', index, tempo)), [375, 125, 500], 'The accelerated fill preserves dotted, short, and held score values');
+  assert.deepEqual(
+    [12, 13, 14].map(index => melodyStepMs('odeToJoy', index, tempo)),
+    [500, 1000 / 6, 2000 / 3],
+    'The accelerated fill preserves dotted, short, and held score values',
+  );
   let before = await sounds(page);
   await page.mouse.dblclick(center.screen.x, center.screen.y);
   current = await state(page);

@@ -260,6 +260,7 @@ export class BoardScene {
   private moved = false;
   private rotated = false;
   private pinchGesture = false;
+  private backgroundPointer: { id: number; x: number; y: number } | null = null;
   private listeners = new AbortController();
 
   constructor(
@@ -1566,6 +1567,7 @@ export class BoardScene {
     if (!enabled) {
       this.cancelTap();
       this.endStroke();
+      this.backgroundPointer = null;
       this.moved = true;
     }
     this.renderer.domElement.tabIndex = enabled ? 0 : -1;
@@ -2185,6 +2187,67 @@ export class BoardScene {
       this.gestures.onRotationGesture?.(direction);
   }
 
+  beginBackgroundRotation(pointerId: number, x: number, y: number): boolean {
+    if (!this.interactive || this.shapeTransition || this.isFlat || this.pointers.size || this.backgroundPointer)
+      return false;
+    this.interactionRevision++;
+    this.cancelTap();
+    this.endStroke();
+    this.cancelMotion();
+    this.renderer.domElement.focus({ preventScroll: true });
+    this.backgroundPointer = { id: pointerId, x, y };
+    this.gestureStart = { x, y };
+    this.gestureOrientation.copy(this.orientation);
+    this.gestureNode = null;
+    this.moved = false;
+    this.rotated = false;
+    this.pinchGesture = false;
+    return true;
+  }
+
+  moveBackgroundRotation(pointerId: number, x: number, y: number): void {
+    const previous = this.backgroundPointer;
+    if (!previous || previous.id !== pointerId || !this.interactive || this.shapeTransition) return;
+    this.backgroundPointer = { id: pointerId, x, y };
+    if (!this.moved && Math.hypot(x - this.gestureStart.x, y - this.gestureStart.y) > 5)
+      this.moved = true;
+    if (!this.moved) return;
+    this.rotateGesture(previous, { x, y });
+  }
+
+  endBackgroundRotation(pointerId: number, x: number, y: number, commit = true): void {
+    const previous = this.backgroundPointer;
+    if (!previous || previous.id !== pointerId) return;
+    if (commit) this.moveBackgroundRotation(pointerId, x, y);
+    this.backgroundPointer = null;
+    if (this.rotated) {
+      this.settleGesture(commit ? { x, y } : previous, commit);
+      this.gestures.onViewChange?.();
+    } else if (commit && !this.moved) this.onBackground?.();
+  }
+
+  private rotateGesture(previous: { x: number; y: number }, next: { x: number; y: number }): void {
+    if (this.isFlat) return;
+    this.cancelMotion();
+    if (!this.rotated) this.gestures.onRotate?.();
+    this.rotated = true;
+    this.orientation.multiply(
+      new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        -(next.x - previous.x) * 0.007,
+      ),
+    );
+    this.orientation.multiply(
+      new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        -(next.y - previous.y) * 0.007,
+      ),
+    );
+    this.orientation.normalize();
+    this.updateCamera();
+    this.render();
+  }
+
   private installGestures(): void {
     const canvas = this.renderer.domElement;
     const options = { signal: this.listeners.signal };
@@ -2270,27 +2333,7 @@ export class BoardScene {
           this.followDragStrand(next);
           return;
         }
-        if (this.isFlat) return;
-        this.cancelMotion();
-        if (!this.rotated) this.gestures.onRotate?.();
-        this.rotated = true;
-        const dx = next.x - previous.x;
-        const dy = next.y - previous.y;
-        this.orientation.multiply(
-          new THREE.Quaternion().setFromAxisAngle(
-            new THREE.Vector3(0, 1, 0),
-            -dx * 0.007,
-          ),
-        );
-        this.orientation.multiply(
-          new THREE.Quaternion().setFromAxisAngle(
-            new THREE.Vector3(1, 0, 0),
-            -dy * 0.007,
-          ),
-        );
-        this.orientation.normalize();
-        this.updateCamera();
-        this.render();
+        this.rotateGesture(previous, next);
       },
       options,
     );

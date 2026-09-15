@@ -2242,3 +2242,24 @@ TODO / Note
 - Replaced the fixed 100ms onset spacing used by double-tap fills with an accelerated 240 BPM score tempo.
 - Double-tap notes now retain each melody's relative short, dotted, held, and rest intervals while remaining faster than regular playback; short notes also end before the following attack instead of overlapping it.
 - Native Web Audio interaction coverage passes in Chromium and WebKit, including queued fills, manual moves, removal, persistence, and console errors.
+
+## Double-tap melody feel (2026-09-15)
+- Reduced accelerated node-fill playback from 240 BPM to 180 BPM. The score's onset ratios remain unchanged, while short notes now have enough attack and decay to remain recognizable after the melody volume increase.
+- Updated the native browser audio fixture to use the tracked Library setting with a deterministic Ode to Joy seed. Chromium confirms that a four-link double click updates immediately, schedules every note at the new score timing, preserves rests and subsequent queued moves, and keeps removal feedback intact.
+- Focused 42 audio tests and the production build pass. The prescribed web-game client reports the expected playing state with no console-error artifact; its gameplay screenshot was inspected.
+
+2026-09-15 update
+- Mobile 3D rotation now accepts drags from the unused background gap below the rendered board and above/between the bottom controls.
+- Kept the canvas and camera framing unchanged; the game background forwards only direct empty-area gestures into the board's existing free-rotation and snap behavior.
+- Buttons, dialogs, melody links, network status, node taps, and flat puzzles remain excluded from this background gesture path.
+- Validation: production build passed; all 237 unit/server tests passed.
+- Focused real-touch Chromium test at 390x844 confirmed the gap (canvas bottom 644px to controls top 714px) rotates from front to side, preserves edges, and logs no browser errors. Screenshot: output/web-game/mobile-background-rotation/after-gap-drag.png.
+- The required web-game Playwright client ran and its screenshot/state artifacts were inspected under output/web-game/mobile-background-rotation-skill/.
+- Existing broad `test:browser`, `test:camera`, and `test:front-face` scripts still have assertions that fail on current origin/main (canvas-height expectation, post-hint animation timing, and a generated edge drag respectively); each failure was reproduced in a clean detached origin/main worktree. The focused new interaction check passes before those unrelated failures.
+- WebKit also passed the mobile-viewport background drag check, covering Safari's pointer-event path.
+- CI layout regression passed for flat and cube boards at all six desktop/mobile/landscape viewports; background gesture support does not resize or shift the board.
+
+2026-09-15 melody loudness
+- Raised synthesized melody-note fundamental and overtone gains by 2.5x (about +8 dB) while preserving the saved 0–100% Melody volume control and leaving rotation, disconnect, ambient, and Classic effects unchanged.
+- Validation: all 42 audio-engine tests and production build pass; required web-game Playwright pass completed and screenshot inspected at output/web-game/louder-notes/shot-0.png.
+- The standalone browser sound script stops on its existing default-melody assertion: origin/main config selects `library`, while origin/main test still expects `odeToJoy`; the loudness change is not involved.

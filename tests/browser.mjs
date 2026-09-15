@@ -324,6 +324,26 @@ try {
     'mobile portrait keeps puzzle actions separate from rotation controls',
   );
   s = await state(mobile);
+  const mobileCanvas = await mobile.locator('#game-stage canvas').boundingBox();
+  const backgroundPoint = await mobile.evaluate(({ canvasBottom }) => {
+    const controls = [...document.querySelectorAll('.tools-group, .rotation-tools')]
+      .map(element => element.getBoundingClientRect().top);
+    const point = { x: innerWidth / 2, y: canvasBottom + (Math.min(...controls) - canvasBottom) / 2 };
+    return { ...point, target: document.elementFromPoint(point.x, point.y)?.className };
+  }, { canvasBottom: mobileCanvas.y + mobileCanvas.height });
+  assert.match(String(backgroundPoint.target), /game-main/, 'mobile gap belongs to the puzzle rotation surface');
+  const directionBeforeGapDrag = s.view.direction;
+  const touch = await mobile.context().newCDPSession(mobile);
+  const dispatchTouch = (type, point) => touch.send('Input.dispatchTouchEvent', {
+    type, touchPoints: point ? [{ id: 7, x: point.x, y: point.y, radiusX: 3, radiusY: 3, force: 1 }] : [],
+  });
+  await dispatchTouch('touchStart', backgroundPoint);
+  await dispatchTouch('touchMove', { x: backgroundPoint.x + 55, y: backgroundPoint.y + 12 });
+  assert.equal((await state(mobile)).view.snapped, false, 'dragging below the canvas rotates the mobile puzzle');
+  await dispatchTouch('touchEnd');
+  await settle(mobile);
+  s = await state(mobile);
+  assert.notDeepEqual(s.view.direction, directionBeforeGapDrag, 'the mobile background drag commits a turn');
   nodes = pair(s);
   assert.equal(s.selected, null, "a fresh mobile puzzle starts with no selected node");
   await mobile.touchscreen.tap(nodes[0].screen.x, nodes[0].screen.y);
