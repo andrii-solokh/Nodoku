@@ -8,7 +8,7 @@
     "admin": "node --import tsx scripts/admin-link.ts",
     "build": "tsc --noEmit && tsc --noEmit -p tsconfig.server.json && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --import tsx --test tests/puzzle.test.ts tests/sponsorship-server.test.ts tests/statistics-server.test.ts tests/ad-free-server.test.ts tests/demo.test.ts tests/dot-animation.test.ts tests/connection-colors.test.ts tests/gum-profile.test.ts tests/admin-api.test.ts tests/vite-admin.test.ts tests/sound.test.ts tests/melodies.test.ts tests/ambient.test.ts tests/open-graph.test.ts tests/seo.test.ts tests/posthog.test.ts tests/timeout.test.ts tests/accounts.test.ts tests/accounts-client.test.ts tests/migrations.test.ts",
+    "test": "node --import tsx --test tests/puzzle.test.ts tests/sponsorship-server.test.ts tests/statistics-server.test.ts tests/ad-free-server.test.ts tests/demo.test.ts tests/dot-animation.test.ts tests/connection-colors.test.ts tests/gum-profile.test.ts tests/admin-api.test.ts tests/vite-admin.test.ts tests/sound.test.ts tests/melodies.test.ts tests/ambient.test.ts tests/open-graph.test.ts tests/seo.test.ts tests/posthog.test.ts tests/timeout.test.ts tests/accounts.test.ts tests/accounts-client.test.ts tests/migrations.test.ts tests/pages-api.test.ts",
     "test:melody-library": "node --import tsx tests/melody-library.mjs",
     "test:demo": "node tests/demo.mjs",
     "test:demo-rhythm": "node --import tsx tests/demo-rhythm.mjs",
