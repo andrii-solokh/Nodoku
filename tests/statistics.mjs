@@ -29,6 +29,10 @@ const stats = (period = 'all', solved = 213) => ({
   sizes: [{ size: 3, depth: 1, count: 80 }, { size: 3, depth: 3, count: 100 }, { size: 4, depth: 4, count: 33 }],
   difficulties: [{ difficulty: 'easy', count: 103 }, { difficulty: 'medium', count: 65 }, { difficulty: 'hard', count: 45 }],
 });
+const geography = period => ({
+  period,
+  countries: [{ country: 'UA', visitors: 812, pageviews: 1934 }, { country: 'US', visitors: 421, pageviews: 991 }, { country: 'Unknown', visitors: 3, pageviews: 4 }],
+});
 
 async function fixture(save = null) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
@@ -37,10 +41,16 @@ async function fixture(save = null) {
   await page.route('**/api/presence', route => route.fulfill({ json: { online: 12, scope: 'local' } }));
   await page.route('**/api/sponsorship', route => route.fulfill({ json: { available: false, sponsors: [] } }));
   const requests = [];
+  const geoRequests = [];
   await page.route('**/api/statistics?*', route => {
     const period = new URL(route.request().url()).searchParams.get('period');
     requests.push(period);
     return route.fulfill({ json: stats(period) });
+  });
+  await page.route('**/api/statistics/geo?*', route => {
+    const period = new URL(route.request().url()).searchParams.get('period');
+    geoRequests.push(period);
+    return route.fulfill({ json: geography(period) });
   });
   if (save) await page.addInitScript(save => {
     if (!sessionStorage.getItem('stats-fixture')) {
@@ -48,7 +58,7 @@ async function fixture(save = null) {
       localStorage.setItem('nodoku.astra.v1', JSON.stringify(save));
     }
   }, save);
-  return { page, requests };
+  return { page, requests, geoRequests };
 }
 
 try {
@@ -136,6 +146,11 @@ try {
   assert.equal(await dialog.locator('#statistics-sizes .statistics-ranking-bar').count(), 3);
   assert.equal(await dialog.locator('#statistics-difficulties .statistics-ranking-bar').count(), 3);
   assert.equal(await dialog.locator('#statistics-difficulties .statistics-complexity-icon').count(), 3, 'Difficulty rankings use the home-page complexity symbols');
+  await waitFor(async () => await dialog.locator('#statistics-geo').isVisible(), 'Country statistics load separately from the main totals');
+  assert.equal(await dialog.locator('#statistics-geo-values tr').count(), 3);
+  const countryRows = await dialog.locator('#statistics-geo-values tr').evaluateAll(rows => rows.map(row => [...row.querySelectorAll('td')].map(cell => cell.textContent)));
+  assert.deepEqual(countryRows.map(row => row.slice(1)), [['812', '1,934'], ['421', '991'], ['3', '4']]);
+  assert.equal(countryRows[2][0], 'Unknown location');
   for (const ranking of ['#statistics-sizes', '#statistics-difficulties']) {
     const offsets = await dialog.locator(`${ranking} li`).evaluateAll(rows => rows.map(row => {
       const bar = row.querySelector('.statistics-ranking-bar').getBoundingClientRect();
@@ -153,6 +168,7 @@ try {
   for (const period of ['today', '7d', '30d', 'all']) {
     await dialog.locator(`[data-period="${period}"]`).click();
     await waitFor(() => view.requests.at(-1) === period, `Filter requests ${period}`);
+    await waitFor(() => view.geoRequests.at(-1) === period, `Country filter requests ${period}`);
     await waitFor(async () => await dialog.locator('#statistics-content').isVisible(), `Filter ${period} finishes loading`);
     assert.equal(await dialog.locator(`[data-period="${period}"]`).getAttribute('aria-pressed'), 'true');
     assert.equal(await dialog.locator('#statistics-activity').isVisible(), period !== 'today', `${period} only shows activity charts when the period spans multiple days`);

@@ -3,6 +3,7 @@ import type { Order, Store } from './store.js';
 import type { StatisticsPeriod } from './statistics.js';
 import { Puzzle } from '../src/puzzle.js';
 import { capturePostHog, completionAnalytics, completionDistinctId } from './posthog.js';
+import { geographicStatistics } from './posthog-geo.js';
 import { accountsEnabled, handleAccountsApi, tokenHash } from './accounts-api.js';
 
 type Env = Record<string, string | undefined>;
@@ -286,7 +287,7 @@ export async function handleApi(request: Request, env: Env, store: Store): Promi
   if (path.startsWith('/api/auth/') || path === '/api/leaderboard' || path === '/api/ranked-attempts') return handleAccountsApi(request, env, store);
   const allowed: Record<string, string[]> = {
     '/api/visitors': ['GET', 'POST'], '/api/presence': ['POST'], '/api/sponsorship': ['GET'], '/api/checkout': ['POST'],
-    '/api/statistics': ['GET'], '/api/analytics-config': ['GET'], '/api/completions': ['POST'], '/api/sponsor-events': ['POST'], '/api/sponsor-report': ['POST'],
+    '/api/statistics': ['GET'], '/api/statistics/geo': ['GET'], '/api/analytics-config': ['GET'], '/api/completions': ['POST'], '/api/sponsor-events': ['POST'], '/api/sponsor-report': ['POST'],
     '/api/checkout-status': ['GET'], '/api/stripe-webhook': ['POST'],
     '/api/ad-free/checkout': ['POST'], '/api/ad-free/status': ['GET'], '/api/ad-free/entitlement': ['POST'],
   };
@@ -315,6 +316,11 @@ export async function handleApi(request: Request, env: Env, store: Store): Promi
       const period = statisticsPeriod(new URL(request.url).searchParams.get('period'));
       await statisticsStore(store);
       return json(await store.statistics(period));
+    }
+    if (path === '/api/statistics/geo') {
+      const period = statisticsPeriod(new URL(request.url).searchParams.get('period'));
+      const result = await geographicStatistics(env, period, appOrigin(env));
+      return result ? json(result) : new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
     }
     if (path === '/api/analytics-config') {
       const projectApiKey = env.POSTHOG_PROJECT_API_KEY;

@@ -10,6 +10,13 @@ REMOVE_ADS_AMOUNT=""
 # Optional PostHog product analytics. This public project key is delivered to
 # the browser through the same-origin /api/analytics-config endpoint.
 POSTHOG_PROJECT_API_KEY=""
+# Optional country statistics. Keep this server-only query key private; use a
+# PostHog project-secret key or a least-privilege personal key with query read
+# access. The project ID is shown in PostHog project settings.
+POSTHOG_QUERY_API_KEY=""
+POSTHOG_PROJECT_ID=""
+# US Cloud is the default. Use https://eu.posthog.com for an EU project.
+POSTHOG_API_HOST="https://us.posthog.com"
 # Optional Google accounts + leaderboard. Enable only after schema setup.
 ACCOUNTS_ENABLED="false"
 GOOGLE_CLIENT_ID=""

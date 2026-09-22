@@ -12,6 +12,10 @@ export interface StatisticsData {
   sizes: { size: number; depth: number; count: number }[];
   difficulties: { difficulty: 'easy' | 'medium' | 'hard'; count: number }[];
 }
+export interface GeographicStatisticsData {
+  period: StatisticsPeriod;
+  countries: { country: string; visitors: number; pageviews: number }[];
+}
 const count = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object';
 const day = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value));
@@ -26,7 +30,16 @@ export function parseStatistics(value: unknown, period: StatisticsPeriod): Stati
   }
   return value as unknown as StatisticsData;
 }
+export function parseGeographicStatistics(value: unknown, period: StatisticsPeriod): GeographicStatisticsData {
+  if (!record(value) || value.period !== period || !Array.isArray(value.countries)
+    || !value.countries.every(row => record(row) && (row.country === 'Unknown' || /^[A-Z]{2}$/.test(String(row.country))) && count(row.visitors) && count(row.pageviews))) {
+    throw new Error('Geographic statistics are temporarily unavailable.');
+  }
+  return value as unknown as GeographicStatisticsData;
+}
 const format = new Intl.NumberFormat();
+const countryNames = typeof Intl.DisplayNames === 'function' ? new Intl.DisplayNames(undefined, { type: 'region' }) : null;
+const countryLabel = (country: string) => country === 'Unknown' ? 'Unknown location' : countryNames?.of(country) ?? country;
 const complexityIcon = (level: number) =>
   `<svg class="complexity-icon statistics-complexity-icon" viewBox="0 0 40 20" aria-hidden="true"><path class="complexity-track" d="M6 10h28"/>${level > 1 ? `<path class="complexity-link" d="M6 10h${(level - 1) * 14}"/>` : ''}${[1, 2, 3].map(dot => `<circle class="complexity-dot${dot <= level ? ' filled' : ''}" cx="${6 + (dot - 1) * 14}" cy="10" r="3.5"/>`).join('')}</svg>`;
 const periodLabels: Record<StatisticsPeriod, string> = { today: 'Today', '7d': '7 days', '30d': '30 days', all: 'All time' };
@@ -51,6 +64,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
         <div class="statistics-totals">${[['visitors', 'Visitors'], ['puzzlesSolved', 'Puzzles solved'], ['nodesFilled', 'Nodes filled'], ['connectionsCompleted', 'Connections']].map(([key, label]) => `<article class="statistics-total"><strong data-total="${key}">—</strong><span>${label}</span></article>`).join('')}</div>
         <section id="statistics-activity" class="statistics-panel statistics-activity" aria-labelledby="statistics-activity-title"><div class="statistics-panel-heading"><div><h2 id="statistics-activity-title">Daily activity</h2></div></div><p id="statistics-chart-note"></p><div class="statistics-histograms">${activityMetrics.map(metric => `<section class="statistics-histogram" data-metric="${metric}" aria-labelledby="statistics-histogram-${metric}"><h3 id="statistics-histogram-${metric}">${metricLabels[metric]}</h3><div id="statistics-chart-${metric}" class="statistics-chart" role="group" aria-label="Daily ${metricLabels[metric].toLowerCase()} histogram"></div><div class="statistics-chart-axis"><span id="statistics-chart-first-${metric}"></span><output id="statistics-chart-value-${metric}" aria-live="polite"></output><span id="statistics-chart-last-${metric}"></span></div><p id="statistics-chart-empty-${metric}" class="statistics-chart-empty" hidden>No ${metricLabels[metric].toLowerCase()} recorded in this period yet.</p></section>`).join('')}</div><details class="statistics-daily-details"><summary>Daily values</summary><div class="statistics-table-wrap"><table><caption class="sr-only">Daily activity values</caption><thead><tr><th>Date (UTC)</th><th>Puzzles</th><th>Visitors</th><th>Nodes filled</th></tr></thead><tbody id="statistics-daily-values"></tbody></table></div></details></section>
         <div class="statistics-breakdowns"><section class="statistics-panel"><h2>Popular grids</h2><ul id="statistics-sizes" class="statistics-ranking"></ul></section><section class="statistics-panel"><h2>Popular difficulties</h2><ul id="statistics-difficulties" class="statistics-ranking"></ul></section></div>
+        <section id="statistics-geo" class="statistics-panel statistics-geo" aria-labelledby="statistics-geo-title" hidden><div class="statistics-panel-heading"><div><h2 id="statistics-geo-title">Where players are</h2><p>Unique visitors and page views by country, from PostHog.</p></div></div><div class="statistics-table-wrap"><table><caption class="sr-only">Country statistics from PostHog</caption><thead><tr><th>Country</th><th>Visitors</th><th>Page views</th></tr></thead><tbody id="statistics-geo-values"></tbody></table></div><p id="statistics-geo-status" class="statistics-geo-status" role="status" aria-live="polite"></p><p class="statistics-geo-note">A visitor is unique within each country for the selected period. Only Nodoku page views are included.</p></section>
         <p id="statistics-tracking" class="statistics-tracking"></p>
       </div>
       <section id="statistics-report" class="statistics-panel statistics-report" aria-labelledby="statistics-report-title"><div><p class="statistics-eyebrow">For our supporters</p><h2 id="statistics-report-title">Your placement report</h2><p>Enter the sponsor code from your purchase confirmation to see your placement’s results.</p></div><form id="statistics-report-form"><label for="statistics-report-code">Sponsor code</label><div class="statistics-report-entry"><input id="statistics-report-code" name="receipt" type="password" autocomplete="off" spellcheck="false" required placeholder="Your private sponsor code"><button class="statistics-report-submit" type="submit">View report</button></div><p class="statistics-private-note">Your code stays out of the page address and is cleared when you leave statistics.</p></form><p id="statistics-report-status" role="status" aria-live="polite"></p><div id="statistics-report-result" hidden><h3 id="statistics-report-brand"></h3><p id="statistics-report-period"></p><div class="statistics-report-totals"><div><strong data-report="views">—</strong><span>Views</span></div><div><strong data-report="clicks">—</strong><span>Clicks</span></div><div><strong data-report="ctr">—</strong><span>Click-through rate</span></div></div><details><summary>Daily placement results</summary><div class="statistics-table-wrap"><table><thead><tr><th>Date (UTC)</th><th>Views</th><th>Clicks</th></tr></thead><tbody id="statistics-report-daily"></tbody></table></div></details><p class="statistics-private-note">Views and clicks count each browser once per UTC day. A click counts only after a qualifying view.</p></div></section>
@@ -60,6 +74,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
   let period: StatisticsPeriod = '30d';
   let data: StatisticsData | null = null;
   let active: AbortController | null = null;
+  let geoActive: AbortController | null = null;
   let reportActive: AbortController | null = null;
   let reportReceipt = '';
   let sponsorsVisible = document.documentElement.dataset.sponsorsEnabled !== 'false';
@@ -153,6 +168,39 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
     el('statistics-activity').hidden = period === 'today';
     renderCharts();
   }
+  function renderGeography(data: GeographicStatisticsData) {
+    const section = el('statistics-geo');
+    const body = el('statistics-geo-values');
+    body.replaceChildren();
+    for (const row of data.countries) {
+      const tr = document.createElement('tr');
+      for (const value of [countryLabel(row.country), format.format(row.visitors), format.format(row.pageviews)]) {
+        const td = document.createElement('td'); td.textContent = value; tr.appendChild(td);
+      }
+      body.appendChild(tr);
+    }
+    el('statistics-geo-status').textContent = data.countries.length ? '' : 'No PostHog page views were recorded in this period yet.';
+    section.hidden = false;
+  }
+  async function loadGeography(expectedPeriod: StatisticsPeriod) {
+    geoActive?.abort();
+    const controller = new AbortController();
+    geoActive = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 12_000);
+    el('statistics-geo').hidden = true;
+    try {
+      const response = await fetch(`/api/statistics/geo?period=${expectedPeriod}`, { cache: 'no-store', signal: controller.signal });
+      if (response.status === 204) return;
+      if (!response.ok) throw new Error('Unavailable');
+      const result = parseGeographicStatistics(await response.json(), expectedPeriod);
+      if (geoActive !== controller || !dialog.open || period !== expectedPeriod) return;
+      renderGeography(result);
+    } catch {
+      if (geoActive !== controller || !dialog.open || period !== expectedPeriod) return;
+      el('statistics-geo-status').textContent = 'Country statistics are temporarily unavailable.';
+      el('statistics-geo').hidden = false;
+    } finally { window.clearTimeout(timeout); if (geoActive === controller) geoActive = null; }
+  }
   async function load() {
     active?.abort();
     const controller = new AbortController();
@@ -162,6 +210,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
     el('statistics-retry').hidden = true;
     el('statistics-content').hidden = true;
     data = null;
+    void loadGeography(period);
     try {
       const response = await fetch(`/api/statistics?period=${period}`, { cache: 'no-store', signal: controller.signal });
       if (!response.ok) throw new Error('Unavailable');
@@ -247,6 +296,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
   dialog.addEventListener('cancel', event => { event.preventDefault(); leave(); });
   dialog.addEventListener('close', () => {
     active?.abort(); active = null;
+    geoActive?.abort(); geoActive = null;
     clearReport();
     if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
   });
@@ -264,7 +314,7 @@ export function mountStatistics(options: { beforeOpen?: () => void } = {}): void
   setSponsorshipVisible(sponsorsVisible);
   window.addEventListener('popstate', syncLocation);
   window.addEventListener('hashchange', syncLocation);
-  window.addEventListener('pagehide', () => { active?.abort(); active = null; clearReport(); });
+  window.addEventListener('pagehide', () => { active?.abort(); active = null; geoActive?.abort(); geoActive = null; clearReport(); });
   window.addEventListener('pageshow', event => { if (event.persisted && dialog.open) void load(); });
   window.addEventListener('nodoku:statistics-updated', () => { if (dialog.open) void load(); });
   window.addEventListener('nodoku:visitor-registered', () => { if (dialog.open) void load(); });

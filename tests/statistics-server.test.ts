@@ -73,6 +73,45 @@ test('empty statistics begin on the real tracking day and reject unsupported per
   assert.equal((await handleApi(request('/api/statistics', {}), env, store)).status, 405);
 });
 
+test('country statistics query PostHog privately, scope to Nodoku page views, and remain optional', async t => {
+  const store = new LocalStore(':memory:');
+  t.after(() => store.close());
+  t.mock.method(Date, 'now', () => Date.parse('2026-08-01T12:00:00.000Z'));
+  const requests: Array<{ url: string; init: RequestInit | undefined }> = [];
+  t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push({ url: String(input), init });
+    return new Response(JSON.stringify({ results: [['UA', '14', '37'], [null, 1, 1]] }), { headers: { 'Content-Type': 'application/json' } });
+  });
+  const geoEnv = {
+    APP_ORIGIN: 'https://nodoku.solokh.com', POSTHOG_QUERY_API_KEY: 'phs_test_private_query_key', POSTHOG_PROJECT_ID: '123',
+  };
+  const geoRequest = () => new Request('https://nodoku.solokh.com/api/statistics/geo?period=7d');
+  const first = await handleApi(geoRequest(), geoEnv, store);
+  assert.equal(first.status, 200, await first.clone().text());
+  assert.equal(first.headers.get('Cache-Control'), 'no-store');
+  assert.deepEqual(await first.json(), { period: '7d', countries: [
+    { country: 'UA', visitors: 14, pageviews: 37 }, { country: 'Unknown', visitors: 1, pageviews: 1 },
+  ] });
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, 'https://us.posthog.com/api/projects/123/query/');
+  assert.equal(new Headers(requests[0].init?.headers).get('Authorization'), 'Bearer phs_test_private_query_key');
+  const query = JSON.parse(String(requests[0].init?.body)).query.query;
+  assert.match(query, /event = '\$pageview'/);
+  assert.match(query, /properties\.app = 'nodoku'/);
+  assert.match(query, /properties\.\$host = 'nodoku\.solokh\.com'/);
+  assert.match(query, /2026-07-26 00:00:00/);
+  assert.match(query, /2026-08-02 00:00:00/);
+  const cached = await handleApi(geoRequest(), geoEnv, new UnavailableStore());
+  assert.equal(cached.status, 200, 'country statistics do not depend on the D1 store');
+  assert.equal(requests.length, 1, 'country requests reuse the short server cache');
+  const all = await handleApi(new Request('https://nodoku.solokh.com/api/statistics/geo?period=all'), geoEnv, store);
+  assert.equal(all.status, 200);
+  assert.match(JSON.parse(String(requests[1].init?.body)).query.query, /2020-01-01 00:00:00/);
+  assert.equal((await handleApi(geoRequest(), env, store)).status, 204, 'missing query credentials leave the optional panel disabled');
+  assert.equal((await handleApi(new Request('https://nodoku.solokh.com/api/statistics/geo?period=year'), geoEnv, store)).status, 400);
+  assert.equal((await handleApi(new Request('https://nodoku.solokh.com/api/statistics/geo', { method: 'POST' }), geoEnv, store)).status, 405);
+});
+
 test('completions require a truly solved graph and derive counts instead of trusting client totals', async t => {
   const { store } = setup(t);
   const puzzle = solved();
