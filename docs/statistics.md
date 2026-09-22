@@ -15,6 +15,18 @@ The browser persists an attempt ID with its game. Completion requests contain th
 
 Local data is labeled Preview and persists in `.nodoku-data/local.sqlite`. Demos never send completion events. Automated browser tests can generate actual local counts when exercising the unmocked API. Browser-generated events are approximate community activity, not proof of a human player or a fraud-audited advertising measurement.
 
+## Country statistics
+
+**Where players are** is a public country-level view of Nodoku page traffic. It shows unique PostHog browser identities within each country and page views for the selected UTC period. It intentionally queries only `$pageview` events registered as `app: nodoku` for the configured Nodoku host, so server-side completion events and traffic for other sites cannot appear. A browser that visits from more than one country may be included once in each of those country rows.
+
+Country data is optional and loads independently: the D1-backed totals remain available if PostHog is unavailable. To enable it, configure these runtime values (not `VITE_` values) and redeploy:
+
+- `POSTHOG_PROJECT_ID`: the numeric project ID from PostHog project settings.
+- `POSTHOG_QUERY_API_KEY`: a server-only PostHog project-secret key or least-privilege personal key with query-read access. Store it as a Cloudflare Pages secret; never put it in browser code, `wrangler.jsonc`, or Git.
+- `POSTHOG_API_HOST`: optional; defaults to `https://us.posthog.com`. Set `https://eu.posthog.com` for EU Cloud.
+
+The Worker requests PostHog's query API over HTTPS and holds each period/host result in its isolate for up to five minutes to reduce query volume. The all-time country query starts at 2020-01-01 so it remains time-bounded. With no query key or project ID, the country panel is simply omitted.
+
 ## Private sponsor reports
 
 After payment is verified, the sponsorship confirmation offers a private sponsor code and a link to the placement report. Copy and retain the code. Enter it in the Statistics page's placement-report form. The code is the existing random Stripe Checkout session reference, checked against a paid sponsorship order; it cannot open another sponsor's report. Treat it as a private credential. Report requests send it in a POST body, never in a new URL or public statistics response. Ad-free purchases and pending sponsorships cannot open placement reports.
@@ -25,9 +37,10 @@ Views and clicks each count once per sponsor, browser and UTC day. Repeated rota
 
 ## Storage and deployment
 
-The APIs and tables belong to the Astra implementation; the older Godot app on `origin/main` has no statistics backend. New tables are additive and preserve existing visitor totals and sponsorship orders. Restart the local Vite server to apply the schema locally. Before deploying the new APIs, initialize or update the configured D1 database using `server/schema.sql` as described in [sponsorship setup](sponsorship.md). This feature does not configure a production database or publish a deployment automatically.
+The APIs and tables belong to the Astra implementation; the older legacy Godot app has no statistics backend. New tables are additive and preserve existing visitor totals and sponsorship orders. Restart the local Vite server to apply the schema locally. Before deploying the new APIs, initialize or update the configured D1 database using `server/schema.sql` as described in [sponsorship setup](sponsorship.md). This feature does not configure a production database or publish a deployment automatically.
 
 - `GET /api/statistics?period=today|7d|30d|all`: public aggregate statistics.
+- `GET /api/statistics/geo?period=today|7d|30d|all`: public PostHog page-view aggregates by country when the optional query credentials are configured.
 - `POST /api/completions`: validated, deduplicated final puzzle.
 - `POST /api/sponsor-events`: daily unique view/click for an active sponsor.
 - `POST /api/sponsor-report`: private paid-campaign report using its code and selected period.

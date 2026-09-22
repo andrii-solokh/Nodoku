@@ -47,6 +47,13 @@
 .statistics-page th { color: #62506f; }
 .statistics-page th:first-child, .statistics-page td:first-child { text-align: left; white-space: nowrap; }
 .statistics-breakdowns { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 22px; }
+.statistics-geo { margin-top: 22px; background: #edf3ee; border-color: #d7e3d9; }
+.statistics-geo .statistics-panel-heading > div > p { margin: 9px 0 0; color: #7b8e80; font-size: 12px; line-height: 1.5; }
+.statistics-geo .statistics-table-wrap { max-width: 620px; }
+.statistics-geo th { color: #58705f; }
+.statistics-geo td:nth-child(2), .statistics-geo td:nth-child(3), .statistics-geo th:nth-child(2), .statistics-geo th:nth-child(3) { text-align: right; }
+.statistics-geo-status, .statistics-geo-note { margin: 12px 0 0; color: #718377; font-size: 12px; line-height: 1.55; }
+.statistics-geo-note { color: #8b9a8f; font-size: 11px; }
 .statistics-ranking { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); align-items: stretch; gap: 14px; margin: 18px 0 0; padding: 0; list-style: none; }
 .statistics-ranking li { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 9px; min-width: 0; height: 166px; font-size: 13px; }
 .statistics-ranking-bar { align-self: end; display: block; height: var(--ranking-height); min-height: 5px; border-radius: 7px 7px 2px 2px; background: #ad9dce; box-shadow: inset 0 1px #ffffff50; }
