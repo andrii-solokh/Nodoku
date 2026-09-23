@@ -22,7 +22,7 @@ Local data is labeled Preview and persists in `.nodoku-data/local.sqlite`. Demos
 Country data is optional and loads independently: the D1-backed totals remain available if PostHog is unavailable. To enable it, configure these runtime values (not `VITE_` values) and redeploy:
 
 - `POSTHOG_PROJECT_ID`: the numeric project ID from PostHog project settings.
-- `POSTHOG_QUERY_API_KEY`: a server-only PostHog project-secret key or least-privilege personal key with query-read access. Store it as a Cloudflare Pages secret; never put it in browser code, `wrangler.jsonc`, or Git.
+- `POSTHOG_QUERY_API_KEY`: a server-only, least-privilege PostHog personal API key with only `query:read` access. Store it as a Cloudflare Pages secret; never put it in browser code, `wrangler.jsonc`, or Git. Project Secret API keys cannot query this endpoint.
 - `POSTHOG_API_HOST`: optional; defaults to `https://us.posthog.com`. Set `https://eu.posthog.com` for EU Cloud.
 
 The Worker requests PostHog's query API over HTTPS and holds each period/host result in its isolate for up to five minutes to reduce query volume. The all-time country query starts at 2020-01-01 so it remains time-bounded. With no query key or project ID, the country panel is simply omitted.
