@@ -11,8 +11,8 @@ REMOVE_ADS_AMOUNT=""
 # the browser through the same-origin /api/analytics-config endpoint.
 POSTHOG_PROJECT_API_KEY=""
 # Optional country statistics. Keep this server-only query key private; use a
-# PostHog project-secret key or a least-privilege personal key with query read
-# access. The project ID is shown in PostHog project settings.
+# least-privilege PostHog personal API key with only query:read access. The
+# project ID is shown in PostHog project settings.
 POSTHOG_QUERY_API_KEY=""
 POSTHOG_PROJECT_ID=""
 # US Cloud is the default. Use https://eu.posthog.com for an EU project.
