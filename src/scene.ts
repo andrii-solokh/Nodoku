@@ -8,7 +8,8 @@ import { ConnectionColors } from "./connection-colors";
 import { DOTS_THEME } from "./dots-theme";
 import { GROKS_THEME, GROK_COLORS, GROKS_SCENE_COLORS } from "./groks-theme";
 import { CHARACTER_COLORS, characterForLattice, makeCharacterGeometries } from "./character-geometry";
-import { makeCharacterFaces } from "./character-faces";
+import { cloneCharacterFace, disposeCharacterFace, disposeCharacterFaceTemplates,
+  makeCharacterFaces, setCharacterFaceOpacity } from "./character-faces";
 import { makeFurFringes, makeFurTextures } from "./character-fur";
 import { grokForLattice, makeGrokGeometries } from "./groks-geometry";
 import { makeGrokClueTexture, makeGrokFaces } from "./groks-faces";
@@ -177,8 +178,10 @@ export class BoardScene {
   private customFur = (DOTS_THEME ? [0, 1] : []).map(() => new THREE.LineBasicMaterial({
     transparent: true, opacity: .42, depthWrite: false,
   }));
-  private faceGeometry = THEMED ? new THREE.PlaneGeometry(RADIUS * 2.7, RADIUS * 2.7) : null;
-  private faceTextures = DOTS_THEME ? makeCharacterFaces() : GROKS_THEME ? makeGrokFaces() : [];
+  private characterFaceTemplates = DOTS_THEME ? makeCharacterFaces(RADIUS) : [];
+  private characterFaceInstances = new Set<THREE.Group>();
+  private faceGeometry = GROKS_THEME ? new THREE.PlaneGeometry(RADIUS * 2.7, RADIUS * 2.7) : null;
+  private faceTextures = GROKS_THEME ? makeGrokFaces() : [];
   private grokClueTexture = GROKS_THEME ? makeGrokClueTexture() : null;
   private faceMaterials = this.faceTextures.map(texture => new THREE.MeshBasicMaterial({
     map: texture, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
@@ -589,18 +592,28 @@ export class BoardScene {
       if (!visual) group.position.copy(position);
       group.scale.setScalar(this.config.nodeScale);
       if (THEMED && node.required > 0) {
-        let face = group.userData.face as THREE.Mesh | undefined;
-        if (!face) {
+        let face = group.userData.face as THREE.Group | THREE.Mesh | undefined;
+        if (DOTS_THEME) {
+          if (!face || face.userData.character !== character) {
+            if (face) this.disposeFace(group);
+            face = cloneCharacterFace(this.characterFaceTemplates[character]);
+            face.userData.character = character;
+            this.characterFaceInstances.add(face as THREE.Group);
+            group.add(face);
+            group.userData.face = face;
+          }
+          setCharacterFaceOpacity(face as THREE.Group, 0);
+        } else if (!face) {
           const material = this.faceMaterials[character].clone();
           material.opacity = 0;
           this.faceInstances.add(material);
           face = new THREE.Mesh(this.faceGeometry!, material);
-          face.position.z = RADIUS * (GROKS_THEME ? .95 : 1) + .012;
+          face.position.z = RADIUS * .95 + .012;
           face.renderOrder = 6;
           group.add(face);
           group.userData.face = face;
         } else {
-          const material = face.material as THREE.MeshBasicMaterial;
+          const material = (face as THREE.Mesh).material as THREE.MeshBasicMaterial;
           if (material.map !== this.faceTextures[character]) {
             material.map = this.faceTextures[character];
             material.needsUpdate = true;
@@ -608,7 +621,7 @@ export class BoardScene {
         }
         face.userData.reveal = 0;
         face.scale.setScalar(.7);
-        (face.material as THREE.MeshBasicMaterial).opacity = 0;
+        if (GROKS_THEME) ((face as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0;
         face.visible = false;
       } else if (THEMED) this.disposeFace(group);
       this.pipGroups.set(node.id, group);
@@ -965,7 +978,10 @@ export class BoardScene {
     return {
       style: this.config.materialStyle, stretch: this.config.gooStretch, gloss: this.config.gooGloss,
       nodeRoughness: this.white.roughness, rodRoughness: this.rodMaterial.roughness, nodeClearcoat: this.white.clearcoat,
-      nodes: [...this.nodeMeshes].map(([id, mesh]) => ({ id, scale: mesh.scale.toArray() })),
+      nodes: [...this.nodeMeshes].map(([id, mesh]) => ({
+        id, scale: mesh.scale.toArray(),
+        ...(GROKS_THEME ? { shapeVariant: mesh.userData.character as number } : {}),
+      })),
       pulses: [...this.gumPulses].map(([id, pulse]) => ({ id, progress: Math.min(1, pulse.elapsed / pulse.duration) })),
       rods: [...this.rodMeshes.values()].map(rod => ({ edge: [...rod.edge], scale: rod.mesh.scale.toArray() })),
     };
@@ -980,7 +996,7 @@ export class BoardScene {
   private get facesRevealing(): boolean {
     if (!THEMED || this.reducedMotion || this.shapeTransition || !this.puzzle) return false;
     for (const [id, group] of this.pipGroups) {
-      const face = group.userData.face as THREE.Mesh | undefined;
+      const face = group.userData.face as THREE.Object3D | undefined;
       if (face && (face.userData.reveal as number) < 1
         && this.puzzle.remaining(id) === 0 && this.dotAnimations.get(id)?.dots.length === 0) return true;
     }
@@ -1523,11 +1539,16 @@ export class BoardScene {
   }
 
   private disposeFace(group: THREE.Group): void {
-    const face = group.userData.face as THREE.Mesh | undefined;
+    const face = group.userData.face as THREE.Group | THREE.Mesh | undefined;
     if (!face) return;
-    const material = face.material as THREE.MeshBasicMaterial;
-    this.faceInstances.delete(material);
-    material.dispose();
+    if (DOTS_THEME) {
+      this.characterFaceInstances.delete(face as THREE.Group);
+      disposeCharacterFace(face as THREE.Group);
+    } else {
+      const material = (face as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      this.faceInstances.delete(material);
+      material.dispose();
+    }
     group.remove(face);
     delete group.userData.face;
   }
@@ -2705,11 +2726,11 @@ export class BoardScene {
     this.updateShapeOutlines();
     if (THEMED && this.shapeTransition) {
       for (const node of this.shapeTransition.nodes.values()) {
-        const face = node.group.userData.face as THREE.Mesh | undefined;
+        const face = node.group.userData.face as THREE.Object3D | undefined;
         if (face) face.visible = false;
       }
     } else if (THEMED) for (const [id, group] of this.pipGroups) {
-      const face = group.userData.face as THREE.Mesh | undefined;
+      const face = group.userData.face as THREE.Group | THREE.Mesh | undefined;
       if (!face) continue;
       const ready = this.puzzle?.remaining(id) === 0
         && this.dotAnimations.get(id)?.dots.length === 0;
@@ -2724,7 +2745,9 @@ export class BoardScene {
       // Eyes, glasses, and hats fade and spring into place after clues clear.
       const eased = 1 + 2.7 * (progress - 1) ** 3 + 1.7 * (progress - 1) ** 2;
       face.scale.setScalar(.7 + .3 * eased);
-      (face.material as THREE.MeshBasicMaterial).opacity = progress * progress * (3 - 2 * progress);
+      const opacity = progress * progress * (3 - 2 * progress);
+      if (DOTS_THEME) setCharacterFaceOpacity(face as THREE.Group, opacity);
+      else ((face as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = opacity;
       face.visible = progress > 0;
     }
     this.updateGumNodes();
@@ -2767,6 +2790,9 @@ export class BoardScene {
     this.furTextures?.bump.dispose();
     for (const material of [...this.furMaterials, ...this.customFur]) material.dispose();
     this.faceGeometry?.dispose();
+    for (const face of this.characterFaceInstances) disposeCharacterFace(face);
+    this.characterFaceInstances.clear();
+    disposeCharacterFaceTemplates(this.characterFaceTemplates);
     for (const material of this.faceInstances) material.dispose();
     this.faceInstances.clear();
     for (const material of this.faceMaterials) material.dispose();

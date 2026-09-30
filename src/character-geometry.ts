@@ -18,6 +18,30 @@ const bump = (angle: number, center: number, width: number): number => {
   return Math.exp(-((distance / width) ** 2));
 };
 
+const roundedUnion = (angle: number, lobes: readonly [number, number, number][]): number => {
+  const dx = Math.cos(angle), dy = Math.sin(angle);
+  let edge = 0;
+  for (const [x, y, radius] of lobes) {
+    const along = x * dx + y * dy;
+    const inside = along * along + radius * radius - x * x - y * y;
+    if (inside <= 0) continue;
+    const reach = along + Math.sqrt(inside);
+    const overlap = Math.max(0, .09 - Math.abs(edge - reach)) / .09;
+    edge = Math.max(edge, reach) + overlap * overlap * .09 * .25;
+  }
+  return edge;
+};
+
+const roundedTriangle = (angle: number): number => {
+  const corner = Math.PI * 2 / 3;
+  const radius = (offset: number) => {
+    const wrapped = ((angle + offset - Math.PI / 6 + corner / 2) % corner + corner) % corner - corner / 2;
+    return Math.cos(Math.PI / 3) / Math.cos(wrapped);
+  };
+  const weights = [1, 2, 3, 4, 5, 4, 3, 2, 1];
+  return weights.reduce((sum, weight, index) => sum + weight * radius((index - 4) * .055), 0) / 25;
+};
+
 /** Sculpt the sphere's rim while leaving its front dome clear for puzzle dots. */
 export function makeCharacterGeometries(radius: number): THREE.SphereGeometry[] {
   return CHARACTER_COLORS.map((_, character) => {
@@ -30,20 +54,26 @@ export function makeCharacterGeometries(radius: number): THREE.SphereGeometry[] 
       const angle = Math.atan2(y, x);
       const rim = Math.pow(Math.max(0, 1 - Math.abs(z) / radius), .7);
       if (character === 0) {
-        // Blue: a soft, asymmetric three-lobed blob.
-        const wave = 1 + rim * (.085 * Math.sin(3 * angle + .4) + .035 * Math.cos(5 * angle));
-        x *= wave * 1.04;
-        y *= wave * .94;
+        // Blue: four overlapping plush puffs, with three scallops along the right edge.
+        const cloud = roundedUnion(angle, [
+          [-.16, -.02, .84], [.47, .49, .46], [.52, -.04, .48],
+          [.43, -.56, .47], [-.36, -.47, .51],
+        ]);
+        x *= cloud;
+        y *= cloud;
       } else if (character === 1) {
-        // Green: the two raised eyes make the frog silhouette legible in profile.
-        const eyes = bump(angle, .78, .24) + bump(angle, 2.36, .24);
-        const wave = 1 + rim * (.23 * eyes - .035 * bump(angle, Math.PI / 2, .25));
-        x *= wave;
-        y *= wave;
+        // Green: a round body with two distinct rounded eye stalks above it.
+        const frog = roundedUnion(angle, [
+          [0, -.12, .86], [-.31, -.32, .63], [.31, -.32, .63],
+          [-.43, .64, .31], [.43, .64, .31],
+        ]);
+        x *= 1 + rim * (frog - 1);
+        y *= 1 + rim * (frog - 1);
       } else if (character === 2) {
-        // Yellow: broad base and a gently narrowed, taller crown.
-        x *= 1 - rim * (.06 + .23 * Math.max(0, y / radius));
-        y *= 1 + rim * .095;
+        // Yellow: a softened triangle with a high crown and a broad, stable base.
+        const triangle = roundedTriangle(angle);
+        x *= triangle * 1.17;
+        y *= triangle * 1.17;
       } else {
         // Pink: two upper lobes, a small cleft, and a tapered lower point.
         const lobes = bump(angle, .67, .43) + bump(angle, 2.47, .43);

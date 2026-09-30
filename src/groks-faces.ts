@@ -1,29 +1,36 @@
 import * as THREE from "three";
 import { GROK_COLORS } from "./groks-theme";
 
-/** Mint, four-point clue sparks stay distinct from the Bots' black eyes. */
+/** Small hexagonal connection sockets stay distinct from the Bots' black eyes. */
 export function makeGrokClueTexture(): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 128;
   const context = canvas.getContext("2d")!;
   context.translate(64, 64);
-  const sparkle = (radius: number, inset: number) => {
+  const hexagon = (radius: number) => {
     context.beginPath();
-    context.moveTo(0, -radius);
-    context.lineTo(inset, -inset);
-    context.lineTo(radius, 0);
-    context.lineTo(inset, inset);
-    context.lineTo(0, radius);
-    context.lineTo(-inset, inset);
-    context.lineTo(-radius, 0);
-    context.lineTo(-inset, -inset);
+    for (let side = 0; side < 6; side++) {
+      const angle = -Math.PI / 2 + side * Math.PI / 3;
+      const x = Math.cos(angle) * radius, y = Math.sin(angle) * radius;
+      if (side === 0) context.moveTo(x, y); else context.lineTo(x, y);
+    }
     context.closePath();
     context.fill();
   };
-  context.fillStyle = "#062c35";
-  sparkle(51, 13);
-  context.fillStyle = "#1ce8cc";
-  sparkle(35, 9);
+  context.fillStyle = "#062b30";
+  hexagon(48);
+  context.fillStyle = "#87f9e8";
+  hexagon(36);
+  context.fillStyle = "#0c3436";
+  hexagon(22);
+  context.strokeStyle = "#dcfff8";
+  context.lineWidth = 3;
+  context.lineCap = "round";
+  context.beginPath();
+  context.moveTo(-17, -27);
+  context.lineTo(0, -36);
+  context.lineTo(17, -27);
+  context.stroke();
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;

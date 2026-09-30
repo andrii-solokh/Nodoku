@@ -20,8 +20,9 @@ body { background: #0e0f10; }
   background: radial-gradient(ellipse 50% 45% at 52% 45%, #242e2c 0%, #111717 64%, transparent 100%);
 }
 .home-characters { width: 100%; bottom: 5px; animation: groks-sway 5s ease-in-out infinite alternate; }
-.seo-content { background: #101313; border-color: #ffffff14; }
-.seo-content section { border-color: #ffffff20; }
+.header-actions .account-header .icon-button { color: #a8f5e8; background: #203331; }
+.header-actions .account-header .icon-button:hover,
+.header-actions .account-header .icon-button[aria-pressed="true"] { color: #e6fffb; background: #31504c; }
 .start-button { background: #00b9aa; color: #071311; box-shadow: 0 10px 28px #00b9aa3d; }
 .start-button:hover { background: #60e1d5; box-shadow: 0 12px 32px #1edac25c; }
 .segment[aria-pressed="true"], .size-button[aria-pressed="true"], .difficulty-button[aria-pressed="true"] {

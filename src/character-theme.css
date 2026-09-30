@@ -31,6 +31,15 @@ a:focus-visible { outline-color: #82c9ff; }
   background: #ffffff17;
 }
 .header-actions .icon-button.music-enabled { color: #f8a1dd; background: #f8a1dd24; }
+.header-actions .account-header .icon-button {
+  color: #eee2ff;
+  background: #30263d;
+}
+.header-actions .account-header .icon-button:hover,
+.header-actions .account-header .icon-button[aria-pressed="true"] {
+  color: #fff;
+  background: #4a395f;
+}
 .visitor-widget, .visitor-scope { color: #b8afc7; }
 .visitor-widget strong { color: #ede6f4; }
 .audience-link:hover { color: #fff; }
@@ -131,14 +140,6 @@ a:focus-visible { outline-color: #82c9ff; }
   height: auto;
   pointer-events: none;
 }
-
-.seo-content {
-  background: #0e0c13;
-  border-color: #ffffff17;
-}
-.seo-content section { border-color: #ffffff20; }
-.seo-content .seo-lede { color: #d5cedf; }
-.seo-content p { color: #aaa4b8; }
 
 .game-header-info, .progress-wrap, .puzzle-melody, .game-tip { color: #c1b8cf; }
 .game-title { color: #dcbfff; }

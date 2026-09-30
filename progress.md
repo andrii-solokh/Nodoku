@@ -2366,3 +2366,37 @@ TODO / Note
 - Visually inspected onboarding step 7 at `output/web-game/dots-outline/step7.png`, a selected furry character at `output/web-game/dots-outline/selected.png`, and the Groks step 7 regression capture at `output/web-game/dots-outline/groks-step7.png`. The web-game client screenshot/state was inspected at `output/web-game/dots-outline/client/`.
 - A real Dots step-7 drag connected nodes `[4,5]` and advanced to step 8 without page errors (`output/web-game/dots-outline/after-drag.png`). Production build and `git diff --check` pass. The generic full onboarding script is written for the classic route; when pointed at `/dots/`, it later reads the classic storage key and fails, so the route-specific browser interaction above is the relevant check.
 - Reduced-motion step 7 also shows the contour (`output/web-game/dots-outline/step7-reduced-motion.png`); a browser selection on `/` still reports the classic circular ring, with no page errors.
+
+2026-09-30 Grok shapes follow remaining connections
+- Decoupled Grok color identity from silhouette. The shape now follows the live remaining-connection count: zero circle, one drop, two capsule, three triangle, four square, five pentagon, six hexagon. Shape vertices ease between counts over the clue fade duration; rapid changes, puzzle changes, and reduced motion settle to the right shared geometry.
+- Inspected the Groks gameplay client at `output/web-game/groks-shape-count/client/`, link/morph/undo captures at `output/web-game/groks-shape-count/interaction/`, and the one-to-zero change with eyes at `output/web-game/groks-shape-count/completed/`. Real clicks, undo/redo, and reload kept shape counts aligned with remaining clues and produced no page errors.
+- Production build, 242 unit/server tests, Groks Gum and connection-color browser checks, and `git diff --check` pass.
+- TODO: Check whether the count-based silhouettes read clearly at the smallest phone size in hands-on testing.
+
+2026-09-30 Dots character silhouettes
+- Resculpted the three in-game bodies from the user's reference: blue uses overlapping cloud puffs with a scalloped edge, green has a round frog body and raised eye bumps, and yellow uses a broad rounded triangle. The existing face details, fur, clue markers, colors, and pink character continue to use the same game systems.
+- Compared before/after flat-board captures, then inspected four-clue triangles, a 390px mobile board, and the full 3D board at `output/web-game/dots-shape-reference/`. The final web-game client screenshot and state are in `output/web-game/dots-shape-reference/final-client/`; no page errors appeared.
+- Dots Gum and connection-color browser checks pass after the body changes. TODO: Get visual feedback on whether the cloud scallops and triangle crown now match the reference closely enough.
+
+2026-09-30 Remove below-game articles
+- Removed the explanatory article and FAQ beneath the game on `/`, `/dots/`, and `/groks/`, along with its unused CSS and FAQPage structured data. Kept each page's game metadata and prerendered game introduction.
+- Updated the SEO test to require the article's absence on all three routes. The focused tests and production build pass; Chromium loaded each route without page errors, and each page ended at the viewport with no article below the game.
+
+2026-09-30 Dark-theme leaderboard contrast
+- The shared account stylesheet gave the Dots trophy a pale background while the character theme made its icon pale too. Added Dots-specific dark purple button colors and matching teal colors for Groks, which had the same contrast issue; classic Nodoku keeps its original pale button.
+- Inspected the Dots control capture at `/tmp/nodoku-dots-trophy.png`; browser-computed icon and button colors now contrast on both character pages. Production build and `git diff --check` pass.
+
+2026-09-30 Sculpted Dots accessories
+- Replaced Dots face decals with shared 3D mesh templates: blue beret and eyes, green protruding eyeballs, yellow tube glasses with two independent smiling eyes, and pink convex sunglasses. Per-node materials retain the existing fade and spring reveal, and are disposed with the scene.
+- Removed the spherical Gum link flare on Dots; it created shiny circular patches around the furry silhouettes. Links now tuck into the actual sculpted bodies. Inspected close-up flat and rotated 3D gameplay captures at `/tmp/dots-3d-accessories-nocircles.png` and `/tmp/dots-3d-perspective-turned.png`, plus the web-game client at `output/web-game/dots-accessories-client/`.
+- Dots Gum, connection-color browser checks, the production build, and the full unit/server suite pass. TODO: Get visual feedback on the new raised details at phone size.
+
+2026-09-30 Groks connection sockets and original shapes
+- Swapped star clues for mint hexagonal sockets with dark centers, visually separate from the black capsule eyes. The exact remaining count and clue animations continue to use the same game data.
+- Kept the count-specific silhouette mapping while moving the original rounded hexagon to four remaining connections, which occurs on playable flat and cube surfaces. The original circle remains the completed silhouette; color identity stays stable through links.
+- Inspected the socket, hexagon, and completed-circle gameplay captures at `/tmp/groks-sockets-first.png`, `/tmp/groks-original-hex.png`, and `/tmp/groks-original-round.png`, plus the web-game client at `output/web-game/groks-original-shapes-client/`. A real click changed a four-connection hexagon to a three-connection triangle and cleared one socket without page errors. Groks Gum and connection-color browser checks, production build, and `git diff --check` pass. TODO: Check whether the socket style feels right beside the original Grok branding.
+
+2026-09-30 Stable Grok silhouettes
+- Supersedes the count-based shape notes above at the user's request. Each Grok's silhouette and color now come from the same stable lattice identity: the teal original keeps its rounded hexagon, the white original keeps its circle, and the third variant returns to its original rounded pebble, regardless of available connections. Removed connection-driven shape morphs; mint sockets still show and animate the remaining count.
+- Inspected the final onboarding capture at `output/web-game/groks-stable-shapes-final-client/` and a live 5×5 puzzle before/after a connection at `output/web-game/groks-stable-shapes-interaction/`. A teal hexagon stayed variant 0 as its clue count changed 2→1, and the adjacent white circle stayed variant 1 as its count changed 3→2. Undo and reload kept both variants, with no browser errors.
+- Production build, 242 unit/server tests, Groks Gum and shape-transition browser checks, and `git diff --check` pass. TODO: Get visual feedback on the stable shapes and socket style at phone size.

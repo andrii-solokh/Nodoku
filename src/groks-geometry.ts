@@ -32,7 +32,7 @@ function bump(angle: number, center: number, width: number): number {
   return Math.exp(-((distance / width) ** 2));
 }
 
-/** Eight full-bodied silhouettes: hexagon, circle, pebble, square, capsule, triangle, cloud, drop. */
+/** Eight stable Bot silhouettes: hexagon, circle, pebble, square, capsule, triangle, cloud, drop. */
 export function makeGrokGeometries(radius: number): THREE.SphereGeometry[] {
   return GROK_COLORS.map((_, variant) => {
     const geometry = new THREE.SphereGeometry(radius, 96, 64);

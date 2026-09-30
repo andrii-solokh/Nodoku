@@ -121,9 +121,9 @@ export class GumMaterials {
   configure(config: GameConfig["scene"]): void {
     this.config = config;
     this.stretch.value = config.materialStyle === "gum" ? config.gooStretch : 0;
-    // Grok Bots are sculpted shapes, so their links enter as narrow rods rather
-    // than growing the round node profile used by the original and Dots boards.
-    this.nodeRadius.value = GROKS_THEME ? 0 : .205 * config.nodeScale * (DOTS_THEME ? .8 : 1);
+    // Character bodies have sculpted silhouettes. A spherical link flare would
+    // show a glossy circle through the fur, so tuck narrow links into the body.
+    this.nodeRadius.value = DOTS_THEME || GROKS_THEME ? 0 : .205 * config.nodeScale;
     this.glow.value = config.materialStyle === "gum" ? 1 : 0;
   }
 
