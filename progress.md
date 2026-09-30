@@ -2400,3 +2400,13 @@ TODO / Note
 - Supersedes the count-based shape notes above at the user's request. Each Grok's silhouette and color now come from the same stable lattice identity: the teal original keeps its rounded hexagon, the white original keeps its circle, and the third variant returns to its original rounded pebble, regardless of available connections. Removed connection-driven shape morphs; mint sockets still show and animate the remaining count.
 - Inspected the final onboarding capture at `output/web-game/groks-stable-shapes-final-client/` and a live 5×5 puzzle before/after a connection at `output/web-game/groks-stable-shapes-interaction/`. A teal hexagon stayed variant 0 as its clue count changed 2→1, and the adjacent white circle stayed variant 1 as its count changed 3→2. Undo and reload kept both variants, with no browser errors.
 - Production build, 242 unit/server tests, Groks Gum and shape-transition browser checks, and `git diff --check` pass. TODO: Get visual feedback on the stable shapes and socket style at phone size.
+
+2026-09-30 Dots connection stitches
+- Replaced the Dots-only black circular connection clues with small raised purple plus-shaped stitches. The count, layout, fade, and character-face reveal still use the existing dot animation state; Groks and classic marker styles remain route-specific.
+- Inspected desktop and phone gameplay at `output/web-game/dots-plus-client/shot-0.png` and `mobile-before.png`, plus close-ups before and after a link at `detail-before.png` and `detail-after.png`. A one-connection frog cleared its stitch and revealed its eyes; undo restored the remaining count. No browser errors.
+- The required web-game client passed after installing its missing Chromium revision. TODO: Get visual feedback on the purple stitch look at normal phone size.
+
+2026-09-30 Fixed Ode to Joy default
+- Changed the shared sound configuration from the seed-rotating melody library to Ode to Joy. The home preview and new or resumed puzzles now select the same tune on Nodoku, Dots, and Groks. Kept the existing music library available for explicit Studio selection.
+- Updated the default-melody browser assertions and README. Two different puzzle seeds, reload, and home/resume pass the melody browser check; the web-game client reports Ode to Joy on the home preview. All three routes report Ode to Joy in home and play states with no page errors.
+- Production build, 53 focused unit tests, native-audio double-tap and return-home checks, and the web-game client pass. The unfiltered sound browser script still times out trying to click a rotation control hidden in a flat puzzle; the same click and fixture are present on `origin/main`, unrelated to melody selection.

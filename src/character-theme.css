@@ -45,6 +45,7 @@ a:focus-visible { outline-color: #82c9ff; }
 .audience-link:hover { color: #fff; }
 .visitor-dot { background: #b9ee6c; }
 .audience-divider { background: #ffffff40; }
+.edition-switch { --edition-groks: #7de2d5; --edition-dots: #9ccaff; }
 
 .home-main {
   grid-template-columns: minmax(420px, 44%) minmax(0, 56%);
@@ -212,13 +213,13 @@ a:focus-visible { outline-color: #82c9ff; }
 }
 @media (max-width: 760px) {
   #app.home { height: auto; min-height: 100dvh; overflow: visible; }
-  .home .site-header { height: 70px; padding: 0 5vw; }
+  .home .site-header { height: 96px; padding: 0 5vw; }
   .home .header-actions :is(#help-button, #sound-button) { background: #ffffff17; color: #eee6f3; }
   .home-main {
     display: flex;
     flex-direction: column;
     height: auto;
-    min-height: calc(100dvh - 70px);
+    min-height: calc(100dvh - 96px);
     overflow: visible;
     padding: 20px 5vw 28px;
   }
