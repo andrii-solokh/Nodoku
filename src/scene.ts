@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { Puzzle } from "./puzzle";
 import type { GameConfig } from "./config";
-import { SELECTION_DEFAULTS } from "./config-schema";
+import { PIP_SHADOW_DEFAULTS, SELECTION_DEFAULTS } from "./config-schema";
 import { DotAnimation } from "./dot-animation";
 import { GumMaterials } from "./gum-materials";
 import { ConnectionColors } from "./connection-colors";
@@ -9,10 +9,10 @@ import { DOTS_THEME } from "./dots-theme";
 import { GROKS_THEME, GROK_COLORS, GROKS_SCENE_COLORS } from "./groks-theme";
 import { CHARACTER_COLORS, characterForLattice, makeCharacterGeometries } from "./character-geometry";
 import { cloneCharacterFace, disposeCharacterFace, disposeCharacterFaceTemplates,
-  makeCharacterFaces, setCharacterFaceOpacity } from "./character-faces";
+  makeCharacterFaces, setCharacterFaceBlink, setCharacterFaceOpacity } from "./character-faces";
 import { makeFurFringes, makeFurTextures } from "./character-fur";
 import { grokForLattice, makeGrokGeometries } from "./groks-geometry";
-import { makeGrokClueTexture, makeGrokFaces } from "./groks-faces";
+import { makeGrokFaces } from "./groks-faces";
 import {
   CUBE_ORIENTATIONS,
   nearestOrientation,
@@ -56,7 +56,8 @@ type DragStrand = {
   recoil: THREE.Vector3; elapsed: number | null; duration: number;
 };
 type DragMagnet = { nodeId: number; strength: number; target: number };
-type PipMeshes = Map<number, THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial | THREE.MeshPhysicalMaterial>>;
+type PipMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial | THREE.MeshPhysicalMaterial>;
+type PipMeshes = Map<number, PipMesh>;
 type ShapeNode = {
   key: string; mesh: THREE.Mesh; group: THREE.Group; dots: DotAnimation; pips: PipMeshes;
   lattice: THREE.Vector3;
@@ -80,6 +81,18 @@ type ShapeTransition = {
 };
 
 const THEMED = DOTS_THEME || GROKS_THEME;
+function blinkClosure(time: number, period: number, doubleBlink: boolean): number {
+  if (time < 0) return 0;
+  const phase = time % period;
+  const pulse = (start: number): number => {
+    const t = phase - start;
+    if (t < 0 || t >= 190) return 0;
+    if (t < 65) return (1 - Math.cos(Math.PI * t / 65)) / 2;
+    if (t < 90) return 1;
+    return (1 + Math.cos(Math.PI * (t - 90) / 100)) / 2;
+  };
+  return Math.max(pulse(0), doubleBlink ? pulse(285) : 0);
+}
 function makeStitchGeometry(): THREE.ExtrudeGeometry {
   // A raised plus reads as an available connection, separate from the characters' eyes.
   const stitch = new THREE.Shape();
@@ -94,6 +107,24 @@ function makeStitchGeometry(): THREE.ExtrudeGeometry {
   });
   geometry.center();
   return geometry;
+}
+function paintStitchShadowTexture(texture: THREE.CanvasTexture, blur: number): void {
+  const canvas = texture.image as HTMLCanvasElement;
+  const context = canvas.getContext("2d")!;
+  context.filter = "none";
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.filter = `blur(${blur}px)`;
+  context.fillStyle = "#0a0712";
+  context.fillRect(65, 22, 30, 116);
+  context.fillRect(22, 65, 116, 30);
+  texture.needsUpdate = true;
+}
+function makeStitchShadowTexture(blur: number): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 160;
+  const texture = new THREE.CanvasTexture(canvas);
+  paintStitchShadowTexture(texture, blur);
+  return texture;
 }
 const BOT_COLORS: readonly string[] = GROKS_THEME ? GROK_COLORS : CHARACTER_COLORS;
 const COLORS = DOTS_THEME ? {
@@ -146,6 +177,7 @@ export class BoardScene {
     shapeTransitionMs: 700, materialStyle: "gum", gooStretch: .65, gooGloss: .7,
     nodeFloatAmplitude: .025, nodeFloatPeriodMs: 6000,
     rodRadius: .047, nodeScale: 1, fogStrength: 1, shadowOpacity: .11,
+    ...PIP_SHADOW_DEFAULTS,
     background: DOTS_THEME ? "#07070b" : GROKS_THEME ? GROKS_SCENE_COLORS.background : "#eeedf6",
     nodeColor: DOTS_THEME ? "#0879e8" : GROKS_THEME ? GROKS_SCENE_COLORS.nodeColor : "#fcfaf5",
     connectionColor: DOTS_THEME ? "#f495dc" : GROKS_THEME ? GROKS_SCENE_COLORS.connectionColor : "#8170c9",
@@ -197,15 +229,22 @@ export class BoardScene {
   private characterFaceInstances = new Set<THREE.Group>();
   private faceGeometry = GROKS_THEME ? new THREE.PlaneGeometry(RADIUS * 2.7, RADIUS * 2.7) : null;
   private faceTextures = GROKS_THEME ? makeGrokFaces() : [];
-  private grokClueTexture = GROKS_THEME ? makeGrokClueTexture() : null;
   private faceMaterials = this.faceTextures.map(texture => new THREE.MeshBasicMaterial({
     map: texture, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
   }));
   private faceInstances = new Set<THREE.MeshBasicMaterial>();
   private cylinder = new THREE.CylinderGeometry(1, 1, 1, 16, 64);
   private connectionColors = new ConnectionColors(this.cylinder);
-  private pip = GROKS_THEME ? new THREE.PlaneGeometry(.09, .09)
-    : DOTS_THEME ? makeStitchGeometry() : new THREE.CircleGeometry(0.024, 16);
+  private pip = THEMED ? makeStitchGeometry() : new THREE.CircleGeometry(0.024, 16);
+  private pipShadowGeometry = THEMED ? new THREE.PlaneGeometry(.095, .095) : null;
+  private pipShadowTexture = THEMED ? makeStitchShadowTexture(PIP_SHADOW_DEFAULTS.pipShadowBlur) : null;
+  private pipShadowMaterial = THEMED ? new THREE.MeshBasicMaterial({
+    map: this.pipShadowTexture,
+    opacity: PIP_SHADOW_DEFAULTS.pipShadowStrength,
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+  }) : null;
   private ring = new THREE.TorusGeometry(RADIUS * 1.28, 0.014, 8, 64);
   private white = new THREE.MeshPhysicalMaterial({
     color: COLORS.porcelain,
@@ -286,18 +325,21 @@ export class BoardScene {
   private magnetTip = new THREE.Mesh(this.sphere, this.magnetTipMaterial);
   private dragPlane = new THREE.Plane();
   private dragNormal = new THREE.Vector3();
-  private pipMaterial = DOTS_THEME ? new THREE.MeshPhysicalMaterial({
-    color: 0x7043a9,
+  private pipMaterial = THEMED ? new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
     roughness: .9,
     metalness: 0,
     clearcoat: 0,
   }) : new THREE.MeshBasicMaterial({
-    color: GROKS_THEME ? 0xffffff : COLORS.ink,
-    map: this.grokClueTexture,
-    transparent: GROKS_THEME,
-    depthWrite: !GROKS_THEME,
+    color: COLORS.ink,
     side: THREE.DoubleSide,
   });
+  private grokPipBackingMaterial = GROKS_THEME ? new THREE.MeshPhysicalMaterial({
+    color: 0x9da8aa,
+    roughness: .9,
+    metalness: 0,
+    clearcoat: 0,
+  }) : null;
   private guideMaterial = new THREE.LineBasicMaterial({
     color: 0xa29aaa,
     transparent: true,
@@ -641,13 +683,19 @@ export class BoardScene {
           }
         }
         face.userData.reveal = 0;
+        face.userData.blinkDelay = 1400 + (node.id * 587 + character * 311) % 2200;
+        face.userData.blinkElapsed = -(face.userData.blinkDelay as number);
+        face.userData.blinkPeriod = 3200 + (node.id * 941 + character * 283) % 2400;
+        face.userData.doubleBlink = (node.id + character) % 4 === 0;
         face.scale.setScalar(.7);
+        if (DOTS_THEME) setCharacterFaceBlink(face as THREE.Group, 0);
         if (GROKS_THEME) ((face as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0;
         face.visible = false;
       } else if (THEMED) this.disposeFace(group);
       this.pipGroups.set(node.id, group);
       const dots = visual?.dots ?? new DotAnimation(morph ? 0 : puzzle.remaining(node.id), {
         style: this.config.dotAnimation, durationMs: this.config.dotAnimationMs,
+        threeLayout: THEMED ? "triangle" : "line",
       });
       const pips = visual?.pips ?? new Map();
       this.dotAnimations.set(node.id, dots);
@@ -852,7 +900,22 @@ export class BoardScene {
   }
 
   setConfig(config: GameConfig): void {
+    const previousShadowBlur = this.config.pipShadowBlur;
     this.config = { ...config.scene };
+    if (this.pipShadowTexture && previousShadowBlur !== this.config.pipShadowBlur)
+      paintStitchShadowTexture(this.pipShadowTexture, this.config.pipShadowBlur);
+    if (this.pipShadowMaterial) {
+      this.pipShadowMaterial.opacity = this.config.pipShadowStrength;
+      const updateShadow = (mesh: PipMesh) => {
+        const shadow = mesh.userData.shadow as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | undefined;
+        if (!shadow) return;
+        shadow.position.set(this.config.pipShadowOffset, -this.config.pipShadowOffset, GROKS_THEME ? -.008 : -.004);
+        if (shadow.material !== this.pipShadowMaterial)
+          shadow.material.opacity = this.config.pipShadowStrength * mesh.material.opacity;
+      };
+      for (const meshes of this.pipMeshes.values()) for (const mesh of meshes.values()) updateShadow(mesh);
+      for (const node of this.shapeTransition?.nodes.values() ?? []) for (const mesh of node.pips.values()) updateShadow(mesh);
+    }
     const selection = config.selection;
     if (selection.ringSize !== this.selectionConfig.ringSize || selection.ringThickness !== this.selectionConfig.ringThickness) {
       this.ring.dispose();
@@ -1024,7 +1087,16 @@ export class BoardScene {
     return false;
   }
 
-  get hasAnimations(): boolean { return (!!this.removalCue && !this.reducedMotion) || this.dragAnimating || this.gumPulses.size > 0 || this.motion !== null || this.connectionGrowth.size > 0 || this.activeDotNodes.size > 0 || this.noteParticles.length > 0 || this.shapeTransition !== null || this.facesRevealing; }
+  private get facesBlinking(): boolean {
+    if (!THEMED || this.reducedMotion || this.shapeTransition) return false;
+    for (const group of this.pipGroups.values()) {
+      const face = group.userData.face as THREE.Object3D | undefined;
+      if (face?.visible && (face.userData.reveal as number) >= 1) return true;
+    }
+    return false;
+  }
+
+  get hasAnimations(): boolean { return (!!this.removalCue && !this.reducedMotion) || this.dragAnimating || this.gumPulses.size > 0 || this.motion !== null || this.connectionGrowth.size > 0 || this.activeDotNodes.size > 0 || this.noteParticles.length > 0 || this.shapeTransition !== null || this.facesRevealing || this.facesBlinking; }
 
   get hasAmbientMotion(): boolean {
     return !this.disposed && !this.reducedMotion && !document.hidden && this.config.nodeFloatAmplitude > 0 && this.nodeMeshes.size > 0;
@@ -1398,10 +1470,18 @@ export class BoardScene {
     this.syncDotMeshes(group, meshes, dots, opacity);
   }
 
+  private disposePipMesh(mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial | THREE.MeshPhysicalMaterial>): void {
+    if (mesh.material !== this.pipMaterial) mesh.material.dispose();
+    const backing = mesh.userData.backing as THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial> | undefined;
+    if (backing && backing.material !== this.grokPipBackingMaterial) backing.material.dispose();
+    const shadow = mesh.userData.shadow as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | undefined;
+    if (shadow && shadow.material !== this.pipShadowMaterial) shadow.material.dispose();
+  }
+
   private syncDotMeshes(group: THREE.Group, meshes: PipMeshes, dots: DotAnimation["dots"], opacity = 1): void {
     const ids = new Set(dots.map(dot => dot.id));
     for (const [id, mesh] of meshes) if (!ids.has(id)) {
-      if (mesh.material !== this.pipMaterial) mesh.material.dispose();
+      this.disposePipMesh(mesh);
       group.remove(mesh);
       meshes.delete(id);
     }
@@ -1409,6 +1489,19 @@ export class BoardScene {
       let mesh = meshes.get(dot.id);
       if (!mesh) {
         mesh = new THREE.Mesh(this.pip, this.pipMaterial);
+        if (this.pipShadowGeometry && this.pipShadowMaterial) {
+          const shadow = new THREE.Mesh(this.pipShadowGeometry, this.pipShadowMaterial);
+          shadow.position.set(this.config.pipShadowOffset, -this.config.pipShadowOffset, GROKS_THEME ? -.008 : -.004);
+          mesh.add(shadow);
+          mesh.userData.shadow = shadow;
+        }
+        if (this.grokPipBackingMaterial) {
+          const backing = new THREE.Mesh(this.pip, this.grokPipBackingMaterial);
+          backing.scale.set(1.12, 1.12, .7);
+          backing.position.z = -.007;
+          mesh.add(backing);
+          mesh.userData.backing = backing;
+        }
         meshes.set(dot.id, mesh);
         group.add(mesh);
       }
@@ -1425,6 +1518,30 @@ export class BoardScene {
       } else if (mesh.material !== this.pipMaterial) {
         mesh.material.dispose();
         mesh.material = this.pipMaterial;
+      }
+      const backing = mesh.userData.backing as THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial> | undefined;
+      if (backing && this.grokPipBackingMaterial) {
+        if (alpha < 1) {
+          if (backing.material === this.grokPipBackingMaterial) {
+            backing.material = this.grokPipBackingMaterial.clone();
+            backing.material.transparent = true;
+            backing.material.depthWrite = false;
+          }
+          backing.material.opacity = alpha;
+        } else if (backing.material !== this.grokPipBackingMaterial) {
+          backing.material.dispose();
+          backing.material = this.grokPipBackingMaterial;
+        }
+      }
+      const shadow = mesh.userData.shadow as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | undefined;
+      if (shadow && this.pipShadowMaterial) {
+        if (alpha < 1) {
+          if (shadow.material === this.pipShadowMaterial) shadow.material = this.pipShadowMaterial.clone();
+          shadow.material.opacity = alpha * this.config.pipShadowStrength;
+        } else if (shadow.material !== this.pipShadowMaterial) {
+          shadow.material.dispose();
+          shadow.material = this.pipShadowMaterial;
+        }
       }
       const surface = Math.sqrt(Math.max(0, RADIUS * RADIUS - dot.x * dot.x - dot.y * dot.y));
       const z = GROKS_THEME ? .95 * surface + .012 : surface + (DOTS_THEME ? .008 : .002);
@@ -1552,7 +1669,7 @@ export class BoardScene {
 
   private clearDots(): void {
     for (const meshes of this.pipMeshes.values()) for (const mesh of meshes.values()) {
-      if (mesh.material !== this.pipMaterial) mesh.material.dispose();
+      this.disposePipMesh(mesh);
     }
     this.pipMeshes.clear();
     this.dotAnimations.clear();
@@ -1624,7 +1741,7 @@ export class BoardScene {
       if (node.nodeId === null) {
         this.disposeFace(node.group);
         this.board.remove(node.mesh, node.group);
-        for (const mesh of node.pips.values()) if (mesh.material !== this.pipMaterial) mesh.material.dispose();
+        for (const mesh of node.pips.values()) this.disposePipMesh(mesh);
       } else {
         this.basePosition(node.mesh).copy(node.to);
         node.mesh.position.copy(node.to);
@@ -2757,6 +2874,7 @@ export class BoardScene {
         && this.dotAnimations.get(id)?.dots.length === 0;
       if (!ready) {
         face.userData.reveal = 0;
+        face.userData.blinkElapsed = -(face.userData.blinkDelay as number);
         face.visible = false;
         continue;
       }
@@ -2765,10 +2883,20 @@ export class BoardScene {
       face.userData.reveal = progress;
       // Eyes, glasses, and hats fade and spring into place after clues clear.
       const eased = 1 + 2.7 * (progress - 1) ** 3 + 1.7 * (progress - 1) ** 2;
-      face.scale.setScalar(.7 + .3 * eased);
+      const revealScale = .7 + .3 * eased;
+      const blinkElapsed = (face.userData.blinkElapsed as number) + (progress >= 1 && !this.reducedMotion ? elapsed : 0);
+      face.userData.blinkElapsed = blinkElapsed;
+      const closed = this.reducedMotion ? 0 : blinkClosure(blinkElapsed,
+        face.userData.blinkPeriod as number, face.userData.doubleBlink as boolean);
+      face.scale.setScalar(revealScale);
       const opacity = progress * progress * (3 - 2 * progress);
-      if (DOTS_THEME) setCharacterFaceOpacity(face as THREE.Group, opacity);
-      else ((face as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = opacity;
+      if (DOTS_THEME) {
+        setCharacterFaceOpacity(face as THREE.Group, opacity);
+        setCharacterFaceBlink(face as THREE.Group, closed);
+      } else {
+        face.scale.y *= 1 - .94 * closed;
+        ((face as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = opacity;
+      }
       face.visible = progress > 0;
     }
     this.updateGumNodes();
@@ -2821,7 +2949,8 @@ export class BoardScene {
     this.cylinder.dispose();
     this.connectionColors.dispose();
     this.pip.dispose();
-    this.grokClueTexture?.dispose();
+    this.pipShadowGeometry?.dispose();
+    this.pipShadowTexture?.dispose();
     this.ring.dispose();
     this.shapeOutlineMaterial?.dispose();
     for (const outline of this.shapeCueOutlines) outline.material.dispose();
@@ -2844,10 +2973,12 @@ export class BoardScene {
       this.magnetRodMaterial,
       this.magnetTipMaterial,
       this.pipMaterial,
+      this.pipShadowMaterial,
+      this.grokPipBackingMaterial,
       this.guideMaterial,
       this.ringMaterial,
     ])
-      material.dispose();
+      material?.dispose();
     this.scene.traverse((object) => {
       if (object instanceof THREE.DirectionalLight) object.shadow.dispose();
     });

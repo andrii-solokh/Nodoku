@@ -39,6 +39,9 @@ export interface GameConfig {
     nodeScale: number;
     fogStrength: number;
     shadowOpacity: number;
+    pipShadowBlur: number;
+    pipShadowStrength: number;
+    pipShadowOffset: number;
     background: string;
     nodeColor: string;
     connectionColor: string;
@@ -105,6 +108,11 @@ const dragDefaults = {
   dragMaxLength: 1.15, dragThickness: 1.15, dragMinThickness: .3, dragTipSize: .05,
   dragFollowMs: 90, dragMagnetRange: .45, dragMagnetStrength: .7,
   dragMagnetResponseMs: 120, dragReturnMs: 520, dragElasticity: .55,
+};
+export const PIP_SHADOW_DEFAULTS = {
+  pipShadowBlur: 18,
+  pipShadowStrength: .32,
+  pipShadowOffset: .003,
 };
 export const SELECTION_DEFAULTS: GameConfig["selection"] = {
   ringEnabled: true, ringColor: "#8170c9", ringSize: 1.28, ringThickness: 1, ringOpacity: 1,
@@ -206,6 +214,9 @@ export const CONFIG_RULES: Record<"demo" | "scene" | "sound" | "sponsors" | "tut
     nodeFloatPeriodMs: { ...milliseconds("Node float cycle", 2000, 15000), description: "Longer cycles make the floating slower." },
     fogStrength: { label: "Depth haze", kind: "number", min: 0, max: 2, step: .05 },
     shadowOpacity: { label: "Shadow strength", kind: "number", min: 0, max: .4, step: .01 },
+    pipShadowBlur: { label: "Plus shadow softness", kind: "number", min: 0, max: 32, step: 1, unit: "px" },
+    pipShadowStrength: { label: "Plus shadow strength", kind: "number", min: 0, max: 1, step: .01 },
+    pipShadowOffset: { label: "Plus shadow offset", kind: "number", min: 0, max: .02, step: .001 },
     background: { label: "Background", kind: "color" },
     nodeColor: { label: "Nodes", kind: "color" },
     connectionColor: { label: "Connection accent", kind: "color", description: "Color used for selection, available connections, and the center of every placed link. Links blend from each node color into this accent at their center." },
@@ -318,7 +329,7 @@ export function validateConfig(value: unknown): GameConfig {
       : group === "scene"
       ? (() => {
         const { accentFadeMs: _retiredAccentFadeMs, ...scene } = object(source[group]);
-        return { materialStyle: "gum", gooStretch: .65, gooGloss: .7, dotAnimation: "glide", dotAnimationMs: 460, shapeTransitionMs: 700, nodeFloatAmplitude: .025, nodeFloatPeriodMs: 6000, ...dragDefaults, ...scene };
+        return { materialStyle: "gum", gooStretch: .65, gooGloss: .7, dotAnimation: "glide", dotAnimationMs: 460, shapeTransitionMs: 700, nodeFloatAmplitude: .025, nodeFloatPeriodMs: 6000, ...dragDefaults, ...PIP_SHADOW_DEFAULTS, ...scene };
       })()
       : group === "sound"
       ? migrateSound(source[group], hasSound)

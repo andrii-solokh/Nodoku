@@ -93,6 +93,8 @@ The form works as a preview without credentials; payment stays disabled until it
 
 With the local preview running, `npm run admin` prints a private link to **Studio settings**. Tune demo speed, connection animation, dot rearranging (Glide, Spring, Orbit or Fade), colors, node size, fog, shadows and sponsor slots live. **Save to project** writes `config/game-config.json`, ready for your review and commit. For the development server, use `npm run admin -- http://127.0.0.1:5173`. See the [configurator guide](docs/configurator.md).
 
+For Dots or Groks, add `?shadowGui=1` to the local page to tune the white pluses' contact-shadow softness, strength, and offset in lil-gui. **Save in browser** keeps the look on that browser's normal game pages. To save it to `config/game-config.json`, open the private link printed by `npm run admin -- http://127.0.0.1:5173/groks/` (or `/dots/`) and choose **Save to project**. **Reset to project** clears the browser preset.
+
 ## Check
 
 ```sh

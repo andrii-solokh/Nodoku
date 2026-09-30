@@ -2024,3 +2024,9 @@ if (new URLSearchParams(location.search).has("admin")) {
     toast("The configurator could not load. Reload to try again.");
   });
 }
+if (location.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)
+  && new URLSearchParams(location.search).has("shadowGui") && (DOTS_THEME || GROKS_THEME)) {
+  void import("./shadow-gui").then(({ mountShadowGui }) => mountShadowGui()).catch(() => {
+    toast("The shadow controls could not load. Reload to try again.");
+  });
+}
