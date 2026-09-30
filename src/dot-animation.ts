@@ -2,7 +2,7 @@ export type DotAnimationStyle = "glide" | "spring" | "orbit" | "fade";
 export type DotState = { id: number; x: number; y: number; scale: number; opacity: number };
 type Position = { x: number; y: number };
 type Transition = { from: DotState; to: DotState; exiting: boolean };
-type Options = { style: DotAnimationStyle; durationMs: number; animate?: boolean };
+type Options = { style: DotAnimationStyle; durationMs: number; animate?: boolean; threeLayout?: "line" | "triangle" };
 
 const PIPS: [number, number][][] = [
   [], [[0, 0]], [[-1, 1], [1, -1]], [[-1, 1], [0, 0], [1, -1]],
@@ -13,9 +13,11 @@ const PIPS: [number, number][][] = [
 const clampCount = (count: number): number => Number.isFinite(count) ? Math.max(0, Math.min(6, Math.round(count))) : 0;
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
-export function dotLayout(count: number): Position[] {
+export function dotLayout(count: number, threeLayout: "line" | "triangle" = "line"): Position[] {
   count = clampCount(count);
   const spacing = count > 3 ? .066 : .071;
+  if (count === 3 && threeLayout === "triangle")
+    return [[0, 1], [-1, -.55], [1, -.55]].map(([x, y]) => ({ x: x * spacing, y: y * spacing }));
   return PIPS[count].map(([x, y]) => ({ x: x * spacing, y: y * spacing }));
 }
 
@@ -49,12 +51,14 @@ export class DotAnimation {
   private count: number;
   private style: DotAnimationStyle;
   private duration: number;
+  private threeLayout: "line" | "triangle";
 
   constructor(count: number, options: Options = { style: "glide", durationMs: 460 }) {
     this.count = clampCount(count);
     this.style = options.style;
     this.duration = options.durationMs;
-    this.current = dotLayout(this.count).map(position => ({ ...position, id: this.nextId++, scale: 1, opacity: 1 }));
+    this.threeLayout = options.threeLayout ?? "line";
+    this.current = dotLayout(this.count, this.threeLayout).map(position => ({ ...position, id: this.nextId++, scale: 1, opacity: 1 }));
   }
 
   get active(): boolean { return this.transitions.length > 0; }
@@ -70,7 +74,7 @@ export class DotAnimation {
     this.style = options.style;
     this.duration = Math.max(0, options.durationMs);
     this.elapsed = 0;
-    const targets = dotLayout(count);
+    const targets = dotLayout(count, this.threeLayout);
     // Reuse even departing dots when a rapid undo brings them back. This bounds
     // the live meshes to six and starts every new transition at its live state.
     while (this.current.length < count) this.current.push({

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 import { handleAdminApi, readAdminToken, type AdminContext } from "../scripts/admin-api.ts";
-import { validateConfig, TUTORIAL_DEFAULTS, SELECTION_DEFAULTS } from "../src/config-schema.ts";
+import { validateConfig, PIP_SHADOW_DEFAULTS, TUTORIAL_DEFAULTS, SELECTION_DEFAULTS } from "../src/config-schema.ts";
 
 const baseline = validateConfig(JSON.parse(readFileSync(new URL("../config/game-config.json", import.meta.url), "utf8")));
 const origin = "http://localhost:5173";
@@ -143,6 +143,27 @@ test("legacy drag settings gain defaults on read and persist only on explicit sa
   assert.deepEqual(saved.config, expected);
   assert.deepEqual(JSON.parse(readFileSync(path, "utf8")), expected);
   assert.deepEqual(await (await call()).json(), saved, "subsequent loads retain canonical saved defaults");
+});
+
+test("plus shadow settings migrate and save without changing other scene settings", async t => {
+  const { call, path } = fixture(t);
+  const legacy = structuredClone(baseline);
+  for (const key of Object.keys(PIP_SHADOW_DEFAULTS)) delete legacy.scene[key];
+  const original = `${JSON.stringify(legacy)}\n`;
+  writeFileSync(path, original);
+  const current = await (await call()).json();
+  assert.deepEqual(current.config.scene, { ...legacy.scene, ...PIP_SHADOW_DEFAULTS });
+  assert.equal(readFileSync(path, "utf8"), original);
+  const scene = { ...current.config.scene, pipShadowBlur: 32, pipShadowStrength: 0, pipShadowOffset: 0 };
+  const saved = await call("PUT", { config: { ...current.config, scene }, revision: current.revision });
+  assert.equal(saved.status, 200);
+  assert.deepEqual((await (await call()).json()).config.scene, scene);
+  const bytes = readFileSync(path, "utf8");
+  const revision = (await saved.json()).revision;
+  for (const value of [-1, 33, NaN]) {
+    assert.equal((await call("PUT", { config: { ...current.config, scene: { ...scene, pipShadowBlur: value } }, revision })).status, 400);
+    assert.equal(readFileSync(path, "utf8"), bytes);
+  }
 });
 
 test("drag tuning saves boundary values and partially missing fields without resetting owner settings", async t => {

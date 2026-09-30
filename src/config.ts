@@ -1,8 +1,9 @@
 import defaults from "../config/game-config.json";
-import { validateConfig, type GameConfig } from "./config-schema";
+import { PIP_SHADOW_DEFAULTS, validateConfig, type GameConfig } from "./config-schema";
 import { DOTS_SCENE_COLORS, DOTS_SELECTION_COLORS, DOTS_THEME } from "./dots-theme";
 import { GROKS_SCENE_COLORS, GROKS_SELECTION_COLORS, GROKS_THEME } from "./groks-theme";
 export type { GameConfig } from "./config-schema";
+export const PIP_SHADOW_PRESET_KEY = "nodoku.plus-shadow-preview.v1";
 
 let current = validateConfig(DOTS_THEME ? {
   ...defaults,
@@ -13,6 +14,17 @@ let current = validateConfig(DOTS_THEME ? {
   scene: { ...defaults.scene, ...GROKS_SCENE_COLORS },
   selection: { ...defaults.selection, ...GROKS_SELECTION_COLORS },
 } : defaults);
+if (DOTS_THEME || GROKS_THEME) {
+  try {
+    const preset = JSON.parse(localStorage.getItem(PIP_SHADOW_PRESET_KEY) || "null");
+    if (preset && Object.keys(PIP_SHADOW_DEFAULTS).every(key => typeof preset[key] === "number"))
+      current = validateConfig({ ...current, scene: { ...current.scene,
+        pipShadowBlur: preset.pipShadowBlur,
+        pipShadowStrength: preset.pipShadowStrength,
+        pipShadowOffset: preset.pipShadowOffset,
+      } });
+  } catch { /* Invalid or unavailable browser presets leave the project settings intact. */ }
+}
 const listeners = new Set<(config: GameConfig) => void>();
 export const getConfig = (): GameConfig => structuredClone(current);
 export function applyConfig(config: unknown): void {

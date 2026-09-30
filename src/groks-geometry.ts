@@ -53,6 +53,7 @@ export function makeGrokGeometries(radius: number): THREE.SphereGeometry[] {
       x *= radial;
       y *= radial;
       if (variant === 4) { x *= .79; y *= 1.13; }
+      if (variant === 5) { x *= 1.14; y *= 1.14; }
       if (variant === 7) { x *= 1 - .42 * Math.max(0, Math.sin(angle)); y *= 1.08; }
       positions.setXYZ(index, x, y, z * .95);
     }

@@ -1,0 +1,22 @@
+#pip-shadow-panel {
+  position: fixed;
+  top: 78px;
+  right: 18px;
+  z-index: 45;
+  width: 292px;
+  color: #e8e6ef;
+  font-size: 12px;
+}
+
+#pip-shadow-panel .lil-gui { --background-color: #211d2b; --widget-color: #3b334b; --focus-color: #8270bd; }
+#pip-shadow-status {
+  margin: 0;
+  padding: 10px 12px;
+  line-height: 1.4;
+  background: #211d2b;
+  border-top: 1px solid #443c52;
+}
+
+@media (max-width: 680px) {
+  #pip-shadow-panel { top: 72px; right: 8px; width: min(292px, calc(100vw - 16px)); }
+}

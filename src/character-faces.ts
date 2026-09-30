@@ -22,21 +22,29 @@ export function makeCharacterFaces(radius: number): THREE.Group[] {
     group.add(mesh);
     return mesh;
   };
+  const blinkEye = <T extends THREE.Mesh>(mesh: T, pivotY = 0, minHeight = .06): T => {
+    mesh.userData.blinkPivotY = scale(pivotY);
+    mesh.userData.blinkScaleY = mesh.scale.y;
+    mesh.userData.blinkPositionY = mesh.position.y;
+    mesh.userData.blinkMinHeight = minHeight;
+    return mesh;
+  };
   const tube = (group: THREE.Group, material: FaceMaterial, points: readonly [number, number, number][], thickness: number) => {
     const path = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => point(x, y, z)));
     const mesh = new THREE.Mesh(new THREE.TubeGeometry(path, 24, scale(thickness), 8, false), material);
     group.add(mesh);
+    return mesh;
   };
 
   const blue = new THREE.Group();
   ball(blue, velvet, -.10, .67, .57, 1.01, .26, .37, .12);
   ball(blue, velvet, -.31, .91, .56, .13, .13, .14);
-  for (const x of [-.28, .28]) ball(blue, ink, x, -.08, .99, .068, .13, .073);
+  for (const x of [-.28, .28]) blinkEye(ball(blue, ink, x, -.08, .99, .068, .13, .073));
 
   const green = new THREE.Group();
   for (const x of [-.40, .40]) {
-    ball(green, white, x, .52, .81, .26, .27, .24);
-    ball(green, ink, x + (x < 0 ? .025 : -.025), .50, 1.035, .145, .16, .105);
+    blinkEye(ball(green, white, x, .52, .81, .26, .27, .24));
+    blinkEye(ball(green, ink, x + (x < 0 ? .025 : -.025), .50, 1.035, .145, .16, .105));
   }
 
   const yellow = new THREE.Group();
@@ -51,7 +59,7 @@ export function makeCharacterFaces(radius: number): THREE.Group[] {
       const angle = Math.PI + step * Math.PI / 12;
       lid.push([x + Math.cos(angle) * .105, -.12 + Math.sin(angle) * .08, 1.215]);
     }
-    tube(yellow, ink, lid, .027);
+    blinkEye(tube(yellow, ink, lid, .027), -.12, .32);
   }
   tube(yellow, frames, [[-.075, -.035, 1.17], [0, -.025, 1.19], [.075, -.035, 1.17]], .042);
   for (const side of [-1, 1])
@@ -59,7 +67,7 @@ export function makeCharacterFaces(radius: number): THREE.Group[] {
 
   const pink = new THREE.Group();
   for (const side of [-1, 1]) {
-    ball(pink, lenses, side * .41, -.055, 1.00, .32, .29, .15);
+    blinkEye(ball(pink, lenses, side * .41, -.055, 1.00, .32, .29, .15), 0, .72);
     tube(pink, frames, [[side * .72, -.035, 1.08], [side * .93, -.025, .99], [side * 1.03, -.02, .88]], .035);
   }
   tube(pink, frames, [[-.095, -.03, 1.12], [0, .005, 1.16], [.095, -.03, 1.12]], .035);
@@ -70,8 +78,10 @@ export function makeCharacterFaces(radius: number): THREE.Group[] {
 export function cloneCharacterFace(template: THREE.Group): THREE.Group {
   const face = template.clone(true);
   const materials = new Map<FaceMaterial, FaceMaterial>();
+  const blinkEyes: THREE.Mesh[] = [];
   face.traverse(object => {
     if (!(object instanceof THREE.Mesh)) return;
+    if (object.userData.blinkScaleY !== undefined) blinkEyes.push(object);
     const source = object.material as FaceMaterial;
     let material = materials.get(source);
     if (!material) {
@@ -84,7 +94,17 @@ export function cloneCharacterFace(template: THREE.Group): THREE.Group {
     object.material = material;
   });
   face.userData.materials = [...materials.values()];
+  face.userData.blinkEyes = blinkEyes;
   return face;
+}
+
+export function setCharacterFaceBlink(face: THREE.Group, closed: number): void {
+  for (const eye of face.userData.blinkEyes as THREE.Mesh[]) {
+    const height = 1 - (1 - (eye.userData.blinkMinHeight as number)) * closed;
+    eye.scale.y = (eye.userData.blinkScaleY as number) * height;
+    eye.position.y = (eye.userData.blinkPositionY as number)
+      + (eye.userData.blinkPivotY as number) * (1 - height);
+  }
 }
 
 export function setCharacterFaceOpacity(face: THREE.Group, opacity: number): void {

@@ -2410,3 +2410,36 @@ TODO / Note
 - Changed the shared sound configuration from the seed-rotating melody library to Ode to Joy. The home preview and new or resumed puzzles now select the same tune on Nodoku, Dots, and Groks. Kept the existing music library available for explicit Studio selection.
 - Updated the default-melody browser assertions and README. Two different puzzle seeds, reload, and home/resume pass the melody browser check; the web-game client reports Ode to Joy on the home preview. All three routes report Ode to Joy in home and play states with no page errors.
 - Production build, 53 focused unit tests, native-audio double-tap and return-home checks, and the web-game client pass. The unfiltered sound browser script still times out trying to click a rotation control hidden in a flat puzzle; the same click and fixture are present on `origin/main`, unrelated to melody selection.
+
+2026-09-30 White Dots connection stitches
+- Changed only the Dots connection-stitch material from purple to white; the raised plus geometry, animation, and other editions remain as before.
+- The production build and required web-game client pass. Inspected `output/web-game/dots-white-pluses/shot-0.png`: the remaining-connection stitches are white on yellow, blue, pink, and green characters, with no browser errors.
+
+2026-09-30 White Groks connection pluses
+- Replaced Groks' hexagonal socket texture with white plus signs and a dark edge so they remain visible on white and colored Groks; the same clue animation and count logic still drive them.
+- The production build and web-game client pass. Inspected `output/web-game/groks-white-pluses-final/shot-0.png` on all visible Grok colors with no browser errors.
+
+2026-09-30 Triangle layout for three character clues
+- Three remaining pluses now form one top and two bottom corners on Dots and Groks. Classic Nodoku keeps its diagonal three-dot layout. The themed layout stays attached to each `DotAnimation` through count changes.
+- The production build and focused dot-animation tests pass. The web-game client screenshots show triangle layouts on Dots (`output/web-game/triangle-pluses-dots/shot-0.png`) and Groks (`output/web-game/triangle-pluses-groks-loaded/shot-0.png`), while classic remains diagonal (`output/web-game/triangle-pluses-classic/shot-0.png`); no browser errors.
+
+2026-09-30 Shared raised plus style on Groks
+- Superseded the flat Groks plus decal with the same extruded white geometry and material used by Dots. A thin gray 3D backing keeps white Groks' clues readable; it follows clue fades and is disposed with the clue mesh.
+- Inspected `output/web-game/raised-groks-pluses-final/shot-0.png` and `output/web-game/shared-raised-pluses-dots/shot-0.png` to compare shape, size, and triangle layout. The production build and web-game client pass without browser errors.
+
+2026-09-30 Contact shadows for connection pluses
+- Added a small blurred plus-shaped shadow directly beneath each Dots and Groks clue. The shadow follows clue position, scale, and fade; it uses shared geometry and texture and releases temporary fade materials with the clue.
+- The production build and web-game client pass. Inspected `output/web-game/dots-plus-contact-shadow-verified/shot-0.png` and `output/web-game/groks-plus-contact-shadow-verified/shot-0.png`; no browser errors. Classic Nodoku still uses its original dots.
+
+2026-09-30 Larger triangular Grok
+- Enlarged only Groks' triangular silhouette 14% in its face plane, keeping its depth and identity stable. The extra area gives the plus clues more margin without changing other shapes or game rules.
+- Production build and web-game client pass. Inspected `output/web-game/groks-larger-triangle/shot-0.png`, `output/web-game/groks-larger-triangle-3x3/shot-0.png`, and the live three-by-three board in the existing `/groks/` browser tab; no page errors.
+
+2026-09-30 Softer, tunable plus shadows
+- Softened the contact shadows on Dots and Groks with a wider blur and lower opacity, and lightened the Groks backing edge. Added project config fields for softness, strength, and diagonal offset, including defaults for older config files.
+- Added a local lil-gui panel at `/dots/?shadowGui=1` and `/groks/?shadowGui=1`. It previews live, saves a browser preset that applies even without the panel, and can save only the shadow fields to `config/game-config.json` through the existing authenticated local admin API. `npm run admin -- http://127.0.0.1:5173/groks/` now creates a private Groks tuning link; Dots works similarly.
+- Production build, 39 admin API tests, mocked project-save request, browser-preset reload and normal-game application, and required web-game screenshots pass. Inspected `output/web-game/groks-softer-plus-shadow-final/shot-0.png` and `output/web-game/dots-softer-plus-shadow-final/shot-0.png`; no page errors.
+
+2026-09-30 Character eye blinks
+- Added short, staggered, sometimes double blinks to revealed Grok and Dots faces. Groks squash only the eye texture; Dots animate individual sculpted eyes, preserving the beret and glasses. The pink sunglasses narrow gently and the yellow sleepy eyes flatten subtly. Reduced-motion preference keeps eyes steady.
+- Production build and `git diff --check` pass. The required web-game client ran on both character routes. Inspected deterministic open, shut, and reopened gameplay captures in `output/web-game/groks-eye-blink-check/` and `output/web-game/dots-eye-blink-check/`; no browser errors.
