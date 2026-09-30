@@ -61,29 +61,6 @@
         "playMode": "SinglePlayer"
       }
     </script>
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "What do the dots mean?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Each dot is one connection that node still needs." }
-          },
-          {
-            "@type": "Question",
-            "name": "How do you solve Nodoku?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Clear every dot and make sure all nodes belong to one connected network." }
-          },
-          {
-            "@type": "Question",
-            "name": "Why is Nodoku 3D?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Rotate the puzzle to reveal neighbours that are hidden from the current view." }
-          }
-        ]
-      }
-    </script>
   </head>
   <body>
     <div id="app-loader" role="status" aria-live="polite" aria-label="Loading Nodoku">
@@ -108,31 +85,6 @@
         <p>Connect every node and complete the network. Each node shows how many connections it needs.</p>
       </main>
     </div>
-    <section class="seo-content" aria-labelledby="seo-introduction-title">
-      <div class="seo-content-inner">
-        <p class="seo-lede" id="seo-introduction-title">Nodoku is a 3D connection puzzle. Link neighbouring nodes until every dot is cleared and every node belongs to one network.</p>
-
-        <section aria-labelledby="how-to-play-title">
-          <h2 id="how-to-play-title">How to Play Nodoku</h2>
-          <p>Each dot is one connection that node still needs. A connection clears one dot from both nodes. Solve the puzzle when every dot is gone and the whole network is connected.</p>
-        </section>
-
-        <section aria-labelledby="three-d-title">
-          <h2 id="three-d-title">Why Nodoku Is 3D</h2>
-          <p>Rotate the puzzle to reveal neighbouring nodes hidden by the current view. The rules stay the same from every angle.</p>
-        </section>
-
-        <section aria-labelledby="faq-title">
-          <h2 id="faq-title">Frequently Asked Questions</h2>
-          <h3>What do the dots mean?</h3>
-          <p>Each dot is one connection that node still needs.</p>
-          <h3>How do you solve Nodoku?</h3>
-          <p>Clear every dot and make sure all nodes belong to one connected network.</p>
-          <h3>Why is Nodoku 3D?</h3>
-          <p>Rotate the puzzle to reveal neighbours that are hidden from the current view.</p>
-        </section>
-      </div>
-    </section>
     <script>
       // Runs before the bundle, so failed downloads or unsupported syntax cannot
       // strand the player on an endless loader. A slow startup can still finish.
