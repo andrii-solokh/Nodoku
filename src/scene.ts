@@ -56,7 +56,7 @@ type DragStrand = {
   recoil: THREE.Vector3; elapsed: number | null; duration: number;
 };
 type DragMagnet = { nodeId: number; strength: number; target: number };
-type PipMeshes = Map<number, THREE.Mesh<THREE.CircleGeometry | THREE.PlaneGeometry, THREE.MeshBasicMaterial>>;
+type PipMeshes = Map<number, THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial | THREE.MeshPhysicalMaterial>>;
 type ShapeNode = {
   key: string; mesh: THREE.Mesh; group: THREE.Group; dots: DotAnimation; pips: PipMeshes;
   lattice: THREE.Vector3;
@@ -80,6 +80,21 @@ type ShapeTransition = {
 };
 
 const THEMED = DOTS_THEME || GROKS_THEME;
+function makeStitchGeometry(): THREE.ExtrudeGeometry {
+  // A raised plus reads as an available connection, separate from the characters' eyes.
+  const stitch = new THREE.Shape();
+  const points: [number, number][] = [
+    [-.28, -1], [.28, -1], [.28, -.28], [1, -.28], [1, .28], [.28, .28],
+    [.28, 1], [-.28, 1], [-.28, .28], [-1, .28], [-1, -.28], [-.28, -.28],
+  ];
+  points.forEach(([x, y], index) => index ? stitch.lineTo(x * .032, y * .032) : stitch.moveTo(x * .032, y * .032));
+  stitch.closePath();
+  const geometry = new THREE.ExtrudeGeometry(stitch, {
+    depth: .005, bevelEnabled: true, bevelThickness: .003, bevelSize: .0015, bevelSegments: 2,
+  });
+  geometry.center();
+  return geometry;
+}
 const BOT_COLORS: readonly string[] = GROKS_THEME ? GROK_COLORS : CHARACTER_COLORS;
 const COLORS = DOTS_THEME ? {
   background: 0x07070b,
@@ -189,7 +204,8 @@ export class BoardScene {
   private faceInstances = new Set<THREE.MeshBasicMaterial>();
   private cylinder = new THREE.CylinderGeometry(1, 1, 1, 16, 64);
   private connectionColors = new ConnectionColors(this.cylinder);
-  private pip = GROKS_THEME ? new THREE.PlaneGeometry(.09, .09) : new THREE.CircleGeometry(0.024, 16);
+  private pip = GROKS_THEME ? new THREE.PlaneGeometry(.09, .09)
+    : DOTS_THEME ? makeStitchGeometry() : new THREE.CircleGeometry(0.024, 16);
   private ring = new THREE.TorusGeometry(RADIUS * 1.28, 0.014, 8, 64);
   private white = new THREE.MeshPhysicalMaterial({
     color: COLORS.porcelain,
@@ -270,7 +286,12 @@ export class BoardScene {
   private magnetTip = new THREE.Mesh(this.sphere, this.magnetTipMaterial);
   private dragPlane = new THREE.Plane();
   private dragNormal = new THREE.Vector3();
-  private pipMaterial = new THREE.MeshBasicMaterial({
+  private pipMaterial = DOTS_THEME ? new THREE.MeshPhysicalMaterial({
+    color: 0x7043a9,
+    roughness: .9,
+    metalness: 0,
+    clearcoat: 0,
+  }) : new THREE.MeshBasicMaterial({
     color: GROKS_THEME ? 0xffffff : COLORS.ink,
     map: this.grokClueTexture,
     transparent: GROKS_THEME,
@@ -1405,8 +1426,8 @@ export class BoardScene {
         mesh.material.dispose();
         mesh.material = this.pipMaterial;
       }
-      const z = GROKS_THEME ? .95 * Math.sqrt(Math.max(0, RADIUS * RADIUS - dot.x * dot.x - dot.y * dot.y)) + .012
-        : Math.sqrt(Math.max(0, RADIUS * RADIUS - dot.x * dot.x - dot.y * dot.y)) + .002;
+      const surface = Math.sqrt(Math.max(0, RADIUS * RADIUS - dot.x * dot.x - dot.y * dot.y));
+      const z = GROKS_THEME ? .95 * surface + .012 : surface + (DOTS_THEME ? .008 : .002);
       mesh.position.set(dot.x, dot.y, z);
       mesh.quaternion.setFromUnitVectors(this.pipFacing, this.pipNormal.copy(mesh.position).normalize());
       mesh.scale.setScalar(dot.scale);

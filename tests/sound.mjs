@@ -13,8 +13,8 @@ const rotationSmoke = process.argv.includes('--rotation-smoke');
 const completionSmoke = process.argv.includes('--completion-smoke');
 const doubleTapSmoke = process.argv.includes('--double-tap-smoke');
 const homeSmoke = process.argv.includes('--home-smoke');
-// The tracked Library setting resolves seed 120 to Ode to Joy, keeping these
-// native-audio assertions deterministic without overriding production config.
+// The production default is Ode to Joy, keeping these native-audio assertions
+// deterministic without overriding the project configuration.
 const settings = { size: 4, depth: 1, difficulty: 'easy', seed: 120 };
 const state = async page => JSON.parse(await page.evaluate(() => window.render_game_to_text()));
 const sounds = page => page.evaluate(() => window.__audio.starts);
@@ -106,8 +106,8 @@ async function fixture(edges = [], melodyStep = 0) {
   await page.goto(url);
   await page.locator('#resume-button').click();
   const current = await state(page);
-  assert.equal(current.config.sound.connectionMelody, 'library', 'Default connection melody rotates through the library');
-  assert.equal(current.melody, 'odeToJoy', 'The fixture seed deterministically selects Ode to Joy');
+  assert.equal(current.config.sound.connectionMelody, 'odeToJoy', 'Default connection melody is Ode to Joy');
+  assert.equal(current.melody, 'odeToJoy', 'The puzzle plays Ode to Joy');
   return page;
 }
 async function enable(page) {

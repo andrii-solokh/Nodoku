@@ -2,6 +2,10 @@
 
 A quiet dot-connection puzzle, rebuilt from scratch with Astra using TypeScript, Three.js and Vite. Ceramic nodes, soft studio lighting and physical connections make the board a small object you can turn in your hands.
 
+**Play online:** [Nodoku](https://nodoku.solokh.com/) · [Dots](https://nodoku.solokh.com/dots/) · [Groks](https://nodoku.solokh.com/groks/). The game runs in a browser, is free to play, and does not require an account.
+
+Connect neighboring nodes until every connection marker is cleared and all nodes form one network. Start with the interactive tutorial, or choose a flat board or 3D cube from the home screen.
+
 ## Run
 
 Requires Node.js 24 for the local SQLite API.
@@ -43,7 +47,7 @@ Choose a flat board (sizes 4 or 5) or a 3D cube (sizes 3, 4 or 5), and a complex
 
 A green node has used all its dots, but it can still belong to a separate group. If every dot is cleared and groups remain, the game shows their count and highlights the smallest group in amber. **Show group** brings it into view and cycles through the groups. Faint neighbor guides disappear while highlighting, leaving only actual connections visible. Remove and replace links between groups to finish one network.
 
-The home demo solves the selected board one connection at a time. Each new link and its note start as the camera turns it into view. By default, connections follow the selected melody’s scored note lengths, including longer notes and rests. Studio → Home auto-solve offers Melody rhythm with a tempo in BPM, or Fixed delay to wait for each animation and then pause. In melody mode, turns fit within the next beat and connection animations can overlap. The completed puzzle continues the tune in rhythm before replaying. Use the pause button below the preview to stop or resume it; dragging temporarily pauses playback. Demo moves are separate from your saved puzzle.
+The home demo solves the selected board one connection at a time. Each new link and its note start as the camera turns it into view. Connections play Ode to Joy by default, following its scored note lengths, including longer notes and rests. Studio → Home auto-solve offers Melody rhythm with a tempo in BPM, or Fixed delay to wait for each animation and then pause. In melody mode, turns fit within the next beat and connection animations can overlap. The completed puzzle continues the tune in rhythm before replaying. Use the pause button below the preview to stop or resume it; dragging temporarily pauses playback. Demo moves are separate from your saved puzzle.
 
 The Gum material trial adds soft reflections, glossy nodes and tapered connections that stretch into place. Nodes give a small elastic wobble when links change. In local Studio → **Gum materials**, switch between **Gum** and **Classic** and adjust stretch/gloss. **Connection draw duration** sets the timing. Reduced motion disables the wobble; saved puzzle rules and connections stay the same. Save to project writes the settings to `config/game-config.json`.
 
