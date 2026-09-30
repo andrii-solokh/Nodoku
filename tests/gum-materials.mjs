@@ -3,11 +3,24 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
 import { Puzzle } from '../src/puzzle.ts';
+import { DOTS_SCENE_COLORS, DOTS_SELECTION_COLORS } from '../src/dots-theme.ts';
+import { GROKS_SCENE_COLORS, GROKS_SELECTION_COLORS } from '../src/groks-theme.ts';
 
-const url = process.env.TEST_URL || 'http://127.0.0.1:4173';
+const url = (process.env.TEST_URL || 'http://127.0.0.1:4173').replace(/\/+$/, '');
+const dotsRoute = new URL(url).pathname === '/dots';
+const groksRoute = new URL(url).pathname === '/groks';
+const storageKey = dotsRoute ? 'nodoku.dots.v1' : groksRoute ? 'nodoku.groks.v1' : 'nodoku.astra.v1';
 const out = 'output/web-game/gum-materials';
 await fs.mkdir(out, { recursive: true });
 const defaults = JSON.parse(await fs.readFile(new URL('../config/game-config.json', import.meta.url), 'utf8'));
+if (dotsRoute) {
+  Object.assign(defaults.scene, DOTS_SCENE_COLORS);
+  Object.assign(defaults.selection, DOTS_SELECTION_COLORS);
+}
+if (groksRoute) {
+  Object.assign(defaults.scene, GROKS_SCENE_COLORS);
+  Object.assign(defaults.selection, GROKS_SELECTION_COLORS);
+}
 const browser = await chromium.launch();
 const errors = [];
 const uiOnly = process.argv.includes('--ui-only');
@@ -16,7 +29,7 @@ const materialRadio = (page, style) => page.locator(`#config-scene-materialStyle
 const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text()));
 const advance = (page, ms) => page.evaluate(ms => window.advanceTime(ms), ms);
 const click = (page, selector) => page.locator(selector).evaluate(element => element.click());
-const savedGame = page => page.evaluate(() => JSON.parse(localStorage.getItem('nodoku.astra.v1')).game);
+const savedGame = page => page.evaluate(key => JSON.parse(localStorage.getItem(key)).game, storageKey);
 const key = edge => [...edge].sort((a, b) => a - b).join(':');
 const closeEnough = (a, b) => a.length === b.length && a.every((value, i) => Math.abs(value - b[i]) < 1e-6);
 
@@ -36,14 +49,14 @@ async function fixture({ depth = 1, partial = false, reduced = false, keepAdminO
   page.on('console', message => {
     if (message.type() === 'error') errors.push(message.text());
   });
-  await page.addInitScript(({ settings, edges }) => {
+  await page.addInitScript(({ settings, edges, storageKey }) => {
     window.requestAnimationFrame = () => 1;
     window.cancelAnimationFrame = () => {};
-    localStorage.setItem('nodoku.astra.v1', JSON.stringify({
+    localStorage.setItem(storageKey, JSON.stringify({
       screen: 'playing', settings, selected: null,
       game: { version: 1, settings, edges, history: [] },
     }));
-  }, { settings, edges });
+  }, { settings, edges, storageKey });
   const admin = { config, revision: 'gum-fixture-0', writes: 0 };
   adminSnapshots.set(page, admin);
   await page.route('**/api/admin/config', route => {
@@ -67,6 +80,8 @@ async function fixture({ depth = 1, partial = false, reduced = false, keepAdminO
   } }));
   await page.goto(`${url}/?admin=1#admin-token=${'a'.repeat(64)}`);
   await page.waitForFunction(() => typeof window.render_game_to_text === 'function', null, { polling: 25 });
+  // The deterministic fixture freezes requestAnimationFrame, including the loader's exit.
+  await page.locator('#app-loader').evaluate(loader => loader.remove());
   await materialRadio(page, 'gum').waitFor({ state: 'attached' });
   if (!keepAdminOpen) await click(page, '#admin-close');
   assert.equal((await state(page)).mode, 'playing');
@@ -99,7 +114,10 @@ function settled(s) {
   for (const node of s.gum.nodes) {
     const logical = s.nodes.find(candidate => candidate.id === node.id);
     const scale = s.config.scene.nodeScale * (logical.required === 0 ? .52 : 1);
-    assert.ok(closeEnough(node.scale, [scale, scale, scale]), 'settled nodes return to their original sphere scale');
+    if (groksRoute && s.settings.depth > 1) {
+      assert.ok(node.scale.every(value => value > 0 && value <= scale + 1e-6), 'settled Grok Bots stay uniformly within their depth-scaled size');
+      assert.ok(closeEnough(node.scale, [node.scale[0], node.scale[0], node.scale[0]]), 'settled Grok Bots have no residual stretch');
+    } else assert.ok(closeEnough(node.scale, [scale, scale, scale]), 'settled nodes return to their original sphere scale');
   }
 }
 

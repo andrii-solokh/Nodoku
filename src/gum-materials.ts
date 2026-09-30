@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { DOTS_THEME } from "./dots-theme";
+import { GROKS_THEME } from "./groks-theme";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import type { GameConfig } from "./config";
 import { gumLinkProfileAt } from "./gum-profile";
@@ -119,7 +121,9 @@ export class GumMaterials {
   configure(config: GameConfig["scene"]): void {
     this.config = config;
     this.stretch.value = config.materialStyle === "gum" ? config.gooStretch : 0;
-    this.nodeRadius.value = .205 * config.nodeScale;
+    // Grok Bots are sculpted shapes, so their links enter as narrow rods rather
+    // than growing the round node profile used by the original and Dots boards.
+    this.nodeRadius.value = GROKS_THEME ? 0 : .205 * config.nodeScale * (DOTS_THEME ? .8 : 1);
     this.glow.value = config.materialStyle === "gum" ? 1 : 0;
   }
 

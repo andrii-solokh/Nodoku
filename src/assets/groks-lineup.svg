@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 390" fill="none">
+  <defs>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="15" stdDeviation="16" flood-color="#000" flood-opacity=".34"/></filter>
+    <radialGradient id="pebble" cx="34%" cy="25%" r="85%"><stop stop-color="#e4eeff"/><stop offset=".5" stop-color="#a9c8ff"/><stop offset="1" stop-color="#6b88c8"/></radialGradient>
+    <radialGradient id="square" cx="34%" cy="25%" r="85%"><stop stop-color="#ffe5a9"/><stop offset=".5" stop-color="#ffc46b"/><stop offset="1" stop-color="#b98141"/></radialGradient>
+    <radialGradient id="capsule" cx="34%" cy="25%" r="85%"><stop stop-color="#f4e7ff"/><stop offset=".5" stop-color="#d6b9ff"/><stop offset="1" stop-color="#9b7abb"/></radialGradient>
+    <radialGradient id="triangle" cx="34%" cy="25%" r="85%"><stop stop-color="#ffc2b7"/><stop offset=".5" stop-color="#ff807c"/><stop offset="1" stop-color="#bd535a"/></radialGradient>
+    <radialGradient id="cloud" cx="34%" cy="25%" r="85%"><stop stop-color="#e0ffbb"/><stop offset=".5" stop-color="#b7eb93"/><stop offset="1" stop-color="#74ad5c"/></radialGradient>
+    <radialGradient id="hexagon" cx="34%" cy="25%" r="85%"><stop stop-color="#70e5d7"/><stop offset=".5" stop-color="#00a99e"/><stop offset="1" stop-color="#087c76"/></radialGradient>
+    <radialGradient id="circle" cx="34%" cy="25%" r="85%"><stop stop-color="#fff"/><stop offset=".55" stop-color="#f8faf9"/><stop offset="1" stop-color="#bbc8c7"/></radialGradient>
+    <radialGradient id="drop" cx="34%" cy="25%" r="85%"><stop stop-color="#ffd9ec"/><stop offset=".5" stop-color="#f6a7d4"/><stop offset="1" stop-color="#b96a9a"/></radialGradient>
+    <g id="eyes" fill="#101112"><rect x="-24" y="-18" width="11" height="27" rx="5.5" transform="rotate(-17 -19 -4)"/><rect x="15" y="-18" width="11" height="27" rx="5.5" transform="rotate(-17 20 -4)"/></g>
+  </defs>
+  <g filter="url(#shadow)">
+    <g transform="translate(144 134) rotate(-9)"><path d="M-66-16Q-79-68-32-76Q18-90 57-47Q86-18 67 33Q51 80-5 76Q-71 80-76 28Q-80 2-66-16Z" fill="url(#pebble)"/><use href="#eyes"/></g>
+    <g transform="translate(350 125) rotate(7)"><rect x="-75" y="-75" width="150" height="150" rx="43" fill="url(#square)"/><use href="#eyes"/></g>
+    <g transform="translate(550 124) rotate(-7)"><rect x="-59" y="-88" width="118" height="176" rx="56" fill="url(#capsule)"/><use href="#eyes"/></g>
+    <g transform="translate(754 133) rotate(8)"><path d="M-68 55Q-90 44-75 14L-22-68Q0-99 23-68L77 14Q93 45 68 58Q34 82 0 73Q-33 80-68 55Z" fill="url(#triangle)"/><use href="#eyes"/></g>
+    <g transform="translate(942 143) rotate(-7)"><path d="M-78 29Q-91-14-56-35Q-46-82 0-70Q37-93 61-51Q97-28 77 22Q83 68 32 76Q-29 88-71 60Q-84 49-78 29Z" fill="url(#cloud)"/><use href="#eyes"/></g>
+  </g>
+  <g filter="url(#shadow)">
+    <g transform="translate(225 280) rotate(-8)"><path d="M0-96 86-49Q101-40 101-22V49Q101 67 85 76L0 120-86 76Q-101 67-101 49V-22Q-101-40-86-49Z" fill="url(#hexagon)"/><use href="#eyes" transform="scale(1.15) translate(0 5)"/></g>
+    <g transform="translate(550 283) rotate(6)"><circle r="99" fill="url(#circle)"/><use href="#eyes" transform="scale(1.18) translate(0 4)"/></g>
+    <g transform="translate(874 292) rotate(-5)"><path d="M0-105Q31-75 67-26Q107 41 65 85Q36 115 0 112Q-54 117-76 80Q-102 33-57-32Q-29-70 0-105Z" fill="url(#drop)"/><use href="#eyes" transform="scale(1.15) translate(0 11)"/></g>
+  </g>
+</svg>

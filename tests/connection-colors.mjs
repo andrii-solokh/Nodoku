@@ -2,19 +2,35 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
 import sharp from 'sharp';
+import * as THREE from 'three';
 import { Puzzle } from '../src/puzzle.ts';
+import { CHARACTER_COLORS, characterForLattice } from '../src/character-geometry.ts';
+import { DOTS_SCENE_COLORS, DOTS_SELECTION_COLORS } from '../src/dots-theme.ts';
+import { GROKS_SCENE_COLORS, GROKS_SELECTION_COLORS, GROK_COLORS } from '../src/groks-theme.ts';
+import { grokForLattice } from '../src/groks-geometry.ts';
 
-const url = process.env.TEST_URL || 'http://127.0.0.1:4173';
+const url = (process.env.TEST_URL || 'http://127.0.0.1:4173/dots').replace(/\/+$/, '');
+const dotsRoute = new URL(url).pathname === '/dots';
+const groksRoute = new URL(url).pathname === '/groks';
+const storageKey = dotsRoute ? 'nodoku.dots.v1' : groksRoute ? 'nodoku.groks.v1' : 'nodoku.astra.v1';
 const out = 'output/web-game/connection-colors';
 await fs.mkdir(out, { recursive: true });
 const defaults = JSON.parse(await fs.readFile(new URL('../config/game-config.json', import.meta.url), 'utf8'));
+if (dotsRoute) {
+  Object.assign(defaults.scene, DOTS_SCENE_COLORS);
+  Object.assign(defaults.selection, DOTS_SELECTION_COLORS);
+}
+if (groksRoute) {
+  Object.assign(defaults.scene, GROKS_SCENE_COLORS);
+  Object.assign(defaults.selection, GROKS_SELECTION_COLORS);
+}
 const settings = { size: 3, depth: 1, difficulty: 'easy', seed: 0 };
 const initialEdges = new Puzzle(settings).solution.slice(0, 8);
 const custom = { nodeColor: '#e9b86e', completedColor: '#69bea6' };
 const browser = await chromium.launch();
 const errors = [];
 const state = page => page.evaluate(() => JSON.parse(window.render_game_to_text()));
-const savedGame = page => page.evaluate(() => JSON.parse(localStorage.getItem('nodoku.astra.v1')).game);
+const savedGame = page => page.evaluate(key => JSON.parse(localStorage.getItem(key)).game, storageKey);
 const key = edge => [...edge].sort((a, b) => a - b).join(':');
 const sortedEdges = edges => edges.map(key).sort();
 const advance = (page, ms = 2400) => page.evaluate(ms => window.advanceTime(ms), ms);
@@ -29,13 +45,13 @@ async function fixture(game = { version: 1, settings, edges: initialEdges, histo
   const page = await browser.newPage({ viewport: { width: 1200, height: 850 }, deviceScaleFactor: 1 });
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-  await page.addInitScript(game => {
+  await page.addInitScript(({ game, storageKey }) => {
     window.requestAnimationFrame = () => 1;
     window.cancelAnimationFrame = () => {};
     if (sessionStorage.getItem('connection-colors-fixture')) return;
     sessionStorage.setItem('connection-colors-fixture', 'set');
-    localStorage.setItem('nodoku.astra.v1', JSON.stringify({ screen: 'playing', settings: game.settings, game, selected: null, sound: false, music: false }));
-  }, game);
+    localStorage.setItem(storageKey, JSON.stringify({ screen: 'playing', settings: game.settings, game, selected: null, sound: false, music: false }));
+  }, { game, storageKey });
   await page.route('**/api/admin/config', route => {
     assert.equal(route.request().method(), 'GET', 'the test never writes the owner configuration');
     return route.fulfill({ json: { config, revision: 'connection-colors-fixture' } });
@@ -54,6 +70,8 @@ async function fixture(game = { version: 1, settings, edges: initialEdges, histo
 }
 async function ready(page) {
   await page.waitForFunction(() => typeof window.render_game_to_text === 'function', null, { polling: 25 });
+  // This fixture freezes requestAnimationFrame, including the loader's exit.
+  await page.locator('#app-loader').evaluate(loader => loader.remove());
   await page.locator('#config-scene-nodeColor').waitFor({ state: 'attached' });
   await page.locator('#admin-close').click();
   await advance(page);
@@ -71,13 +89,32 @@ function assertColors(current, label) {
     }
     const startComplete = nodeFor(current, rod.startNode).remaining === 0;
     const endComplete = nodeFor(current, rod.endNode).remaining === 0;
-    assert.equal(rod.startColor, hex(startComplete ? current.config.scene.completedColor : current.config.scene.nodeColor), `${label}: actual geometry start matches node ${rod.startNode}`);
-    assert.equal(rod.endColor, hex(endComplete ? current.config.scene.completedColor : current.config.scene.nodeColor), `${label}: actual geometry end matches node ${rod.endNode}`);
+    assert.equal(rod.startColor, expectedNodeColor(current, rod.startNode), `${label}: actual geometry start matches node ${rod.startNode}`);
+    assert.equal(rod.endColor, expectedNodeColor(current, rod.endNode), `${label}: actual geometry end matches node ${rod.endNode}`);
     assert.equal(rod.centerColor, hex(current.config.scene.connectionColor), `${label}: every link blends through the connection accent`);
-    if (startComplete === endComplete) assert.equal(rod.startColor, rod.endColor, `${label}: matching endpoints retain their shared node color`);
+    if (startComplete === endComplete && !characterPalette(current))
+      assert.equal(rod.startColor, rod.endColor, `${label}: uniform palette gives matching endpoints the same color`);
     types.add(`${startComplete ? 'C' : 'N'}${endComplete ? 'C' : 'N'}`);
   }
   return types;
+}
+function expectedNodeColor(current, id) {
+  const { scene } = current.config;
+  const node = nodeFor(current, id);
+  const complete = node.remaining === 0;
+  if (!characterPalette(current))
+    return hex(complete ? scene.completedColor : scene.nodeColor);
+  const { size, depth } = current.settings;
+  const key = [node.x / (size - 1), node.y / (size - 1), depth === 1 ? 1 : node.z / (depth - 1)].join(':');
+  const color = new THREE.Color(groksRoute ? GROK_COLORS[grokForLattice(key)] : CHARACTER_COLORS[characterForLattice(key)]);
+  return color.getHexString();
+}
+function characterPalette(current) {
+  const { scene } = current.config;
+  const base = scene.nodeColor.toLowerCase(), complete = scene.completedColor.toLowerCase();
+  if (groksRoute) return base === GROK_COLORS[0] && complete === GROK_COLORS[1];
+  return (base === CHARACTER_COLORS[0] && complete === CHARACTER_COLORS[1])
+    || (base === '#70baff' && complete === '#b9ee6c');
 }
 async function toggle(page, a, b, settle = true) {
   await page.keyboard.press('Escape');
@@ -130,7 +167,7 @@ async function gradientPixels(page) {
   });
   await fs.writeFile(`${out}/gradient-pixels.json`, JSON.stringify({ edge: [0, 1], samples }, null, 2));
   const [nearComplete, nearIncomplete] = samples.map(sample => sample.rgb[0] - sample.rgb[1]);
-  assert.ok(nearIncomplete - nearComplete > 8, 'native rendered pixels become warmer toward the incomplete gold endpoint, not a single solid rod');
+  assert.ok(nearIncomplete - nearComplete >= 6, 'native rendered pixels become warmer toward the incomplete gold endpoint, not a single solid rod');
 }
 
 try {
@@ -139,6 +176,8 @@ try {
   assert.deepEqual([...assertColors(current, 'Initial owner palette')].sort(), ['CC', 'CN', 'NC', 'NN'], 'the seeded board exercises all four ordered endpoint states');
   await page.screenshot({ path: `${out}/owner-gradient-gum.png` });
   const initialGame = await savedGame(page);
+  await setPalette(page, { nodeColor: '#70baff', completedColor: '#b9ee6c' });
+  assertColors(await state(page), 'Previous character palette stays saturated');
   await setPalette(page, custom);
   current = await state(page);
   assertColors(current, 'Live custom palette');

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07070b" />
+    <meta name="robots" content="index,follow" />
+    <meta
+      name="description"
+      content="Play Dots, a 3D spatial reasoning puzzle where each node requires a specific number of connections. Connect every node and complete the network."
+    />
+    <link rel="canonical" href="https://nodoku.solokh.com/dots/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Dots" />
+    <meta property="og:url" content="https://nodoku.solokh.com/dots/" />
+    <meta property="og:title" content="Dots — 3D Spatial Reasoning Puzzle" />
+    <meta property="og:description" content="Connect every node and complete one network in a tactile 3D reasoning puzzle." />
+    <meta property="og:image" content="https://nodoku.solokh.com/og-image.png?v=3d-safe-v2" />
+    <meta property="og:image:secure_url" content="https://nodoku.solokh.com/og-image.png?v=3d-safe-v2" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Nodoku — 3D Spatial Reasoning Puzzle" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Dots — 3D Spatial Reasoning Puzzle" />
+    <meta name="twitter:description" content="Connect every node and complete one network in a tactile 3D reasoning puzzle." />
+    <meta name="twitter:image" content="https://nodoku.solokh.com/og-image.png?v=3d-safe-v2" />
+    <meta name="twitter:image:alt" content="Nodoku — 3D Spatial Reasoning Puzzle" />
+    <link rel="icon" type="image/svg+xml" href="/src/dots-favicon.svg" />
+    <title>Dots — 3D Spatial Reasoning Puzzle</title>
+    <style>
+      @font-face { font-family: Outfit; font-style: normal; font-weight: 400; font-display: swap; src: url('/node_modules/@fontsource/outfit/files/outfit-latin-400-normal.woff2') format('woff2'); }
+      @font-face { font-family: Outfit; font-style: normal; font-weight: 600; font-display: swap; src: url('/node_modules/@fontsource/outfit/files/outfit-latin-600-normal.woff2') format('woff2'); }
+      #app-loader { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; overflow: auto; padding: 24px; box-sizing: border-box; background: #07070b; color: #f8f5ff; opacity: 1; transition: opacity 300ms ease, visibility 300ms ease; }
+      #app-loader.is-ready { opacity: 0; visibility: hidden; pointer-events: none; }
+      .loader-content { display: grid; justify-items: center; width: min(100%, 300px); }
+      .loader-brand { display: flex; align-items: center; gap: 10px; font: 600 34px/40px Outfit, Arial, sans-serif; letter-spacing: -1.4px; }
+      .loader-mark { width: 38px; height: 38px; flex: none; }
+      .loader-progress { width: 88px; height: 3px; margin-top: 26px; overflow: hidden; border-radius: 3px; background: #302d39; }
+      .loader-progress::after { content: ''; display: block; width: 32px; height: 100%; border-radius: inherit; background: #f495dc; animation: loader-sweep 1.6s cubic-bezier(.45, 0, .3, 1) infinite; }
+      .loader-caption { margin-top: 14px; color: #bcb5ca; font: 400 13px/20px Outfit, Arial, sans-serif; text-align: center; }
+      #app-loader.is-failed .loader-progress { visibility: hidden; }
+      #app-loader.is-failed .loader-progress::after { animation: none; }
+      .loader-recovery { max-width: 300px; margin: 0 24px; text-align: center; font: 400 15px/1.5 Outfit, Arial, sans-serif; }
+      .loader-recovery[hidden] { display: none; }
+      .loader-recovery button { padding: 12px 24px; border: 0; border-radius: 16px; background: #8270bd; color: white; font: inherit; cursor: pointer; }
+      .loader-diagnostics { margin-top: 20px; text-align: left; font-size: 12px; color: #70667f; }
+      .loader-diagnostics summary { text-align: center; cursor: pointer; }
+      .loader-diagnostics pre { max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.5 monospace; }
+      @keyframes loader-sweep { from { transform: translateX(-36px); } to { transform: translateX(92px); } }
+      @media (prefers-reduced-motion: reduce) { #app-loader { transition: none; } .loader-progress::after { animation: none; transform: translateX(28px); } }
+    </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Dots",
+        "url": "https://nodoku.solokh.com/dots/",
+        "description": "A 3D spatial reasoning puzzle where each node requires a specific number of connections.",
+        "genre": ["Puzzle", "Logic", "Spatial reasoning"],
+        "playMode": "SinglePlayer"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What do the dots mean?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Each dot is one connection that node still needs." }
+          },
+          {
+            "@type": "Question",
+            "name": "How do you solve Dots?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Clear every dot and make sure all nodes belong to one connected network." }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is Dots 3D?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Rotate the puzzle to reveal neighbours that are hidden from the current view." }
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app-loader" role="status" aria-live="polite" aria-label="Loading Dots">
+      <div class="loader-content">
+        <div class="loader-brand" aria-hidden="true">
+          <svg class="loader-mark" viewBox="0 0 34 34"><path d="M8 9h18v17H8Z" fill="none" stroke="#f5efff" stroke-width="2.5"/><circle cx="8" cy="9" r="4.7" fill="#68b9ff"/><circle cx="26" cy="9" r="4.7" fill="#b8ed67"/><circle cx="8" cy="26" r="4.7" fill="#ffd560"/><circle cx="26" cy="26" r="4.7" fill="#f78cda"/></svg>
+          <span>dots</span>
+        </div>
+        <div class="loader-progress" aria-hidden="true"></div>
+        <span class="loader-caption">Preparing your puzzle</span>
+        <div class="loader-recovery" hidden>
+          <p>Dots couldn’t finish loading. Please reload to try again.</p>
+          <button type="button" id="reload-app">Reload</button>
+          <details class="loader-diagnostics"><summary>Error details</summary><pre id="startup-error-details"></pre></details>
+        </div>
+      </div>
+    </div>
+    <div id="app">
+      <main class="prerender-home">
+        <p class="prerender-brand">dots</p>
+        <h1>3D Spatial Reasoning Puzzle</h1>
+        <p>Connect every node and complete the network. Each node shows how many connections it needs.</p>
+      </main>
+    </div>
+    <section class="seo-content" aria-labelledby="seo-introduction-title">
+      <div class="seo-content-inner">
+        <p class="seo-lede" id="seo-introduction-title">Dots is a 3D connection puzzle. Link neighbouring nodes until every dot is cleared and every node belongs to one network.</p>
+
+        <section aria-labelledby="how-to-play-title">
+          <h2 id="how-to-play-title">How to Play Dots</h2>
+          <p>Each dot is one connection that node still needs. A connection clears one dot from both nodes. Solve the puzzle when every dot is gone and the whole network is connected.</p>
+        </section>
+
+        <section aria-labelledby="three-d-title">
+          <h2 id="three-d-title">Why Dots Is 3D</h2>
+          <p>Rotate the puzzle to reveal neighbouring nodes hidden by the current view. The rules stay the same from every angle.</p>
+        </section>
+
+        <section aria-labelledby="faq-title">
+          <h2 id="faq-title">Frequently Asked Questions</h2>
+          <h3>What do the dots mean?</h3>
+          <p>Each dot is one connection that node still needs.</p>
+          <h3>How do you solve Dots?</h3>
+          <p>Clear every dot and make sure all nodes belong to one connected network.</p>
+          <h3>Why is Dots 3D?</h3>
+          <p>Rotate the puzzle to reveal neighbours that are hidden from the current view.</p>
+        </section>
+      </div>
+    </section>
+    <script>
+      // Runs before the bundle, so failed downloads or unsupported syntax cannot
+      // strand the player on an endless loader. A slow startup can still finish.
+      (function () {
+        var loader = document.getElementById("app-loader");
+        var failureReason = "";
+        function failed(reason) {
+          if (!loader.isConnected || loader.classList.contains("is-ready")) return;
+          if (typeof reason === "string") failureReason = reason.slice(0, 600);
+          loader.classList.add("is-failed");
+          loader.setAttribute("aria-label", "Dots could not finish loading");
+          loader.querySelector(".loader-caption").textContent = "Unable to open the puzzle";
+          loader.querySelector(".loader-recovery").hidden = false;
+          document.getElementById("startup-error-details").textContent = failureReason +
+            "\n\nBrowser: " + navigator.userAgent +
+            "\nConfiguration copying: " + (typeof window.structuredClone === "function" ? "available" : "unavailable") +
+            "\nSecure IDs: " + (window.crypto && typeof window.crypto.randomUUID === "function" ? "available" : "unavailable") +
+            "\nDialogs: " + (window.HTMLDialogElement && typeof HTMLDialogElement.prototype.showModal === "function" ? "available" : "unavailable") +
+            "\nWebGL 2 API: " + (typeof window.WebGL2RenderingContext === "function" ? "available" : "unavailable");
+        }
+        var deadline = setTimeout(function () {
+          if (!failureReason) failed("Loading has not finished after 20 seconds. A slow download can still finish.");
+        }, 20000);
+        function scriptFailed(event) {
+          if (event.target && event.target.tagName === "SCRIPT" && event.target.type === "module") failed("The game script could not be loaded.");
+        }
+        function startupFailed(event) { failed(typeof event.detail === "string" ? event.detail : "Game initialization failed."); }
+        window.addEventListener("error", scriptFailed, true);
+        window.addEventListener("nodoku:startup-error", startupFailed);
+        window.addEventListener("nodoku:startup-ready", function () {
+          clearTimeout(deadline);
+          window.removeEventListener("error", scriptFailed, true);
+          window.removeEventListener("nodoku:startup-error", startupFailed);
+        }, { once: true });
+        document.getElementById("reload-app").addEventListener("click", function () { location.reload(); });
+      })();
+    </script>
+    <script type="module" src="/src/bootstrap.ts"></script>
+  </body>
+</html>

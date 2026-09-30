@@ -5,6 +5,13 @@ import { SELECTION_DEFAULTS } from "./config-schema";
 import { DotAnimation } from "./dot-animation";
 import { GumMaterials } from "./gum-materials";
 import { ConnectionColors } from "./connection-colors";
+import { DOTS_THEME } from "./dots-theme";
+import { GROKS_THEME, GROK_COLORS, GROKS_SCENE_COLORS } from "./groks-theme";
+import { CHARACTER_COLORS, characterForLattice, makeCharacterGeometries } from "./character-geometry";
+import { makeCharacterFaces } from "./character-faces";
+import { makeFurFringes, makeFurTextures } from "./character-fur";
+import { grokForLattice, makeGrokGeometries } from "./groks-geometry";
+import { makeGrokClueTexture, makeGrokFaces } from "./groks-faces";
 import {
   CUBE_ORIENTATIONS,
   nearestOrientation,
@@ -48,11 +55,12 @@ type DragStrand = {
   recoil: THREE.Vector3; elapsed: number | null; duration: number;
 };
 type DragMagnet = { nodeId: number; strength: number; target: number };
-type PipMeshes = Map<number, THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>>;
+type PipMeshes = Map<number, THREE.Mesh<THREE.CircleGeometry | THREE.PlaneGeometry, THREE.MeshBasicMaterial>>;
 type ShapeNode = {
   key: string; mesh: THREE.Mesh; group: THREE.Group; dots: DotAnimation; pips: PipMeshes;
   lattice: THREE.Vector3;
   material: THREE.MeshStandardMaterial; finalMaterial: THREE.Material;
+  fur?: THREE.LineSegments; furMaterial?: THREE.LineBasicMaterial; finalFurMaterial?: THREE.LineBasicMaterial;
   from: THREE.Vector3; to: THREE.Vector3; fromColor: THREE.Color; toColor: THREE.Color;
   fromScale: number; toScale: number; fromOpacity: number; toOpacity: number; nodeId: number | null;
 };
@@ -70,7 +78,21 @@ type ShapeTransition = {
   fromFog: [number, number]; toFog: [number, number]; fromFloor: number; toFloor: number;
 };
 
-const COLORS = {
+const THEMED = DOTS_THEME || GROKS_THEME;
+const BOT_COLORS: readonly string[] = GROKS_THEME ? GROK_COLORS : CHARACTER_COLORS;
+const COLORS = DOTS_THEME ? {
+  background: 0x07070b,
+  porcelain: 0x0879e8,
+  lilac: 0xf495dc,
+  sage: 0x77c62c,
+  ink: 0x161020,
+} : GROKS_THEME ? {
+  background: 0x0e0f10,
+  porcelain: 0x00a99e,
+  lilac: 0x67cfc3,
+  sage: 0xffffff,
+  ink: 0x101112,
+} : {
   background: 0xeeedf6,
   porcelain: 0xfcfaf5,
   lilac: 0x8170c9,
@@ -91,7 +113,7 @@ export class BoardScene {
   private gumDegrees = new Map<number, number>();
   private scene = new THREE.Scene();
   private studio = new THREE.Group();
-  private camera = new THREE.PerspectiveCamera(38, 1, 0.05, 100);
+  private camera = new THREE.PerspectiveCamera(GROKS_THEME ? 14 : 38, 1, 0.05, 100);
   private board = new THREE.Group();
   private rods = new THREE.Group();
   private rodMeshes = new Map<string, Rod>();
@@ -108,7 +130,10 @@ export class BoardScene {
     shapeTransitionMs: 700, materialStyle: "gum", gooStretch: .65, gooGloss: .7,
     nodeFloatAmplitude: .025, nodeFloatPeriodMs: 6000,
     rodRadius: .047, nodeScale: 1, fogStrength: 1, shadowOpacity: .11,
-    background: "#eeedf6", nodeColor: "#fcfaf5", connectionColor: "#8170c9", completedColor: "#a9cbbd",
+    background: DOTS_THEME ? "#07070b" : GROKS_THEME ? GROKS_SCENE_COLORS.background : "#eeedf6",
+    nodeColor: DOTS_THEME ? "#0879e8" : GROKS_THEME ? GROKS_SCENE_COLORS.nodeColor : "#fcfaf5",
+    connectionColor: DOTS_THEME ? "#f495dc" : GROKS_THEME ? GROKS_SCENE_COLORS.connectionColor : "#8170c9",
+    completedColor: DOTS_THEME ? "#77c62c" : GROKS_THEME ? GROKS_SCENE_COLORS.completedColor : "#a9cbbd",
   };
   private guides = new THREE.Group();
   private selectionPaths = new THREE.Group();
@@ -140,21 +165,56 @@ export class BoardScene {
   private pipFacing = new THREE.Vector3(0, 0, 1);
   private positions = new Map<number, THREE.Vector3>();
   private sphere = new THREE.SphereGeometry(RADIUS, 32, 24);
+  private dotGeometries = DOTS_THEME ? makeCharacterGeometries(RADIUS) : [];
+  private characterGeometries: THREE.BufferGeometry[] = DOTS_THEME ? this.dotGeometries
+    : GROKS_THEME ? makeGrokGeometries(RADIUS) : [];
+  private furTextures = DOTS_THEME ? makeFurTextures() : null;
+  private furGeometries = DOTS_THEME ? makeFurFringes(this.dotGeometries) : [];
+  private furMaterials = (DOTS_THEME ? CHARACTER_COLORS : []).map(color => new THREE.LineBasicMaterial({
+    color: new THREE.Color(color).lerp(new THREE.Color(0xffffff), .12),
+    transparent: true, opacity: .42, depthWrite: false,
+  }));
+  private customFur = (DOTS_THEME ? [0, 1] : []).map(() => new THREE.LineBasicMaterial({
+    transparent: true, opacity: .42, depthWrite: false,
+  }));
+  private faceGeometry = THEMED ? new THREE.PlaneGeometry(RADIUS * 2.7, RADIUS * 2.7) : null;
+  private faceTextures = DOTS_THEME ? makeCharacterFaces() : GROKS_THEME ? makeGrokFaces() : [];
+  private grokClueTexture = GROKS_THEME ? makeGrokClueTexture() : null;
+  private faceMaterials = this.faceTextures.map(texture => new THREE.MeshBasicMaterial({
+    map: texture, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
+  }));
+  private faceInstances = new Set<THREE.MeshBasicMaterial>();
   private cylinder = new THREE.CylinderGeometry(1, 1, 1, 16, 64);
   private connectionColors = new ConnectionColors(this.cylinder);
-  private pip = new THREE.CircleGeometry(0.024, 16);
+  private pip = GROKS_THEME ? new THREE.PlaneGeometry(.09, .09) : new THREE.CircleGeometry(0.024, 16);
   private ring = new THREE.TorusGeometry(RADIUS * 1.28, 0.014, 8, 64);
   private white = new THREE.MeshPhysicalMaterial({
     color: COLORS.porcelain,
+    map: this.furTextures?.color ?? null,
+    bumpMap: this.furTextures?.bump ?? null,
+    bumpScale: .006,
     roughness: 0.37,
     metalness: 0,
     clearcoat: 0.2,
     clearcoatRoughness: 0.4,
   });
+  private characterMaterials = BOT_COLORS.map(color => {
+    const material = this.white.clone();
+    material.color.set(color);
+    return material;
+  });
   private finished = new THREE.MeshPhysicalMaterial({
     color: COLORS.sage,
+    map: this.furTextures?.color ?? null,
+    bumpMap: this.furTextures?.bump ?? null,
+    bumpScale: .006,
     roughness: 0.45,
     clearcoat: 0.12,
+  });
+  private completedCharacterMaterials = BOT_COLORS.map(color => {
+    const material = this.finished.clone();
+    material.color.set(color);
+    return material;
   });
   private highlightedNodeMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xe7b36c,
@@ -162,16 +222,16 @@ export class BoardScene {
     clearcoat: 0.12,
   });
   private inactive = new THREE.MeshStandardMaterial({
-    color: 0xd9d7e4,
+    color: DOTS_THEME ? 0x655f72 : GROKS_THEME ? 0x343a39 : 0xd9d7e4,
     roughness: 0.6,
   });
   private selected = new THREE.MeshPhysicalMaterial({
-    color: 0xded5fb,
+    color: DOTS_THEME ? 0xe6d9ff : GROKS_THEME ? 0xa8f5e8 : 0xded5fb,
     roughness: 0.34,
     clearcoat: 0.2,
   });
   private neighborMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xe7e0f7,
+    color: DOTS_THEME ? 0xb6dfff : GROKS_THEME ? 0x92d8cd : 0xe7e0f7,
     roughness: 0.4,
   });
   private selectionPathMaterial = new THREE.MeshBasicMaterial({
@@ -208,7 +268,10 @@ export class BoardScene {
   private dragPlane = new THREE.Plane();
   private dragNormal = new THREE.Vector3();
   private pipMaterial = new THREE.MeshBasicMaterial({
-    color: COLORS.ink,
+    color: GROKS_THEME ? 0xffffff : COLORS.ink,
+    map: this.grokClueTexture,
+    transparent: GROKS_THEME,
+    depthWrite: !GROKS_THEME,
     side: THREE.DoubleSide,
   });
   private guideMaterial = new THREE.LineBasicMaterial({
@@ -222,8 +285,42 @@ export class BoardScene {
     fog: false,
     transparent: true,
     depthWrite: false,
+    visible: !THEMED,
   });
   private selectionRing = new THREE.Mesh(this.ring, this.ringMaterial);
+  private shapeOutlineMaterial = THEMED ? new THREE.ShaderMaterial({
+    uniforms: {
+      outlineColor: { value: this.ringMaterial.color },
+      outlineWidth: { value: .014 },
+      outlineOpacity: { value: 1 },
+    },
+    vertexShader: `
+      uniform float outlineWidth;
+      void main() {
+        vec3 expanded = position + normalize(normal) * outlineWidth;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(expanded, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 outlineColor;
+      uniform float outlineOpacity;
+      void main() {
+        gl_FragColor = vec4(outlineColor, outlineOpacity);
+        #include <colorspace_fragment>
+      }
+    `,
+    side: THREE.BackSide,
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+  }) : null;
+  private shapeOutline = this.shapeOutlineMaterial
+    ? new THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>(this.sphere, this.shapeOutlineMaterial) : null;
+  private shapeCueOutlines = this.shapeOutlineMaterial
+    ? [0, 1].map(() => new THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>(
+      this.sphere, this.shapeOutlineMaterial!.clone(),
+    )) : [];
+  private shapeCueTargets: (number | null)[] = [null, null];
   private floor: THREE.Mesh;
   private shadowFadeHeight = { value: 1 };
   private raycaster = new THREE.Raycaster();
@@ -288,7 +385,9 @@ export class BoardScene {
     canvas.setAttribute("role", "application");
     canvas.setAttribute(
       "aria-label",
-      "Three-dimensional puzzle board. Tap spheres or drag between neighbors to connect them. Drag empty space to rotate.",
+      THEMED
+        ? "Three-dimensional puzzle board. Tap pieces or drag between neighbors to connect them. Drag empty space to rotate."
+        : "Three-dimensional puzzle board. Tap spheres or drag between neighbors to connect them. Drag empty space to rotate.",
     );
     canvas.style.cssText =
       "display:block;width:100%;height:100%;touch-action:none;";
@@ -314,6 +413,16 @@ export class BoardScene {
       this.magnetTip,
       this.musicNotes,
     );
+    if (this.shapeOutline) {
+      this.shapeOutline.visible = false;
+      this.shapeOutline.renderOrder = 5;
+      this.board.add(this.shapeOutline);
+    }
+    for (const outline of this.shapeCueOutlines) {
+      outline.visible = false;
+      outline.renderOrder = 5;
+      this.board.add(outline);
+    }
     for (const mesh of [this.dragRod, this.dragTip, this.magnetRod, this.magnetTip]) {
       mesh.visible = false;
       mesh.frustumCulled = false;
@@ -425,7 +534,10 @@ export class BoardScene {
     this.selectionRing.visible = false;
     if (!morph) {
       for (const mesh of this.nodeMeshes.values()) this.board.remove(mesh);
-      for (const group of this.pipGroups.values()) this.board.remove(group);
+      for (const group of this.pipGroups.values()) {
+        this.disposeFace(group);
+        this.board.remove(group);
+      }
     }
     this.nodeMeshes.clear();
     this.pipGroups.clear();
@@ -444,8 +556,13 @@ export class BoardScene {
       const lattice = new THREE.Vector3(node.x / span, node.y / span,
         puzzle.settings.depth === 1 ? 1 : node.z / (puzzle.settings.depth - 1));
       const key = lattice.toArray().join(":");
+      const character = DOTS_THEME ? characterForLattice(key) : GROKS_THEME ? grokForLattice(key) : 0;
       let visual = shapeNodes.get(key);
-      const mesh = visual?.mesh ?? new THREE.Mesh(this.sphere, this.white);
+      const mesh = visual?.mesh ?? new THREE.Mesh(
+        THEMED ? this.characterGeometries[character] : this.sphere,
+        THEMED ? this.characterMaterials[character] : this.white,
+      );
+      mesh.geometry = THEMED ? this.characterGeometries[character] : this.sphere;
       if (!visual) {
         mesh.position.copy(position);
         mesh.userData.basePosition = position.clone();
@@ -455,13 +572,45 @@ export class BoardScene {
       mesh.userData.nodeId = node.id;
       mesh.userData.nodeScaleFactor = node.required === 0 ? .52 : 1;
       mesh.userData.shapeKey = key;
+      mesh.userData.character = character;
       mesh.userData.lattice = lattice;
+      if (DOTS_THEME) {
+        let fur = mesh.userData.fur as THREE.LineSegments | undefined;
+        if (!fur) {
+          fur = new THREE.LineSegments(this.furGeometries[character], this.furMaterials[character]);
+          mesh.add(fur);
+          mesh.userData.fur = fur;
+        } else fur.geometry = this.furGeometries[character];
+      }
       if (!visual) mesh.scale.setScalar(this.config.nodeScale * (node.required === 0 ? .52 : 1));
       this.nodeMeshes.set(node.id, mesh);
       this.board.add(mesh);
       const group = visual?.group ?? new THREE.Group();
       if (!visual) group.position.copy(position);
       group.scale.setScalar(this.config.nodeScale);
+      if (THEMED && node.required > 0) {
+        let face = group.userData.face as THREE.Mesh | undefined;
+        if (!face) {
+          const material = this.faceMaterials[character].clone();
+          material.opacity = 0;
+          this.faceInstances.add(material);
+          face = new THREE.Mesh(this.faceGeometry!, material);
+          face.position.z = RADIUS * (GROKS_THEME ? .95 : 1) + .012;
+          face.renderOrder = 6;
+          group.add(face);
+          group.userData.face = face;
+        } else {
+          const material = face.material as THREE.MeshBasicMaterial;
+          if (material.map !== this.faceTextures[character]) {
+            material.map = this.faceTextures[character];
+            material.needsUpdate = true;
+          }
+        }
+        face.userData.reveal = 0;
+        face.scale.setScalar(.7);
+        (face.material as THREE.MeshBasicMaterial).opacity = 0;
+        face.visible = false;
+      } else if (THEMED) this.disposeFace(group);
       this.pipGroups.set(node.id, group);
       const dots = visual?.dots ?? new DotAnimation(morph ? 0 : puzzle.remaining(node.id), {
         style: this.config.dotAnimation, durationMs: this.config.dotAnimationMs,
@@ -572,8 +721,15 @@ export class BoardScene {
     material.depthWrite = opacity === 1;
     material.opacity = opacity;
     mesh.material = material;
+    const fur = mesh.userData.fur as THREE.LineSegments | undefined;
+    const finalFurMaterial = fur?.material as THREE.LineBasicMaterial | undefined;
+    const furMaterial = finalFurMaterial?.clone();
+    if (fur && furMaterial && finalFurMaterial) {
+      furMaterial.opacity *= opacity;
+      fur.material = furMaterial;
+    }
     return {
-      key, mesh, group, dots, pips, material, finalMaterial,
+      key, mesh, group, dots, pips, material, finalMaterial, fur, furMaterial, finalFurMaterial,
       lattice: (mesh.userData.lattice as THREE.Vector3).clone(),
       from: this.basePosition(mesh).clone(), to: this.basePosition(mesh).clone(), fromColor: material.color.clone(), toColor: material.color.clone(),
       fromScale: mesh.scale.x, toScale: mesh.scale.x, fromOpacity: opacity, toOpacity: opacity, nodeId: null,
@@ -638,12 +794,27 @@ export class BoardScene {
   getSelectionVisualState() {
     return {
       nodeId: this.selection,
-      ring: { visible: this.selectionRing.visible, color: `#${this.ringMaterial.color.getHexString()}`,
+      ring: { visible: this.selectionRing.visible, shape: THEMED ? "silhouette" : "circle",
+        color: `#${this.ringMaterial.color.getHexString()}`,
         radius: this.ring.parameters.radius, thickness: this.ring.parameters.tube, opacity: this.ringMaterial.opacity },
       guides: { visible: this.selectionPaths.visible, count: this.selectionPaths.children.length,
         color: `#${this.selectionPathMaterial.color.getHexString()}`, opacity: this.selectionPathMaterial.opacity,
         radii: this.selectionPaths.children.map(mesh => mesh.scale.x) },
     };
+  }
+
+  setTutorialOutlines(cues: readonly { id: number; color: string; width: number; scale: number; opacity: number }[]): void {
+    for (const [index, outline] of this.shapeCueOutlines.entries()) {
+      const cue = cues[index];
+      this.shapeCueTargets[index] = cue?.id ?? null;
+      outline.visible = !!cue && cue.opacity > .001;
+      if (!cue) continue;
+      const radius = this.projectNode(cue.id)?.radius ?? 1;
+      const material = outline.material;
+      (material.uniforms.outlineColor.value as THREE.Color).set(cue.color);
+      material.uniforms.outlineWidth.value = RADIUS * (Math.max(0, cue.scale - 1) * .45 + cue.width / radius);
+      material.uniforms.outlineOpacity.value = cue.opacity;
+    }
   }
 
   setConfig(config: GameConfig): void {
@@ -657,6 +828,11 @@ export class BoardScene {
     this.selectionConfig = { ...selection };
     this.selectionRing.visible = this.selection !== null && selection.ringEnabled;
     this.ringMaterial.opacity = selection.ringOpacity;
+    if (this.shapeOutlineMaterial) {
+      this.shapeOutlineMaterial.uniforms.outlineWidth.value = .014 * selection.ringThickness
+        + Math.max(0, selection.ringSize - 1.05) * RADIUS * .1;
+      this.shapeOutlineMaterial.uniforms.outlineOpacity.value = selection.ringOpacity;
+    }
     this.selectionPathMaterial.opacity = selection.guideOpacity;
     this.selectionPaths.visible = selection.guidesEnabled;
     this.cueCycleMs = config.tutorial.gestureCycleMs;
@@ -665,6 +841,10 @@ export class BoardScene {
     if (!this.gumMotionEnabled) this.gumPulses.clear();
     this.white.color.set(this.config.nodeColor);
     this.finished.color.set(this.config.completedColor);
+    if (DOTS_THEME) {
+      this.customFur[0].color.set(this.config.nodeColor);
+      this.customFur[1].color.set(this.config.completedColor);
+    }
     this.connectionColors.configure(this.white.color, this.finished.color, new THREE.Color(this.config.connectionColor));
     this.ringMaterial.color.set(selection.ringColor);
     this.selectionPathMaterial.color.set(selection.guideColor);
@@ -711,8 +891,14 @@ export class BoardScene {
   private updateGumMaterials(): void {
     this.gumMaterials.configure(this.config);
     this.highlightedRodMaterial.color.set(this.config.materialStyle === "gum" ? 0xe7b36c : 0xb77536);
-    for (const material of [this.white, this.finished, this.highlightedNodeMaterial, this.selected, this.neighborMaterial, this.dragTipMaterial, this.magnetTipMaterial])
+    for (const material of [this.white, this.finished, ...this.characterMaterials, ...this.completedCharacterMaterials, this.highlightedNodeMaterial, this.selected, this.neighborMaterial, this.dragTipMaterial, this.magnetTipMaterial])
       this.gumMaterials.apply(material, "node");
+    for (const material of THEMED ? [...this.characterMaterials, ...this.completedCharacterMaterials] : []) {
+      material.roughness = GROKS_THEME ? .97 : .92;
+      material.clearcoat = 0;
+      material.envMapIntensity = 0;
+      material.specularIntensity = .08;
+    }
     for (const material of [this.rodMaterial, this.highlightedRodMaterial, this.dragRodMaterial, this.magnetRodMaterial])
       this.gumMaterials.apply(material, "rod");
     for (const node of this.shapeTransition?.nodes.values() ?? [])
@@ -723,16 +909,53 @@ export class BoardScene {
 
   private updateGumNodes(): void {
     if (this.shapeTransition) return;
+    const view = GROKS_THEME && !this.isFlat ? this.camera.position.clone().normalize() : null;
+    const face = view ? this.frontFace() : undefined;
+    let near = -Infinity, far = Infinity;
+    if (view) for (const mesh of this.nodeMeshes.values()) {
+      const depth = mesh.position.dot(view);
+      near = Math.max(near, depth);
+      far = Math.min(far, depth);
+    }
+    // A rear Bot whose projection sits inside a nearer silhouette should
+    // emerge as the cube turns, not peek out as a round patch within it.
+    const projected = new Map<THREE.Mesh, { x: number; y: number; depth: number; radius: number }>();
+    if (view && near > far) for (const mesh of this.nodeMeshes.values()) {
+      const depth = mesh.position.dot(view);
+      const distance = this.camera.position.length() - depth;
+      const scale = this.config.nodeScale * mesh.userData.nodeScaleFactor
+        * (1 - .4 * (near - depth) / (near - far));
+      const screen = mesh.position.clone().project(this.camera);
+      projected.set(mesh, {
+        x: screen.x * this.width / 2,
+        y: screen.y * this.height / 2,
+        depth,
+        radius: this.nodeRadius * scale * this.height
+          / (2 * distance * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2))),
+      });
+    }
     for (const [id, mesh] of this.nodeMeshes) {
       const group = this.pipGroups.get(id)!;
       const pulse = this.gumMotionEnabled ? this.gumPulses.get(id) : undefined;
       const t = pulse ? Math.min(1, pulse.elapsed / pulse.duration) : 1;
       const strain = this.config.gooStretch * (pulse?.strength ?? 1) * .22 * Math.sin(t * Math.PI * 3) * (1 - t) ** 2;
       const y = 1 + strain, x = 1 / Math.sqrt(y);
-      const scale = this.config.nodeScale * mesh.userData.nodeScaleFactor;
+      const depthScale = view && near > far
+        ? 1 - .4 * (near - mesh.position.dot(view)) / (near - far)
+        : 1;
+      const screen = projected.get(mesh);
+      let separation = 1;
+      if (screen && (!face || !this.onFace(id, face))) for (const front of projected.values()) {
+        if (front.depth <= screen.depth + .1) continue;
+        const distance = Math.hypot(front.x - screen.x, front.y - screen.y);
+        const t = THREE.MathUtils.clamp((distance / front.radius - .7) / .6, 0, 1);
+        separation = Math.min(separation, t * t * (3 - 2 * t));
+      }
+      const scale = this.config.nodeScale * mesh.userData.nodeScaleFactor * depthScale
+        * Math.max(.001, separation);
       mesh.scale.set(scale * x, scale * y, scale * x);
-      // Use the same frame for the sphere and its dots, keeping every clue
-      // attached to the ellipsoid; raycasting and shadows use this real scale.
+      // Keep each clue attached to its body as the view and Gum pulse change.
+      // Raycasting and shadows use this same scale.
       mesh.quaternion.copy(group.quaternion);
       group.scale.copy(mesh.scale);
     }
@@ -754,7 +977,17 @@ export class BoardScene {
       || !!this.dragMagnet && Math.abs(this.dragMagnet.strength - this.dragMagnet.target) > 1e-4);
   }
 
-  get hasAnimations(): boolean { return (!!this.removalCue && !this.reducedMotion) || this.dragAnimating || this.gumPulses.size > 0 || this.motion !== null || this.connectionGrowth.size > 0 || this.activeDotNodes.size > 0 || this.noteParticles.length > 0 || this.shapeTransition !== null; }
+  private get facesRevealing(): boolean {
+    if (!THEMED || this.reducedMotion || this.shapeTransition || !this.puzzle) return false;
+    for (const [id, group] of this.pipGroups) {
+      const face = group.userData.face as THREE.Mesh | undefined;
+      if (face && (face.userData.reveal as number) < 1
+        && this.puzzle.remaining(id) === 0 && this.dotAnimations.get(id)?.dots.length === 0) return true;
+    }
+    return false;
+  }
+
+  get hasAnimations(): boolean { return (!!this.removalCue && !this.reducedMotion) || this.dragAnimating || this.gumPulses.size > 0 || this.motion !== null || this.connectionGrowth.size > 0 || this.activeDotNodes.size > 0 || this.noteParticles.length > 0 || this.shapeTransition !== null || this.facesRevealing; }
 
   get hasAmbientMotion(): boolean {
     return !this.disposed && !this.reducedMotion && !document.hidden && this.config.nodeFloatAmplitude > 0 && this.nodeMeshes.size > 0;
@@ -995,6 +1228,15 @@ export class BoardScene {
   }
 
   private get nodeRadius(): number { return RADIUS * this.config.nodeScale; }
+  private get characterPalette(): boolean {
+    if (GROKS_THEME) return this.config.nodeColor.toLowerCase() === GROK_COLORS[0]
+      && this.config.completedColor.toLowerCase() === GROK_COLORS[1];
+    if (!DOTS_THEME) return false;
+    const base = this.config.nodeColor.toLowerCase();
+    const complete = this.config.completedColor.toLowerCase();
+    return (base === CHARACTER_COLORS[0] && complete === CHARACTER_COLORS[1])
+      || (base === "#70baff" && complete === "#b9ee6c");
+  }
 
   private growthProgress(growth?: Growth): number {
     if (!growth || growth.duration <= 0) return 1;
@@ -1030,6 +1272,15 @@ export class BoardScene {
   }
 
   private connectionGeometry(rod: Rod): THREE.CylinderGeometry {
+    if (this.characterPalette) {
+      const color = (id: number) => {
+        const character = this.nodeMeshes.get(id)!.userData.character as number;
+        return this.puzzle!.remaining(id) === 0
+          ? this.completedCharacterMaterials[character].color
+          : this.characterMaterials[character].color;
+      };
+      return this.connectionColors.geometryBetween(color(rod.startNode), color(rod.endNode));
+    }
     return this.connectionColors.geometry(
       this.puzzle!.remaining(rod.startNode) === 0,
       this.puzzle!.remaining(rod.endNode) === 0,
@@ -1051,9 +1302,7 @@ export class BoardScene {
       const start = reverse ? second : first, end = reverse ? first : second;
       const startNode = reverse ? b : a, endNode = reverse ? a : b;
       const delta = end.clone().sub(start);
-      const mesh = new THREE.Mesh(this.connectionColors.geometry(
-        this.puzzle.remaining(startNode) === 0, this.puzzle.remaining(endNode) === 0,
-      ), this.rodMaterial);
+      const mesh = new THREE.Mesh(this.cylinder, this.rodMaterial);
       mesh.customDepthMaterial = this.gumMaterials.depth;
       mesh.raycast = (ray, hits) => this.gumMaterials.raycast(mesh, ray, hits);
       mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.clone().normalize());
@@ -1066,6 +1315,7 @@ export class BoardScene {
       if (animate && !this.reducedMotion && this.config.connectionMs > 0) this.connectionGrowth.set(key, {
         elapsed: 0, duration: this.config.connectionMs, easing: this.config.connectionEasing,
       });
+      mesh.geometry = this.connectionGeometry(rod);
       this.placeRod(rod, this.growthProgress(this.connectionGrowth.get(key)));
     }
     for (const [key, rod] of this.rodMeshes) if (!current.has(key)) {
@@ -1139,7 +1389,8 @@ export class BoardScene {
         mesh.material.dispose();
         mesh.material = this.pipMaterial;
       }
-      const z = Math.sqrt(Math.max(0, RADIUS * RADIUS - dot.x * dot.x - dot.y * dot.y)) + .002;
+      const z = GROKS_THEME ? .95 * Math.sqrt(Math.max(0, RADIUS * RADIUS - dot.x * dot.x - dot.y * dot.y)) + .012
+        : Math.sqrt(Math.max(0, RADIUS * RADIUS - dot.x * dot.x - dot.y * dot.y)) + .002;
       mesh.position.set(dot.x, dot.y, z);
       mesh.quaternion.setFromUnitVectors(this.pipFacing, this.pipNormal.copy(mesh.position).normalize());
       mesh.scale.setScalar(dot.scale);
@@ -1271,6 +1522,16 @@ export class BoardScene {
     this.activeDotNodes.clear();
   }
 
+  private disposeFace(group: THREE.Group): void {
+    const face = group.userData.face as THREE.Mesh | undefined;
+    if (!face) return;
+    const material = face.material as THREE.MeshBasicMaterial;
+    this.faceInstances.delete(material);
+    material.dispose();
+    group.remove(face);
+    delete group.userData.face;
+  }
+
   private shapeProgress(): number {
     if (!this.shapeTransition) return 1;
     const t = Math.min(1, this.shapeTransition.elapsed / this.shapeTransition.duration);
@@ -1289,6 +1550,8 @@ export class BoardScene {
       node.group.position.copy(node.mesh.position);
       node.mesh.scale.setScalar(THREE.MathUtils.lerp(node.fromScale, node.toScale, t));
       node.material.opacity = THREE.MathUtils.lerp(node.fromOpacity, node.toOpacity, t);
+      if (node.furMaterial && node.finalFurMaterial)
+        node.furMaterial.opacity = node.finalFurMaterial.opacity * node.material.opacity;
       node.material.color.lerpColors(node.fromColor, node.toColor, t);
       node.material.depthWrite = node.material.opacity === 1;
       node.mesh.visible = node.material.opacity > .001;
@@ -1315,7 +1578,9 @@ export class BoardScene {
     this.shapeTransition = null;
     for (const node of shape.nodes.values()) {
       node.material.dispose();
+      node.furMaterial?.dispose();
       if (node.nodeId === null) {
+        this.disposeFace(node.group);
         this.board.remove(node.mesh, node.group);
         for (const mesh of node.pips.values()) if (mesh.material !== this.pipMaterial) mesh.material.dispose();
       } else {
@@ -1323,6 +1588,7 @@ export class BoardScene {
         node.mesh.position.copy(node.to);
         node.mesh.scale.setScalar(node.toScale);
         node.mesh.material = node.finalMaterial;
+        if (node.fur && node.finalFurMaterial) node.fur.material = node.finalFurMaterial;
         node.mesh.visible = true;
         node.mesh.castShadow = true;
         node.group.position.copy(node.to);
@@ -1380,8 +1646,12 @@ export class BoardScene {
         this.selectionPaths.add(path);
       }
     }
+    const characterPalette = this.characterPalette;
     for (const node of this.puzzle.nodes) {
       const mesh = this.nodeMeshes.get(node.id)!;
+      const character = mesh.userData.character as number;
+      const baseMaterial = characterPalette ? this.characterMaterials[character] : this.white;
+      const completeMaterial = characterPalette ? this.completedCharacterMaterials[character] : this.finished;
       const material =
         node.id === this.selection && this.config.materialStyle !== "gum"
           ? this.selected
@@ -1390,13 +1660,23 @@ export class BoardScene {
             : this.highlightedGroup.has(node.id)
               ? this.highlightedNodeMaterial
               : this.puzzle.remaining(node.id) === 0
-                ? this.finished
+                ? completeMaterial
                 : available.has(node.id) && this.config.materialStyle !== "gum"
                   ? this.neighborMaterial
-                  : this.white;
+                  : baseMaterial;
       const visual = this.shapeTransition?.nodes.get(mesh.userData.shapeKey);
       if (visual) { visual.finalMaterial = material; visual.toColor.copy(material.color); }
       else mesh.material = material;
+      if (DOTS_THEME) {
+        const fur = mesh.userData.fur as THREE.LineSegments;
+        fur.visible = node.required > 0;
+        const furMaterial = characterPalette ? this.furMaterials[character]
+          : this.customFur[this.puzzle.remaining(node.id) === 0 ? 1 : 0];
+        if (visual) {
+          visual.finalFurMaterial = furMaterial;
+          visual.furMaterial?.color.copy(furMaterial.color);
+        } else fur.material = furMaterial;
+      }
     }
   }
 
@@ -1711,12 +1991,36 @@ export class BoardScene {
       );
       group.quaternion.setFromRotationMatrix(this.billboardMatrix);
     }
+    if (GROKS_THEME) for (const [id, mesh] of this.nodeMeshes) {
+      const group = this.pipGroups.get(id);
+      if (group) mesh.quaternion.copy(group.quaternion);
+    }
     this.billboardMatrix.lookAt(
       this.camera.position,
       this.selectionRing.position,
       this.camera.up,
     );
     this.selectionRing.quaternion.setFromRotationMatrix(this.billboardMatrix);
+  }
+
+  private updateShapeOutlines(): void {
+    if (!this.shapeOutline) return;
+    const selected = this.selection === null ? null : this.nodeMeshes.get(this.selection);
+    this.shapeOutline.visible = this.selectionRing.visible && !!selected;
+    if (selected) this.placeShapeOutline(this.shapeOutline, selected);
+    for (const [index, outline] of this.shapeCueOutlines.entries()) {
+      const id = this.shapeCueTargets[index];
+      const target = id === null ? null : this.nodeMeshes.get(id);
+      outline.visible &&= !!target;
+      if (target) this.placeShapeOutline(outline, target);
+    }
+  }
+
+  private placeShapeOutline(outline: THREE.Mesh, target: THREE.Mesh): void {
+    outline.geometry = target.geometry;
+    outline.position.copy(target.position);
+    outline.quaternion.copy(target.quaternion);
+    outline.scale.copy(target.scale);
   }
 
   private animateTo(target: THREE.Quaternion, manual = false, maxDurationMs = this.config.rotationMs): void {
@@ -2060,7 +2364,7 @@ export class BoardScene {
     this.dragRodMaterial.color.copy(color);
     this.dragTipMaterial.color.copy(color);
     this.placeLink(this.dragRod, { start: source.position, end: strand.end, radius, progress: 1 });
-    this.gumMaterials.configureRod(this.dragRod, this.nodeRadius, tipRadius);
+    this.gumMaterials.configureRod(this.dragRod, GROKS_THEME ? 0 : this.nodeRadius, tipRadius);
     this.dragTip.position.copy(strand.end);
     this.dragTip.scale.setScalar(tipRadius / RADIUS);
     this.dragRod.visible = this.dragTip.visible = length > this.nodeRadius * .85;
@@ -2087,7 +2391,7 @@ export class BoardScene {
     this.magnetRodMaterial.color.copy(color);
     this.magnetTipMaterial.color.copy(color);
     this.placeLink(this.magnetRod, { start: source.position, end, radius, progress: 1 });
-    this.gumMaterials.configureRod(this.magnetRod, this.nodeRadius, tipRadius);
+    this.gumMaterials.configureRod(this.magnetRod, GROKS_THEME ? 0 : this.nodeRadius, tipRadius);
     this.magnetTip.scale.setScalar(tipRadius / RADIUS);
   }
 
@@ -2398,6 +2702,31 @@ export class BoardScene {
     if (this.disposed) return;
     this.updateFloating();
     this.updateBillboards();
+    this.updateShapeOutlines();
+    if (THEMED && this.shapeTransition) {
+      for (const node of this.shapeTransition.nodes.values()) {
+        const face = node.group.userData.face as THREE.Mesh | undefined;
+        if (face) face.visible = false;
+      }
+    } else if (THEMED) for (const [id, group] of this.pipGroups) {
+      const face = group.userData.face as THREE.Mesh | undefined;
+      if (!face) continue;
+      const ready = this.puzzle?.remaining(id) === 0
+        && this.dotAnimations.get(id)?.dots.length === 0;
+      if (!ready) {
+        face.userData.reveal = 0;
+        face.visible = false;
+        continue;
+      }
+      const progress = this.reducedMotion ? 1
+        : Math.min(1, (face.userData.reveal as number) + elapsed / 420);
+      face.userData.reveal = progress;
+      // Eyes, glasses, and hats fade and spring into place after clues clear.
+      const eased = 1 + 2.7 * (progress - 1) ** 3 + 1.7 * (progress - 1) ** 2;
+      face.scale.setScalar(.7 + .3 * eased);
+      (face.material as THREE.MeshBasicMaterial).opacity = progress * progress * (3 - 2 * progress);
+      face.visible = progress > 0;
+    }
     this.updateGumNodes();
     this.advanceDrag(elapsed);
     this.renderDragStrand();
@@ -2432,15 +2761,30 @@ export class BoardScene {
     this.resizeObserver.disconnect();
     this.clearGuides();
     this.sphere.dispose();
+    for (const geometry of this.characterGeometries) geometry.dispose();
+    for (const geometry of this.furGeometries) geometry.dispose();
+    this.furTextures?.color.dispose();
+    this.furTextures?.bump.dispose();
+    for (const material of [...this.furMaterials, ...this.customFur]) material.dispose();
+    this.faceGeometry?.dispose();
+    for (const material of this.faceInstances) material.dispose();
+    this.faceInstances.clear();
+    for (const material of this.faceMaterials) material.dispose();
+    for (const texture of this.faceTextures) texture.dispose();
     this.cylinder.dispose();
     this.connectionColors.dispose();
     this.pip.dispose();
+    this.grokClueTexture?.dispose();
     this.ring.dispose();
+    this.shapeOutlineMaterial?.dispose();
+    for (const outline of this.shapeCueOutlines) outline.material.dispose();
     this.floor.geometry.dispose();
     (this.floor.material as THREE.Material).dispose();
     for (const material of [
       this.white,
       this.finished,
+      ...this.characterMaterials,
+      ...this.completedCharacterMaterials,
       this.highlightedNodeMaterial,
       this.inactive,
       this.selected,

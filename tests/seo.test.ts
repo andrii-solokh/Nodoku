@@ -47,6 +47,33 @@ test("robots and sitemap permit discovery of the canonical homepage", async () =
   assert.match(robots, /^User-agent: \*\nAllow: \/\n/m);
   assert.match(robots, /Sitemap: https:\/\/nodoku\.solokh\.com\/sitemap\.xml/);
   assert.match(sitemap, /<loc>https:\/\/nodoku\.solokh\.com\/<\/loc>/);
+  assert.match(sitemap, /<loc>https:\/\/nodoku\.solokh\.com\/dots\/<\/loc>/);
+  assert.match(sitemap, /<loc>https:\/\/nodoku\.solokh\.com\/groks\/<\/loc>/);
+});
+
+test("the geometric bot edition has its own canonical page and route", async () => {
+  const [groks, redirects, vite] = await Promise.all([
+    readRootFile("groks/index.html"), readRootFile("static/_redirects"),
+    readRootFile("vite.config.mts"),
+  ]);
+  assert.match(groks, /name="theme-color" content="#0e0f10"/);
+  assert.match(groks, /rel="canonical" href="https:\/\/nodoku\.solokh\.com\/groks\/"/);
+  assert.match(groks, /src\/groks-favicon\.svg/);
+  assert.match(redirects, /^\/groks \/groks\/ 308/m);
+  assert.match(vite, /groks: new URL\("\.\/groks\/index\.html"/);
+});
+
+test("the character edition has its own canonical page and the root keeps classic branding", async () => {
+  const [home, dots, app, redirects] = await Promise.all([
+    readRootFile("index.html"), readRootFile("dots/index.html"),
+    readRootFile("src/main.ts"), readRootFile("static/_redirects"),
+  ]);
+  assert.match(home, /name="theme-color" content="#eeedf6"/);
+  assert.match(dots, /name="theme-color" content="#07070b"/);
+  assert.match(dots, /rel="canonical" href="https:\/\/nodoku\.solokh\.com\/dots\/"/);
+  assert.match(dots, /src\/dots-favicon\.svg/);
+  assert.match(app, /g fill="#a9cbbd"/);
+  assert.match(redirects, /^\/dots \/dots\/ 308/m);
 });
 
 
@@ -58,7 +85,8 @@ test("homepage ships a motion-safe branded loading screen", async () => {
   assert.match(html, /loader-progress/);
   assert.match(html, /startup-error-details/);
   assert.match(app, /function finishLoading\(\)/);
+  assert.match(app, /fill="#68b9ff"/);
+  assert.match(app, /fill="#f78cda"/);
   assert.match(app, /g fill="#a9cbbd"/);
-  assert.match(app, /fill="#fcfaf5" stroke="#d7d2df"/);
   assert.match(app, /loadingScreen\.classList\.add\("is-ready"\)/);
 });

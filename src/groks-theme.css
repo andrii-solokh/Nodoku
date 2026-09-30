@@ -1,0 +1,68 @@
+:root {
+  background: #0e0f10;
+  --paper: #0e0f10;
+  --ink: #f5f7f6;
+  --muted: #aeb8b7;
+  --purple: #71d7cb;
+  --line: #333839;
+  --sage: #a7e9d3;
+}
+body { background: #0e0f10; }
+.site-header { border-bottom-color: #ffffff14; }
+.brand-name { color: #f7faf9; }
+.visitor-dot, .progress-fill { background: #00a99e; }
+.hero-word { margin-bottom: 34px; font-size: clamp(90px, 10vw, 156px); letter-spacing: -.085em; line-height: 1; filter: none; }
+.hero-word span { color: #fff; text-shadow: none !important; -webkit-text-stroke: 0; }
+.hero-word span:nth-child(1), .hero-word span:nth-child(4) { color: #77e2d8; }
+.hero-word span:nth-child(3) { color: #fff; }
+.home-main { grid-template-columns: minmax(440px, 44%) minmax(0, 56%); }
+.home-stage-wrap {
+  background: radial-gradient(ellipse 50% 45% at 52% 45%, #242e2c 0%, #111717 64%, transparent 100%);
+}
+.home-characters { width: 100%; bottom: 5px; animation: groks-sway 5s ease-in-out infinite alternate; }
+.seo-content { background: #101313; border-color: #ffffff14; }
+.seo-content section { border-color: #ffffff20; }
+.start-button { background: #00b9aa; color: #071311; box-shadow: 0 10px 28px #00b9aa3d; }
+.start-button:hover { background: #60e1d5; box-shadow: 0 12px 32px #1edac25c; }
+.segment[aria-pressed="true"], .size-button[aria-pressed="true"], .difficulty-button[aria-pressed="true"] {
+  background: #b9f4e7; color: #102825; box-shadow: 0 2px 12px #84d9c94d;
+}
+.tool-button.hint { background: #63c9bc29; color: #8de9dc; }
+.tool-button.hint:hover { background: #63c9bc44; }
+@media (pointer: fine) and (min-width: 761px) and (min-aspect-ratio: 1001/1000) {
+  .rotation-tools .icon-button,
+  .tool-shortcut kbd {
+    background: #aaa6b1;
+    color: #292530;
+    border-radius: 9px;
+  }
+  .tool-shortcut kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    border: 0;
+    font: 600 12px/1 Outfit, sans-serif;
+  }
+  .rotation-shortcut kbd { font-size: 12px; }
+  .rotation-tools .icon-button:hover,
+  .tool-button:hover .tool-shortcut kbd { background: #c2bec8; color: #292530; }
+  .rotation-tools .icon-button:active,
+  .rotation-tools .icon-button:has(.is-pressed) { background: var(--purple); color: #102825; }
+}
+.completion-emblem, .music-emblem { background: #50c8b52b; color: #8ce9da; }
+.dialog-actions .confirm-button { background: #00b9aa; color: #071311; }
+.game-title { color: #a8f5e8; }
+.network-status button { background: #a8f5e8; color: #102825; }
+.completion-characters { height: 105px; object-fit: cover; object-position: 50% 62%; }
+@keyframes groks-sway { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+@media (max-width: 760px) {
+  .hero-word { margin-bottom: 13px; font-size: clamp(73px, 18vw, 110px); line-height: .8; }
+  .home-main { display: flex; }
+  .home-characters { bottom: 0; }
+}
+@media (max-width: 390px) {
+  .hero-word { font-size: 18vw; }
+}
+@media (prefers-reduced-motion: reduce) { .home-characters { animation: none; } }

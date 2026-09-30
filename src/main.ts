@@ -5,6 +5,10 @@ import "@fontsource/outfit/400.css";
 import "@fontsource/outfit/500.css";
 import "@fontsource/outfit/600.css";
 import "./style.css";
+import charactersUrl from "./assets/dots-characters.png";
+import groksUrl from "./assets/groks-lineup.svg";
+import { DOTS_THEME } from "./dots-theme";
+import { GROKS_THEME } from "./groks-theme";
 import { Puzzle, dailyPuzzleSeed, edgeKey, type Difficulty, type Edge, type PuzzleSettings } from "./puzzle";
 import { updateAudiencePuzzle } from "./audience";
 import { mountGameTips } from "./game-tips";
@@ -51,8 +55,11 @@ const paths: Record<string, string> = {
 const icon = (name: string) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || ""}</svg>`;
 
-const logo =
-  '<svg viewBox="0 0 34 34" aria-hidden="true"><path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3"/><g fill="#a9cbbd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g><circle cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/></svg>';
+const logo = DOTS_THEME
+  ? '<svg viewBox="0 0 34 34" aria-hidden="true"><path d="M8 9h18v17H8Z" fill="none" stroke="#f5efff" stroke-width="2.5"/><g><circle cx="8" cy="9" r="4.7" fill="#68b9ff"/><circle cx="26" cy="9" r="4.7" fill="#b8ed67"/><circle cx="8" cy="26" r="4.7" fill="#ffd560"/><circle cx="26" cy="26" r="4.7" fill="#f78cda"/></g></svg>'
+  : GROKS_THEME
+  ? '<svg viewBox="0 0 34 34" aria-hidden="true"><path d="M17 2 31 10v14L17 32 3 24V10Z" fill="#00a99e"/><g fill="#101112" transform="rotate(-15 17 17)"><rect x="11" y="11" width="3.5" height="9" rx="1.7"/><rect x="20" y="11" width="3.5" height="9" rx="1.7"/></g></svg>'
+  : '<svg viewBox="0 0 34 34" aria-hidden="true"><path d="M8 9h18v17H8Z" fill="none" stroke="#8270bd" stroke-width="3"/><g fill="#a9cbbd"><circle cx="8" cy="9" r="4.7"/><circle cx="26" cy="9" r="4.7"/><circle cx="8" cy="26" r="4.7"/></g><circle cx="26" cy="26" r="5" fill="#fcfaf5" stroke="#d7d2df" stroke-width="1"/></svg>';
 const labels: Record<Difficulty, string> = {
   easy: "Gentle",
   medium: "Focused",
@@ -61,9 +68,11 @@ const labels: Record<Difficulty, string> = {
 const macKeyboard = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
 const modifierLabel = macKeyboard ? "⌘" : "Ctrl";
 const modifierKey = macKeyboard ? "Meta" : "Control";
+const editionName = DOTS_THEME ? "Dots" : GROKS_THEME ? "Groks" : "Nodoku";
+const shapedCharacters = DOTS_THEME || GROKS_THEME;
 const toolShortcut = (...keys: string[]) =>
   `<span class="tool-shortcut" aria-hidden="true">${keys.map(key => `<kbd>${key}</kbd>`).join("")}</span>`;
-const storageKey = "nodoku.astra.v1";
+const storageKey = DOTS_THEME ? "nodoku.dots.v1" : GROKS_THEME ? "nodoku.groks.v1" : "nodoku.astra.v1";
 let settings: PuzzleSettings = {
   size: 3,
   depth: 3,
@@ -172,7 +181,7 @@ function finishLoading() {
 app.className = "home";
 app.innerHTML = `
 <header class="site-header">
-  <button class="brand" id="home-button" aria-label="Nodoku home">${logo}<span class="brand-name">nodoku</span></button>
+  <button class="brand" id="home-button" aria-label="${editionName} home">${logo}<span class="brand-name">${editionName.toLowerCase()}</span></button>
   <div class="game-header-info">
     <div class="game-title" id="game-title"></div>
     <div class="progress-wrap"><div class="progress-track" role="progressbar" aria-label="Dots connected" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="progress-fill"></div></div><span id="progress-value">0%</span></div>
@@ -189,6 +198,7 @@ app.innerHTML = `
 <main id="main-content">
 <section class="home-main" aria-labelledby="home-title">
   <section class="intro" aria-label="Set up a puzzle">
+    ${DOTS_THEME ? '<div class="hero-word" aria-hidden="true"><span>d</span><span>o</span><span>t</span><span>s</span></div>' : GROKS_THEME ? '<div class="hero-word" aria-hidden="true"><span>g</span><span>r</span><span>o</span><span>k</span><span>s</span></div>' : ''}
     <h1 id="home-title">3D Spatial Reasoning Puzzle</h1>
     <p class="intro-copy">Connect every node and complete the network.<br>Each node shows how many connections it needs.</p>
     <div class="puzzle-options">
@@ -205,7 +215,7 @@ app.innerHTML = `
       <div class="start-actions"><button class="start-button" id="start-button">${icon("play")}Start connecting</button><button class="resume-button" id="resume-button" hidden>Continue your puzzle</button></div>
     </div>
   </section>
-  <div class="home-stage-wrap"><div id="home-stage" class="stage home-stage"></div></div>
+  <div class="home-stage-wrap"><div id="home-stage" class="stage home-stage"></div>${DOTS_THEME || GROKS_THEME ? `<img class="home-characters" src="${DOTS_THEME ? charactersUrl : groksUrl}" alt="" aria-hidden="true" draggable="false" />` : ''}</div>
 </section>
 <section class="game-main" aria-label="Puzzle board">
   <div class="puzzle-melody" aria-label="Selected melody">${icon("music")}<a class="puzzle-melody-credit" href="/music-credits.html" target="_blank" rel="noopener" aria-label="About this melody"><span id="puzzle-melody-name"></span><span id="puzzle-melody-composer"></span></a></div>
@@ -228,6 +238,7 @@ app.innerHTML = `
     <div class="rotation-tools" role="group" aria-label="Board view"><button class="icon-button" data-rotate="left" aria-label="Rotate left" aria-keyshortcuts="ArrowLeft A">${icon("left")}${rotationShortcut("left")}</button><button class="icon-button" data-rotate="up" aria-label="Rotate up" aria-keyshortcuts="ArrowUp W">${icon("up")}${rotationShortcut("up")}</button><button class="icon-button view-reset" id="view-button" aria-label="Reset view" aria-keyshortcuts="R">${icon("cube")}Reset view<span class="rotation-shortcut" aria-hidden="true"><kbd data-key="r">R</kbd></span></button><button class="icon-button" data-rotate="down" aria-label="Rotate down" aria-keyshortcuts="ArrowDown S">${icon("down")}${rotationShortcut("down")}</button><button class="icon-button" data-rotate="right" aria-label="Rotate right" aria-keyshortcuts="ArrowRight D">${icon("right")}${rotationShortcut("right")}</button></div>
   </div>
 <dialog class="dialog completion-dialog" id="completion-dialog" aria-labelledby="completion-title">
+  ${DOTS_THEME || GROKS_THEME ? `<img class="completion-characters" src="${DOTS_THEME ? charactersUrl : groksUrl}" alt="" aria-hidden="true" draggable="false" />` : ''}
   <div class="completion-emblem">${icon("check")}</div>
   <h2 id="completion-title">All connected.</h2>
   <details class="completion-invite"><summary>Share your puzzle</summary><div id="completion-share"></div></details>
@@ -364,7 +375,7 @@ try {
   });
 } catch (error) {
   el("home-stage").innerHTML =
-    '<div class="webgl-error"><strong>The 3D view couldn’t start.</strong>Enable hardware acceleration in your browser, then reload to play Nodoku.</div>';
+    `<div class="webgl-error"><strong>The 3D view couldn’t start.</strong>Enable hardware acceleration in your browser, then reload to play ${editionName}.</div>`;
   el<HTMLButtonElement>("start-button").disabled = true;
   throw error;
 }
@@ -415,10 +426,10 @@ function updatePuzzleMelody(seed = 0) {
   gameAudio.setConfig({ ...sound, connectionMelody: selected });
   const melody = selected === "classic" ? null : MELODIES[selected];
   el("puzzle-melody-name").textContent = melody?.title ?? "Classic tones";
-  el("puzzle-melody-composer").textContent = melody?.composer ?? "Nodoku";
+  el("puzzle-melody-composer").textContent = melody?.composer ?? editionName;
   const credit = document.querySelector<HTMLAnchorElement>(".puzzle-melody-credit")!;
   credit.href = `/music-credits.html#${selected}`;
-  credit.setAttribute("aria-label", melody ? `${melody.title} by ${melody.composer}. About this melody` : "About Nodoku sounds");
+  credit.setAttribute("aria-label", melody ? `${melody.title} by ${melody.composer}. About this melody` : `About ${editionName} sounds`);
 }
 let tutorialSettings = getConfig().tutorial;
 const doubleTapStyle = document.createElement("style");
@@ -881,7 +892,10 @@ function positionTutorialSuccess() {
 }
 
 function renderOnboardingCue() {
-  if (mode !== "onboarding") return;
+  if (mode !== "onboarding") {
+    if (shapedCharacters) scene.setTutorialOutlines([]);
+    return;
+  }
   positionTutorialSuccess();
   const cue = el<HTMLElement>("onboarding-cue");
   const line = cue.querySelector<HTMLElement>(".onboarding-cue-line")!;
@@ -894,6 +908,7 @@ function renderOnboardingCue() {
   cue.dataset.selected = String(onboardingStep === 0 && selected !== null);
   if (onboardingCelebrating || !settings.enabled || puzzle?.solved || scene.isViewMoving) {
     cue.hidden = true;
+    if (shapedCharacters) scene.setTutorialOutlines([]);
     return;
   }
   // Keep the chosen target stable, but choose a new visible pair after a turn.
@@ -904,9 +919,13 @@ function renderOnboardingCue() {
   cue.className = `onboarding-cue is-${gesture.kind}`;
   cue.hidden = gesture.kind === "none" || (gesture.kind === "double-tap" && !settings.doubleTapCue)
     || (gesture.kind === "turn" && !settings.rotationCue);
-  if (cue.hidden) return;
+  if (cue.hidden) {
+    if (shapedCharacters) scene.setTutorialOutlines([]);
+    return;
+  }
 
   if (gesture.kind === "turn") {
+    if (shapedCharacters) scene.setTutorialOutlines([]);
     const nodes = puzzle!.nodes.map(node => scene.projectNode(node.id)).filter(node => node !== null);
     if (!nodes.length) { cue.hidden = true; return; }
     const left = Math.min(...nodes.map(node => node.x - node.radius));
@@ -929,6 +948,7 @@ function renderOnboardingCue() {
   const end = scene.projectNode(gesture.end!);
   if (!start || !end) {
     cue.hidden = true;
+    if (shapedCharacters) scene.setTutorialOutlines([]);
     return;
   }
   const distance = Math.hypot(end.x - start.x, end.y - start.y);
@@ -957,6 +977,21 @@ function renderOnboardingCue() {
   hand.style.top = `${fromY + (removing ? dy * length : 0)}px`;
   hand.style.setProperty("--cue-dx", `${dx * length * (removing ? -1 : 1)}px`);
   hand.style.setProperty("--cue-dy", `${dy * length * (removing ? -1 : 1)}px`);
+  if (shapedCharacters) {
+    const outlines = ([[startRing, start], [endRing, end]] as const).flatMap(([ring, node]) => {
+      const style = getComputedStyle(ring);
+      if (style.display === "none") return [];
+      const matrix = style.transform === "none" ? null : new DOMMatrixReadOnly(style.transform);
+      return [{
+        id: node.id,
+        color: gesture.kind === "double-tap" ? settings.doubleTapColor : settings.color,
+        width: gesture.kind === "double-tap" ? settings.doubleTapWidth : settings.ringWidth,
+        scale: matrix ? Math.hypot(matrix.a, matrix.b) : 1,
+        opacity: Number.parseFloat(style.opacity) || 0,
+      }];
+    });
+    scene.setTutorialOutlines(outlines);
+  }
 }
 
 function renderOnboarding() {

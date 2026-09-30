@@ -1,0 +1,272 @@
+/* The character palette gives the puzzle a dark stage without changing its rules. */
+:root {
+  color: #f8f5ff;
+  background: #07070b;
+  --ink: #f8f5ff;
+  --muted: #aaa5b9;
+  --purple: #c6a7ff;
+  --paper: #07070b;
+  --line: #302d39;
+  --sage: #b9ee6c;
+}
+
+body { background: #07070b; }
+button:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+a:focus-visible { outline-color: #82c9ff; }
+
+.site-header {
+  color: #f8f5ff;
+  border-bottom: 1px solid #ffffff12;
+}
+.brand { font-weight: 600; letter-spacing: -1.5px; }
+.brand-name { color: #f9f6ff; }
+.header-actions .text-button,
+.header-actions .icon-button { color: #d8d3e4; }
+.header-actions .text-button:hover,
+.header-actions .icon-button:hover,
+.header-actions .icon-button[aria-pressed="true"] {
+  color: #fff;
+  background: #ffffff17;
+}
+.header-actions .icon-button.music-enabled { color: #f8a1dd; background: #f8a1dd24; }
+.visitor-widget, .visitor-scope { color: #b8afc7; }
+.visitor-widget strong { color: #ede6f4; }
+.audience-link:hover { color: #fff; }
+.visitor-dot { background: #b9ee6c; }
+.audience-divider { background: #ffffff40; }
+
+.home-main {
+  grid-template-columns: minmax(420px, 44%) minmax(0, 56%);
+  min-height: calc(100dvh - 110px);
+  padding-top: 20px;
+  padding-bottom: 24px;
+}
+.intro { align-self: center; padding-bottom: 0; }
+.hero-word {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 0 18px -7px;
+  font-size: clamp(96px, 12vw, 190px);
+  font-weight: 600;
+  letter-spacing: -.09em;
+  line-height: .8;
+  filter: drop-shadow(0 0 13px #9694ff31);
+}
+.hero-word span {
+  display: inline-block;
+  padding-right: .08em;
+  color: #f9f7ff;
+  -webkit-text-stroke: .25px #ffffff55;
+}
+.hero-word span:nth-child(1) { text-shadow: -5px 1px 21px #227effa8, 3px 0 15px #e76bef75; }
+.hero-word span:nth-child(2) { text-shadow: -3px 1px 19px #84ff78a3, 4px 0 16px #ffd35970; }
+.hero-word span:nth-child(3) { text-shadow: -4px 0 18px #ffd053a6, 4px 1px 17px #ff5cad85; }
+.hero-word span:nth-child(4) { text-shadow: -5px 0 18px #ff69b9a8, 5px 1px 21px #a14effa8; }
+.intro h1 {
+  max-width: 480px;
+  margin: 0 0 12px;
+  font-size: clamp(26px, 2.6vw, 39px);
+  font-weight: 500;
+  letter-spacing: -.045em;
+  line-height: 1.12;
+}
+.intro-copy {
+  margin-bottom: 31px;
+  color: #bcb5ca;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.puzzle-options { gap: 15px; max-width: 390px; }
+.setting-row {
+  min-height: 48px;
+  padding: 0 0 13px;
+  border-bottom: 1px solid #ffffff1c;
+}
+.setting-label { color: #d0cadb; font-size: 14px; }
+.segmented { background: #1d1b24; border: 1px solid #ffffff13; }
+.segment, .size-button, .difficulty-button { color: #b5adc2; }
+.segment:hover, .size-button:hover, .difficulty-button:hover { color: #fff; background: #ffffff15; }
+.segment[aria-pressed="true"],
+.size-button[aria-pressed="true"],
+.difficulty-button[aria-pressed="true"] {
+  background: #e6d9ff;
+  color: #281b3b;
+  box-shadow: 0 2px 12px #c9a8ff2c;
+}
+.complexity-dot { fill: #17141c; }
+.start-actions { margin-top: 6px; }
+.start-button {
+  background: #f495dc;
+  color: #1d1020;
+  font-weight: 600;
+  box-shadow: 0 10px 28px #f75ac53d;
+}
+.start-button:hover { background: #ffb0e8; box-shadow: 0 12px 32px #f75ac55c; }
+.resume-button { color: #d4bded; }
+.resume-button:hover { color: #fff; }
+
+.home-stage-wrap {
+  height: min(710px, calc(100dvh - 140px));
+  min-height: 570px;
+  overflow: hidden;
+  align-self: center;
+  margin: 0 -3vw 0 -2vw;
+  display: block;
+  border-radius: 32px;
+  background: radial-gradient(ellipse 48% 43% at 52% 43%, #211b2d 0%, #100e16 62%, transparent 100%);
+}
+.home-stage { height: 74%; max-height: none; min-height: 0; }
+.home-stage canvas { border-radius: 0; }
+.home-characters {
+  display: block;
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: -1px;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+.seo-content {
+  background: #0e0c13;
+  border-color: #ffffff17;
+}
+.seo-content section { border-color: #ffffff20; }
+.seo-content .seo-lede { color: #d5cedf; }
+.seo-content p { color: #aaa4b8; }
+
+.game-header-info, .progress-wrap, .puzzle-melody, .game-tip { color: #c1b8cf; }
+.game-title { color: #dcbfff; }
+.progress-track { background: #3b3446; }
+.progress-fill { background: #b8ee6c; }
+.game-tip kbd { background: #262130; border-color: #564766; color: #e2cfff; }
+.tools-group, .rotation-tools, .onboarding-turn-controls {
+  background: #211c2bd9;
+  border: 1px solid #ffffff19;
+  box-shadow: 0 12px 30px #0006;
+}
+.tool-button, .rotation-tools .icon-button,
+.onboarding-turn-controls .icon-button { color: #e5d9ef; }
+.tool-button:hover, .rotation-tools .icon-button:hover,
+.onboarding-turn-controls .icon-button:hover { background: #ffffff1b; color: #fff; }
+.tool-button.hint { background: #f5c0e429; color: #f7b8e7; }
+.tool-button.hint:hover { background: #f5c0e444; }
+.tool-shortcut kbd { background: #30283a; border-color: #5f506e; }
+.onboarding-cue-node { border-color: transparent !important; }
+.onboarding-copy p, .onboarding-step { color: #b9b0c4; }
+.onboarding-next { background: #e6d9ff; color: #281b3b; }
+.onboarding-skip { color: #c6bdd0; }
+.onboarding-skip:hover { color: #fff; background: #ffffff1b; }
+.status-toast, .network-status {
+  background: #282132f2;
+  color: #e6d8ec;
+  box-shadow: 0 10px 32px #0008;
+}
+.network-group-detail { color: #ffd479; }
+.network-status button { color: #251627; background: #f5c38d; }
+.dialog { background: #211b29; color: #f8f5ff; box-shadow: 0 24px 100px #0009; }
+.dialog::backdrop { background: #000a; }
+.dialog p, .dialog .help-instructions { color: #c7bbd0; }
+.dialog .close { color: #e4d9eb; }
+.dialog .close:hover { background: #ffffff1b; }
+.music-emblem, .completion-emblem { background: #b8ee6c2b; color: #b8ee6c; }
+.music-credit { border-color: #ffffff25; }
+.keyboard-help kbd, .onboarding-shortcut kbd {
+  background: #32293c;
+  color: #f8edff;
+  box-shadow: inset 0 -2px 0 #211929, 0 0 0 1px #564663;
+}
+.shortcut-rotation { background: #302637; }
+.completion-share { background: #302637; border-color: #ffffff20; }
+.completion-share .completion-share-preview,
+.completion-share .completion-share-status,
+.completion-share-fallback label { color: #d3c8de; }
+.share-button { background: #eee5f5; border-color: #e4d8ed; }
+.share-button:hover { background: #fff; }
+.completion-share-message { color: #24192e; }
+.dialog-actions button { background: #3a2e43; color: #f8f5ff; }
+.dialog-actions .confirm-button { background: #f495dc; color: #1d1020; }
+.secondary-button { color: #c9bbd6; }
+.secondary-button:hover { color: #fff; }
+.completion-dialog[open] { border-color: #ffffff24; box-shadow: 0 18px 60px #0009; }
+.completion-characters {
+  display: block;
+  width: min(100%, 330px);
+  height: 116px;
+  margin: -14px auto 22px;
+  object-fit: cover;
+  object-position: bottom;
+  pointer-events: none;
+}
+
+@media (max-width: 1050px) {
+  .home-main { grid-template-columns: minmax(340px, 46%) minmax(0, 54%); }
+  .hero-word { font-size: clamp(90px, 11vw, 140px); }
+  .home-stage-wrap { min-height: 500px; }
+}
+@media (max-width: 760px) {
+  #app.home { height: auto; min-height: 100dvh; overflow: visible; }
+  .home .site-header { height: 70px; padding: 0 5vw; }
+  .home .header-actions :is(#help-button, #sound-button) { background: #ffffff17; color: #eee6f3; }
+  .home-main {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100dvh - 70px);
+    overflow: visible;
+    padding: 20px 5vw 28px;
+  }
+  .intro { display: contents; }
+  .hero-word {
+    order: 0;
+    align-self: center;
+    margin: 0 0 13px -5px;
+    font-size: clamp(82px, 22vw, 132px);
+  }
+  .intro h1 {
+    order: 1;
+    margin: 0 0 8px;
+    font-size: clamp(23px, 6vw, 34px);
+    letter-spacing: -.04em;
+    text-align: center;
+  }
+  .intro-copy { order: 2; margin: 0; font-size: 14px; text-align: center; }
+  .home-stage-wrap {
+    order: 3;
+    align-self: center;
+    flex: none;
+    width: min(100vw, 560px);
+    height: clamp(250px, 68vw, 360px);
+    min-height: 0;
+    margin: 6px 0 10px;
+    border-radius: 0;
+  }
+  .home-stage { height: 79%; }
+  .puzzle-options {
+    order: 4;
+    width: min(100%, 410px);
+    max-width: none;
+    gap: 8px;
+    padding: 0;
+  }
+  .puzzle-options .setting-row { min-height: 48px; padding-bottom: 5px; }
+  .puzzle-options .setting-label { font-size: 13px; }
+  .puzzle-options .segment,
+  .puzzle-options .size-button,
+  .puzzle-options .difficulty-button { min-height: 40px; height: 40px; }
+  .start-actions { margin-top: 5px; }
+}
+@media (max-width: 390px) {
+  .hero-word { font-size: 21vw; }
+  .intro-copy { font-size: 12px; }
+  .home-stage-wrap { height: 228px; margin-top: 0; }
+  .puzzle-options .setting-control { width: 190px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-word { filter: none; }
+}

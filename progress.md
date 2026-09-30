@@ -2280,3 +2280,89 @@ TODO / Note
 - Replaced the fixed 180 BPM node-fill tempo with the configured value and set a more musical 132 BPM default.
 - Double-tap playback still preserves the selected melody's relative note lengths and rests; single links, the home demo, and completion timing remain independently controlled.
 - All 238 unit/server tests and the native Chromium/WebKit double-tap audio regressions pass; Studio was visually inspected with the control updating live and no browser errors.
+
+2026-09-29 character forms
+- The existing character-themed restyle now gives puzzle nodes four distinct sculpted silhouettes: a soft blue blob, raised-eye green frog shape, tapered yellow gumdrop, and pink heart. Lattice-based assignment keeps shared grid positions stable across size changes.
+- Puzzle clue dots remain on their original camera-facing layer; hit testing uses the actual new meshes. The default character palette uses distinct node colors, while a custom owner node color keeps uniform coloring.
+- Production build passed. The required web-game Playwright client ran against the local Vite preview; its gameplay screenshot was inspected at output/web-game/character-forms/shot-0.png with all four shapes and visible clue dots.
+- Added the characters' face details as transparent billboards that appear after a node's clue dots clear, so the eyes and glasses cannot be mistaken for puzzle clues. The four forms are distributed across flat and 3D boards using a mixed lattice hash.
+- A Chromium interaction check connected a one-dot node, confirmed its face appeared, then selected that completed node and removed its connection; no page errors occurred. The home demo was also advanced to completion and visually inspected at output/web-game/character-forms/home-all-faces.png. The required web-game client was rerun after adding faces and its gameplay screenshot was inspected at output/web-game/character-forms/with-faces/shot-0.png.
+
+2026-09-29 integrated character junctions
+- The old gum link profile exposed a sphere-sized end beneath sculpted characters. Buried its link root inside each character and held the character's own color through the visible attachment before blending to the connection accent. Custom owner palettes retain their uniform endpoint colors.
+- Close-up Chromium captures of blue, pink, and yellow multi-link nodes now show no round underlayer: output/web-game/character-unified/blue-junction-80.png and node-10.png/node-5.png/node-9.png. No page errors occurred.
+- Production build, all 240 unit/server tests, browser connection-color integration, and browser gum-material integration pass. Updated those browser fixtures to remove the loader their frozen animation frame had kept over the board. The required web-game client was rerun and its screenshot/state inspected at output/web-game/character-unified/final-client/.
+- TODO: Ask for design feedback on the thinner, character-colored connection roots before changing the organic junction shape further.
+
+2026-09-29 saturated characters and animated details
+- Deepened the four in-game character colors, removed the completion whitening, and softened the body finish so the puzzle pieces read closer to the saturated plush reference. The previous default blue/green owner palette also opts into the new character colors; intentionally custom palettes still use their selected colors.
+- Eyes, glasses, and the blue beret now fade and spring into view over 420ms once the final clue dot clears. Removing a link hides them again. Each node owns its opacity animation while the four face textures remain shared. Reduced-motion users see the finished face immediately.
+- Inspected frame-by-frame close-ups under output/web-game/character-reveal/ and a fully advanced home demo with all four colors. A real click sequence confirmed connection, face reveal, and removal with no page errors; a reduced-motion screenshot confirmed immediate details.
+- Production build, all 240 unit/server tests, browser connection-color checks, and browser gum-material checks passed. The required web-game client ran after the visual changes and its gameplay screenshot was inspected at output/web-game/character-reveal/final-client/.
+- TODO: Gather feedback on the new saturation and reveal timing before adding idle blinking or per-character motion.
+
+2026-09-29 plush character finish
+- Added one deterministic woven color/bump texture and four reusable fringe geometries, each attached to its character body. The puzzle clues and hit targets remain on their existing meshes.
+- Default character bodies now use a soft matte physical finish with minimal clearcoat and reflection. Owner-selected uniform palettes retain the Studio gloss control, and the texture still gives those bodies surface detail.
+- Visually inspected blue, pink, and yellow close-ups at output/web-game/character-fur/node-*.png plus the advanced home demo and gameplay captures. A 7×7×7 board (218 nodes) rendered at a 390×844 mobile viewport with no page errors; the deterministic 12-frame browser smoke measured a 1.7ms median render call in headless Chromium.
+- Production build, all 240 unit/server tests, connection-color browser integration, gum-material browser integration, and the required web-game client pass. The final client screenshot was inspected at output/web-game/character-fur/final-client/shot-0.png.
+- Fur now follows node opacity during grid-shape morphs; the browser morph capture was inspected after the fix, and the build, gum-material browser checks, and required web-game client passed again.
+- TODO: Check the plush feel on a physical mobile device before raising fiber density further.
+
+2026-09-29 dots page
+- Moved the character edition to a separately built `/dots/` page and returned `/` to the classic light Nodoku theme, spherical nodes, original logo, favicon, and owner configuration defaults. Both pages keep the same puzzle logic; each stores its own in-progress puzzle.
+- Added a `/dots` to `/dots/` redirect in local Vite servers and the Pages output, and gave the new page its own canonical URL and sitemap entry.
+- Checked dev and production preview in Chromium: both pages load without errors and start a game; root remains light and `/dots/` displays the furry character board. Production build, all 241 unit/server tests, `/dots/` connection-color and Gum browser checks, and the web-game client pass. Final gameplay capture: `output/web-game/routes/dots-client-final/shot-0.png`.
+
+2026-09-29 Grok Bot edition
+- Added `/groks/` as an independently saved edition, with its own favicon, teal/dark page styling, hero lineup, canonical URL, sitemap entry, and `/groks` redirect. `/` and `/dots/` still load and start their respective designs.
+- The user's teal hexagon and white circle anchor eight geometric Bot forms. The six additional game variations are pebble, rounded square, capsule, rounded triangle, cloud, and droplet. They use two small slanted eyes. Completed pieces reveal their eyes after clue dots clear, with the same spring/fade motion and reduced-motion behavior as `/dots/`.
+- Switched the Grok puzzle bodies to beveled, nearly flat silhouettes that face the camera during rotation. Links draw beneath them; node picking follows that visual order. This keeps the body and junction from looking like a separate round sphere.
+- Production build, 242 unit/server tests, Grok connection-color and Gum integration checks pass. A real click completed a node and revealed its eyes with no browser errors. The web-game client screenshot and state were inspected at `output/web-game/groks-final-client-after-hit/`; mobile home and flat-board captures were inspected at `output/web-game/groks-initial/`.
+- TODO: Get visual feedback on the eight invented variants. The xAI design article supports simple shapes and expressive eyes but does not enumerate these exact eight as an official set.
+
+2026-09-29 volumetric Grok Bot refinement
+- In response to the flat appearance, rebuilt the eight Grok silhouettes as rounded 3D bodies with near-full depth and smooth normals. Kept each silhouette and the camera-facing orientation, and moved the face and clue dots onto the curved front.
+- Gave the home-page lineup soft per-character radial shading so its volume matches the puzzle bodies.
+- Inspected the flat-board screenshot with revealed eyes at `output/web-game/groks-volume/gameplay-first.png`, the 3D board at `output/web-game/groks-volume/client/shot-0.png`, and the home layout at `output/web-game/groks-volume/home.png`; no browser errors. Grok connection-color and Gum browser checks pass, including clicks and board morphs.
+
+2026-09-29 Grok silhouette outlines
+- The round purple outlines in the onboarding screenshot came from CSS focus circles layered over the WebGL puzzle, while normal selection also used a sphere-era torus. On `/groks/`, both now draw expanded backfaces of each Bot's own 3D geometry through a small outline shader. The CSS cue still drives pulse timing and the guide line; its circular border is hidden only for Groks.
+- Inspected the user's onboarding step 7 at `output/web-game/groks-outline/onboarding-step7-shader.png`, the shape-following outline on a selected rounded square at `output/web-game/groks-outline/selected-square.png`, and a reduced-motion capture at `output/web-game/groks-outline/step7-reduced-motion.png`. A real step-7 drag advanced to step 8 with no browser errors.
+- The web-game client capture and state were inspected at `output/web-game/groks-outline/client/`. Chromium tutorial selection and ring-alignment checks, 242 unit/server tests, and the production build pass.
+- Tightened the tutorial contour width after visual review; final screenshot and web-game client state were inspected at `output/web-game/groks-outline/onboarding-step7-final.png` and `output/web-game/groks-outline/final-client/`.
+
+2026-09-30 Grok link depth
+- Removed the Groks-only forced connection render order and disabled depth writes. Opaque links and Bots now use their actual 3D depth, so a connection in front can cover a Bot behind it. Removed the old Bot-first picking exception so hits follow the same nearest-surface order.
+- Reproduced onboarding step 8 from the back of the cube, joined the yellow square to the blue Bot, and visually confirmed the link stays in front of the darker rear Bot at `output/web-game/groks-depth/front-link-over-rear-bot.png`. The link still meets both foreground Bots, and clicking them creates the expected `[1,3]` edge without browser errors.
+- Production build, 242 unit/server tests, Grok Gum material and connection-color browser checks, and the web-game client pass. The client screenshot and state are in `output/web-game/groks-depth/client/`.
+
+2026-09-30 Grok circles inside shapes
+- The visible circles had two causes: Gum links still grew spherical roots inside sculpted Bots, and round rear-layer Bots peeked around foreground silhouettes in perspective. Grok links now keep a narrow profile at each Bot, including while dragging; the original and Dots Gum profile is unchanged.
+- Gave the Grok camera a gentler perspective and let rear Bots recede only when their screen projection overlaps a front silhouette. They remain visible as the cube turns, while front-face Bots keep their full playable size.
+- Inspected the live 3×3 board and a held oblique rotation, plus `output/web-game/groks-depth/current-board-no-nested-bots.png`, `oblique-no-nested-bots.png`, `drag-no-round-root.png`, and `join-no-round-root.png`. A new 3×3 game kept all nine front Bots selectable before and after a turn, and a real click added a connection without browser errors.
+- Production build, Grok Gum and connection-color browser checks, and the web-game client pass; final client output is at `output/web-game/groks-depth/no-nested-final-client/`. The existing generic 4×4 camera/front-face scripts also fail on the previous Groks rendering without these changes; `origin/main` has only the original 38° camera/theme.
+
+2026-09-30 Grok connection clues
+- Replaced the Groks-only round black remaining-connection dots with outlined mint four-point sparks. Their larger, saturated shape stays legible on pale and teal Bots while remaining visually distinct from the capsule eyes revealed when a Bot is filled. The original and Dots markers are unchanged.
+- Inspected gameplay captures at `output/web-game/groks-clues/board-sparks-v2.png` and `output/web-game/groks-clues/client/shot-0.png`. A real link cleared a one-connection Bot's spark and revealed its eyes at `output/web-game/groks-clues/cleared-eyes.png`; state confirmed remaining count 1→0 and dot count 0, with no page errors.
+- Production build, Grok Gum and connection-color browser checks, required web-game client, and `git diff --check` pass.
+
+2026-09-30 Grok shortcut controls
+- Matched the Groks desktop toolbar shortcut keys (⌘ Z, ⇧ R, H, etc.) to the rotation pad's filled key style, with the same surface, text color, and rounded corners. Kept the compact mobile layout and rotation active state.
+- Inspected desktop and mobile screenshots at `output/web-game/groks-shortcuts/desktop.png` and `mobile.png`; computed styles confirm the toolbar keycaps and rotation buttons share the same background, text color, and corner radius. Final web-game client screenshot/state inspected at `output/web-game/groks-shortcuts/final-client/`.
+- Verified a real connection, ⌘Z undo, ⌘⇧Z redo, and ⇧R restart dialog in Chromium with no page errors. Production build and `git diff --check` pass.
+
+2026-09-30 Groks page name
+- Changed the `/groks/` header brand and accessible home label to “groks” / “Groks home”. Updated that page’s title, loading and fallback text, page description, and crawlable copy to use Groks. Internal event names, storage keys, and the canonical domain stay the same.
+- Visually inspected a running puzzle at `output/web-game/groks-brand/game.png` and the required web-game client capture at `output/web-game/groks-brand/client/`. Browser checks confirmed Groks on both its home and puzzle screens while `/` still says Nodoku, with no page errors. Production build and SEO tests pass.
+
+2026-09-30 Dots page name
+- Changed the `/dots/` header brand and accessible home label to “dots” / “Dots home”. Matched its page title, loading and fallback text, description, and crawlable copy. Shared runtime fallback labels now use the current edition name.
+- Inspected `output/web-game/dots-brand/game.png` and the required web-game client screenshot/state at `output/web-game/dots-brand/client/`. Browser checks confirmed Dots on its home and puzzle screens, Groks on `/groks/`, and Nodoku on `/`, with no page errors. Production build and SEO tests pass.
+
+2026-09-30 Dots silhouette outlines
+- The Groks contour shader and cue handoff were route-gated, leaving Dots with a spherical selection torus and CSS tutorial circles. Shared the existing shape-based shader across both character editions, hid the CSS borders through their common theme, and kept the classic page's circular cues.
+- Visually inspected onboarding step 7 at `output/web-game/dots-outline/step7.png`, a selected furry character at `output/web-game/dots-outline/selected.png`, and the Groks step 7 regression capture at `output/web-game/dots-outline/groks-step7.png`. The web-game client screenshot/state was inspected at `output/web-game/dots-outline/client/`.
+- A real Dots step-7 drag connected nodes `[4,5]` and advanced to step 8 without page errors (`output/web-game/dots-outline/after-drag.png`). Production build and `git diff --check` pass. The generic full onboarding script is written for the classic route; when pointed at `/dots/`, it later reads the classic storage key and fails, so the route-specific browser interaction above is the relevant check.
+- Reduced-motion step 7 also shows the contour (`output/web-game/dots-outline/step7-reduced-motion.png`); a browser selection on `/` still reports the classic circular ring, with no page errors.
