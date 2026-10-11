@@ -47,7 +47,7 @@
 .statistics-page th { color: #62506f; }
 .statistics-page th:first-child, .statistics-page td:first-child { text-align: left; white-space: nowrap; }
 .statistics-breakdowns { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 22px; }
-.statistics-geo { margin-top: 22px; background: #edf3ee; border-color: #d7e3d9; }
+.statistics-geo { margin-bottom: 28px; background: #edf3ee; border-color: #d7e3d9; }
 .statistics-geo .statistics-panel-heading > div > p { margin: 9px 0 0; color: #7b8e80; font-size: 12px; line-height: 1.5; }
 #statistics-geo-globe { margin-top: 20px; }
 .statistics-globe { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .8fr); align-items: center; gap: 30px; }
