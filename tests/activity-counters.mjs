@@ -16,7 +16,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     const totals = { visitors: 100, puzzlesSolved: 42, nodesFilled: 420, connectionsCompleted: 210 };
     await page.route('**/api/**', route => {
       const path = new URL(route.request().url()).pathname;
-      if (path === '/api/statistics') return route.fulfill({ json: { scope: 'global', period: 'all', trackingSince: '2026-09-10T00:00:00Z', totals, daily: [], sizes: [], difficulties: [] } });
+      if (path === '/api/statistics') return route.fulfill({ json: { scope: 'global', period: new URL(route.request().url()).searchParams.get('period'), trackingSince: '2026-09-10T00:00:00Z', totals, daily: [], sizes: [], difficulties: [] } });
       if (path === '/api/presence') return route.fulfill({ json: { online: 12, scope: 'global' } });
       if (path === '/api/visitors') return route.fulfill({ json: { count: totals.visitors, scope: 'global' } });
       if (path === '/api/completions') {
@@ -98,9 +98,14 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.locator('#home-button').click();
     assert.match(await page.locator('.visitor-home .audience-rotating > :not([hidden])').textContent(), /43Puzzles solved/);
     totals.visitors++;
+    const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === '/api/statistics');
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
-    for (let i = 0; i < 50 && await page.locator('#visitor-count').textContent() !== '101'; i++) await new Promise(resolve => setTimeout(resolve, 50));
-    assert.match(await page.locator('.visitor-home .audience-rotating > :not([hidden])').textContent(), /101Visitors/, 'Public counters switch only when a total changes');
+    await refreshed;
+    assert.match(await page.locator('.visitor-home .audience-rotating > :not([hidden])').textContent(), /43Puzzles solved/, 'Visitor updates do not replace the activity metric');
+    assert.equal(await page.locator('.audience-visitors').count(), 0, 'Visitor totals are absent from both headers');
+    await page.locator('.visitor-home .audience-link').click();
+    await page.waitForFunction(() => document.querySelector('[data-total="visitors"]')?.textContent === '101');
+    assert.equal(await page.locator('[data-total="visitors"]').textContent(), '101', 'Visitor totals remain in statistics');
     assert.deepEqual(errors, []);
     console.log(`${name}: idle stability, connection/node updates, hint, undo/redo, fill, completion priority and public changes passed`);
   } catch (error) { console.error(error); throw error; } finally { await browser.close(); }

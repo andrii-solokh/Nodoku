@@ -138,7 +138,9 @@ a:focus-visible { outline-color: #82c9ff; }
   right: 0;
   bottom: -1px;
   width: 100%;
-  height: auto;
+  height: calc(26% - 14px);
+  object-fit: contain;
+  object-position: center bottom;
   pointer-events: none;
 }
 
@@ -248,7 +250,8 @@ a:focus-visible { outline-color: #82c9ff; }
     margin: 6px 0 10px;
     border-radius: 0;
   }
-  .home-stage { height: 79%; }
+  .home-stage { height: 100%; }
+  .home-characters { display: none; }
   .puzzle-options {
     order: 4;
     width: min(100%, 410px);
@@ -268,6 +271,9 @@ a:focus-visible { outline-color: #82c9ff; }
   .intro-copy { font-size: 12px; }
   .home-stage-wrap { height: 228px; margin-top: 0; }
   .puzzle-options .setting-control { width: 190px; }
+}
+@media (max-width: 340px) {
+  .home .site-header { padding-right: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-word { filter: none; }

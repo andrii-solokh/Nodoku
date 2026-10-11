@@ -39,11 +39,11 @@ try {
     if (new URL(request.url()).pathname === "/api/visitors" && request.method() === "POST") visitorIds.push(request.postDataJSON().visitorId);
   });
   await local.goto(url);
-  await waitFor(async () => (await local.locator("#visitor-count").textContent()) !== "—", "real local visitor API responds");
+  await waitFor(() => visitorIds.length === 1, "real local visitor API responds");
+  await waitFor(async () => !(await local.locator(".visitor-home").evaluate(widget => widget.classList.contains("is-loading"))), "audience totals finish loading");
   assert.equal(await local.locator("#sponsor-slot-home .sponsor-card").count(), 1, "only one empty placement is shown");
   assert.equal(await local.locator(".visitor-home .visitor-scope").textContent(), "Preview");
   assert.equal(await local.locator(".visitor-home .visitor-scope").isVisible(), true);
-  assert.ok(Number((await local.locator("#visitor-count").textContent()).replaceAll(",", "")) >= 1);
   await local.screenshot({ path: `${out}/home-desktop.png`, fullPage: true });
   await local.reload();
   await waitFor(() => visitorIds.length === 2, "reload records visitor request");
