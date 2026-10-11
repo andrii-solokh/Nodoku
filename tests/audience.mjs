@@ -69,7 +69,7 @@ async function layout(page, mode, label) {
   assert.match(await widget.textContent(), /Online/);
   const homeWidth = mode === 'home' ? await page.evaluate(() => innerWidth) : Infinity;
   assert.equal(await widget.locator('.visitor-scope').isVisible(), homeWidth > 760, `${label}: preview label fits the header`);
-  assert.equal(await widget.locator('.audience-rotating').isVisible(), homeWidth > 680, `${label}: activity metric fits the header`);
+  assert.equal(await widget.locator('.audience-rotating').isVisible(), homeWidth > 900 || (homeWidth > 680 && homeWidth <= 760), `${label}: activity metric fits the header`);
   assert.doesNotMatch(await widget.textContent(), /Visitors/, `${label}: visitor totals stay in statistics`);
   assert.equal(await page.locator('#game-instruction').count(), 0, 'Old game instructions are removed');
   const boxes = await widget.evaluate(element => {
@@ -81,6 +81,8 @@ async function layout(page, mode, label) {
       width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth,
       widget: rect(element), header: rect(document.querySelector('.site-header')),
       homeActivity: rect(document.querySelector('#home-activity')),
+      brand: rect(document.querySelector('.brand')),
+      actions: rect(document.querySelector('.header-actions')),
       edition: rect(document.querySelector('.edition-switch')),
       help: rect(document.querySelector('#help-button')),
       online: rect(element.querySelector('.audience-online')),
@@ -120,6 +122,9 @@ async function layout(page, mode, label) {
       assert.ok(Math.abs(boxes.widget.y + boxes.widget.height / 2 - boxes.help.y - boxes.help.height / 2) <= 1, `${label}: audience aligns with the help control`);
     } else {
       assert.ok(Math.abs(boxes.homeActivity.x + boxes.homeActivity.width / 2 - boxes.header.x - boxes.header.width / 2) <= 1, `${label}: home activity is centered in the header`);
+      assert.ok(Math.abs(boxes.homeActivity.y + boxes.homeActivity.height / 2 - boxes.header.y - boxes.header.height / 2) <= 1, `${label}: home activity shares the header row`);
+      assert.ok(boxes.homeActivity.x >= boxes.brand.x + boxes.brand.width + 4, `${label}: home activity clears the brand`);
+      assert.ok(boxes.homeActivity.x + boxes.homeActivity.width + 4 <= boxes.actions.x, `${label}: home activity clears header actions`);
     }
     assert.ok(boxes.widget.y >= boxes.header.y - 1 && boxes.widget.y + boxes.widget.height <= boxes.header.y + boxes.header.height + 1, `${label}: home audience stays within the header`);
   }
@@ -160,7 +165,7 @@ try {
   assert.deepEqual(mock.requests.presence[0], { method: 'POST', body: { visitorId: firstId } }, 'Presence and visitor registration share one browser identity');
   assert.equal(await page.evaluate(() => localStorage.getItem('nodoku.visitor.v1')), firstId);
   assert.match(await page.locator('.visitor-home .visitor-scope').textContent(), /Preview/);
-  for (const viewport of [{ width: 1440, height: 960 }, { width: 1000, height: 760 }, { width: 715, height: 858 }, { width: 390, height: 844 }, { width: 320, height: 568 }]) {
+  for (const viewport of [{ width: 1440, height: 960 }, { width: 1000, height: 760 }, { width: 961, height: 858 }, { width: 901, height: 858 }, { width: 900, height: 858 }, { width: 842, height: 858 }, { width: 761, height: 858 }, { width: 715, height: 858 }, { width: 390, height: 844 }, { width: 320, height: 568 }]) {
     await page.setViewportSize(viewport);
     await layout(page, 'home', `home ${viewport.width}px`);
     await page.screenshot({ path: `${out}/home-${viewport.width}.png`, fullPage: true });
