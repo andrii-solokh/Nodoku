@@ -26,7 +26,7 @@ const stats = (period = 'all', solved = 213) => ({
   scope: 'local', period, trackingSince: `${days[0]}T00:00:00.000Z`,
   totals: { visitors: 1529, puzzlesSolved: solved, nodesFilled: 16320, connectionsCompleted: 8160 },
   daily: days.map((date, i) => ({ date, visitors: 13 + i * 4, puzzlesSolved: 4 + i * 2, nodesFilled: 132 + i * 8 })),
-  sizes: [{ size: 3, depth: 1, count: 80 }, { size: 3, depth: 3, count: 100 }, { size: 4, depth: 4, count: 33 }],
+  sizes: [{ size: 3, depth: 1, count: 80 }, { size: 3, depth: 3, count: 100 }, { size: 4, depth: 4, count: 33 }, { size: 5, depth: 1, count: 19 }, { size: 5, depth: 5, count: 16 }],
   difficulties: [{ difficulty: 'easy', count: 103 }, { difficulty: 'medium', count: 65 }, { difficulty: 'hard', count: 45 }],
 });
 const geography = period => ({
@@ -143,21 +143,63 @@ try {
   assert.equal(await dialog.locator('[data-total=visitors]').textContent(), '1,529');
   assert.equal(await dialog.locator('.statistics-histogram').count(), 3);
   for (const metric of ['puzzlesSolved', 'visitors', 'nodesFilled']) assert.equal(await dialog.locator(`#statistics-chart-${metric} .statistics-bar`).count(), 7);
-  assert.equal(await dialog.locator('#statistics-sizes .statistics-ranking-bar').count(), 3);
+  assert.equal(await dialog.locator('#statistics-sizes .statistics-ranking-bar').count(), 5);
   assert.equal(await dialog.locator('#statistics-difficulties .statistics-ranking-bar').count(), 3);
   assert.equal(await dialog.locator('#statistics-difficulties .statistics-complexity-icon').count(), 3, 'Difficulty rankings use the home-page complexity symbols');
   await waitFor(async () => await dialog.locator('#statistics-geo').isVisible(), 'Country statistics load separately from the main totals');
-  assert.equal(await dialog.locator('#statistics-geo-values tr').count(), 3);
-  const countryRows = await dialog.locator('#statistics-geo-values tr').evaluateAll(rows => rows.map(row => [...row.querySelectorAll('td')].map(cell => cell.textContent)));
-  assert.deepEqual(countryRows.map(row => row.slice(1)), [['812', '1,934'], ['421', '991'], ['3', '4']]);
-  assert.equal(countryRows[2][0], 'Unknown location');
+  await dialog.locator('.statistics-globe-canvas[data-ready="true"]').waitFor();
+  assert.equal(await dialog.locator('.statistics-globe-marker').count(), 2, 'Known countries appear as globe markers');
+  assert.equal(await dialog.locator('.statistics-globe-name').textContent(), 'Ukraine');
+  assert.equal(await dialog.locator('.statistics-globe-visitors').textContent(), '812');
+  assert.equal(await dialog.locator('.statistics-globe-pageviews').textContent(), '1,934');
+  await dialog.locator('[data-direction="next"]').click();
+  assert.equal(await dialog.locator('.statistics-globe-name').textContent(), 'United States');
+  assert.equal(await dialog.locator('.statistics-globe-visitors').textContent(), '421');
+  await dialog.locator('[data-direction="next"]').click();
+  assert.equal(await dialog.locator('.statistics-globe-name').textContent(), 'Unknown location');
+  assert.equal(await dialog.locator('.statistics-globe-pageviews').textContent(), '4');
+  await dialog.locator('[data-direction="next"]').click();
+  assert.equal(await dialog.locator('.statistics-globe-name').textContent(), 'Ukraine', 'Globe controls wrap through every location');
+  const markerBeforeDrag = await dialog.locator('.statistics-globe-marker').first().evaluate(element => element.style.left);
+  const globeBox = await dialog.locator('.statistics-globe-canvas').boundingBox();
+  await view.page.mouse.move(globeBox.x + globeBox.width * .5, globeBox.y + globeBox.height * .8);
+  await view.page.mouse.down();
+  await view.page.mouse.move(globeBox.x + globeBox.width * .65, globeBox.y + globeBox.height * .8, { steps: 4 });
+  await view.page.mouse.up();
+  await waitFor(async () => await dialog.locator('.statistics-globe-marker').first().evaluate(element => element.style.left) !== markerBeforeDrag, 'Dragging rotates the globe and its markers');
   for (const ranking of ['#statistics-sizes', '#statistics-difficulties']) {
-    const offsets = await dialog.locator(`${ranking} li`).evaluateAll(rows => rows.map(row => {
-      const bar = row.querySelector('.statistics-ranking-bar').getBoundingClientRect();
-      const label = row.querySelector('.statistics-ranking-label').getBoundingClientRect();
-      return Math.abs((bar.left + bar.width / 2) - (label.left + label.width / 2));
+    const rows = await dialog.locator(`${ranking} li`).evaluateAll(elements => elements.map(row => {
+      const label = row.querySelector('.statistics-ranking-label');
+      const count = row.querySelector('strong');
+      const bar = row.querySelector('.statistics-ranking-bar');
+      const labelBox = label.getBoundingClientRect();
+      const countBox = count.getBoundingClientRect();
+      const barBox = bar.getBoundingClientRect();
+      return { label: label.textContent, count: count.textContent, labelRight: labelBox.right, countLeft: countBox.left, labelBottom: labelBox.bottom, barTop: barBox.top, width: bar.style.getPropertyValue('--ranking-width') };
     }));
-    assert.ok(offsets.every(offset => offset <= 1), `${ranking} labels stay centered beneath their bars`);
+    assert.ok(rows.every(row => row.label && row.count && row.labelRight < row.countLeft && row.labelBottom < row.barTop), `${ranking} shows separate labels, counts and bars`);
+    assert.equal(rows[0].width, '100%', `${ranking} scales bars to its largest count`);
+  }
+  assert.deepEqual(await dialog.locator('#statistics-difficulties .statistics-ranking-label').allTextContents(), ['Gentle', 'Focused', 'Intricate']);
+  for (const edition of ['dots', 'groks']) {
+    const themed = await fixture();
+    await themed.page.goto(`${url}/${edition}/#statistics`);
+    const themedDialog = themed.page.locator('#statistics-dialog');
+    await themedDialog.locator('.statistics-globe-canvas[data-ready="true"]').waitFor();
+    const colors = await themedDialog.evaluate(element => ({
+      panel: getComputedStyle(element.querySelector('.statistics-panel')).color,
+      heading: getComputedStyle(element.querySelector('.statistics-breakdowns h2')).color,
+      country: getComputedStyle(element.querySelector('.statistics-globe-detail')).color,
+      total: getComputedStyle(element.querySelector('.statistics-total')).color,
+    }));
+    assert.deepEqual(colors, { panel: 'rgb(48, 43, 72)', heading: 'rgb(48, 43, 72)', country: 'rgb(48, 43, 72)', total: 'rgb(48, 43, 72)' }, `${edition} keeps dark text on light statistics cards`);
+    await themed.page.setViewportSize({ width: 390, height: 844 });
+    assert.ok(await themedDialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1), `${edition} statistics fit mobile`);
+    if (process.argv.includes('--view-only')) {
+      await themedDialog.locator('#statistics-geo').scrollIntoViewIfNeeded();
+      await themed.page.screenshot({ path: `${out}/statistics-${edition}.png` });
+    }
+    await themed.page.close();
   }
   await view.page.evaluate(() => window.dispatchEvent(new CustomEvent('nodoku:sponsorship-config', { detail: { enabled: false } })));
   assert.equal(await dialog.locator('#statistics-report').isVisible(), false, 'Hiding sponsor placements also hides private sponsor reports');
@@ -189,6 +231,7 @@ try {
       assert.ok(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1), `Statistics fits ${width}px`);
       const numberSize = await dialog.locator('[data-total=nodesFilled] .rolling-counter-reel').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize));
       assert.ok(numberSize >= 24, 'Reel digits retain the large card typography');
+      await dialog.locator('#statistics-geo').scrollIntoViewIfNeeded();
       await view.page.screenshot({ path: `${out}/statistics-${width}.png`, fullPage: true });
     }
   } else {

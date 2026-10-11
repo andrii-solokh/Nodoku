@@ -17,7 +17,7 @@ Local data is labeled Preview and persists in `.nodoku-data/local.sqlite`. Demos
 
 ## Country statistics
 
-**Where players are** is a public country-level view of Nodoku page traffic. It shows unique PostHog browser identities within each country and page views for the selected UTC period. It intentionally queries only `$pageview` events registered as `app: nodoku` for the configured Nodoku host, so server-side completion events and traffic for other sites cannot appear. A browser that visits from more than one country may be included once in each of those country rows.
+**Where players are** is a public country-level view of Nodoku page traffic. A draggable globe places countries with recorded visits on a map; its arrows step through each location and show unique PostHog browser identities and page views for the selected UTC period. Unknown or unmapped locations remain available in the location details. It intentionally queries only `$pageview` events registered as `app: nodoku` for the configured Nodoku host, so server-side completion events and traffic for other sites cannot appear. A browser that visits from more than one country may be included once in each of those country counts. The bundled globe land mask and country label positions come from [Natural Earth](https://www.naturalearthdata.com/), which provides its map data in the public domain.
 
 Country data is optional and loads independently: the D1-backed totals remain available if PostHog is unavailable. To enable it, configure these runtime values (not `VITE_` values) and redeploy:
 
