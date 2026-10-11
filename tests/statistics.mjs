@@ -147,6 +147,7 @@ try {
   assert.equal(await dialog.locator('#statistics-difficulties .statistics-ranking-bar').count(), 3);
   assert.equal(await dialog.locator('#statistics-difficulties .statistics-complexity-icon').count(), 3, 'Difficulty rankings use the home-page complexity symbols');
   await waitFor(async () => await dialog.locator('#statistics-geo').isVisible(), 'Country statistics load separately from the main totals');
+  assert.equal(await dialog.locator('#statistics-content > :first-child').getAttribute('id'), 'statistics-geo', 'The globe appears first in the statistics content');
   await dialog.locator('.statistics-globe-canvas[data-ready="true"]').waitFor();
   assert.equal(await dialog.locator('.statistics-globe-marker').count(), 2, 'Known countries appear as globe markers');
   assert.equal(await dialog.locator('.statistics-globe-name').textContent(), 'Ukraine');
