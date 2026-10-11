@@ -7,7 +7,6 @@ const metrics = [
   { key: 'puzzlesSolved', id: 'puzzles-solved-count', label: 'Puzzles solved' },
   { key: 'nodesFilled', id: 'nodes-filled-count', label: 'Nodes filled' },
   { key: 'connectionsCompleted', id: 'connections-completed-count', label: 'Connections' },
-  { key: 'visitors', id: 'visitor-count', label: 'Visitors' },
 ] as const;
 
 type PuzzleActivity = { attemptId: string; connections: number; nodesFilled: number; solved: boolean };
