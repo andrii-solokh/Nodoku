@@ -31,14 +31,23 @@ const server = http.createServer((request, response) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const harnessUrl = `http://localhost:${server.address().port}`;
 const browser = await chromium.launch();
+const startedAt = Date.now();
 const state = frame => frame.evaluate(() => JSON.parse(window.render_game_to_text()));
 const settle = async frame => {
+  await frame.evaluate(() => new Promise(resolve => window.embedTestFrame(() => window.embedTestFrame(resolve))));
   await frame.evaluate(() => window.advanceTime(1200));
   await frame.page().waitForTimeout(350);
 };
 const ready = async frame => {
   await frame.waitForFunction(() => typeof window.render_game_to_text === 'function');
   await frame.locator('#app-loader').waitFor({ state: 'detached' });
+  // Initial startup and loading must use normal rendering. Afterwards, stop
+  // continuous decorative WebGL frames while keeping native layout frames,
+  // ResizeObserver and real input active. advanceTime settles camera motion.
+  await frame.evaluate(() => {
+    window.embedTestFrame = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = () => 0;
+  });
   await settle(frame);
 };
 
@@ -68,7 +77,7 @@ async function fixture(edition, [width, height], { game = null, denyStorage = fa
   }, { origin: gameUrl.origin, key: edition.key, topSave, game, denyStorage });
   const src = new URL(`${edition.path}?embed=1`, gameUrl).href;
   const params = new URLSearchParams({ src, width: String(width), height: String(height) });
-  await page.goto(`${harnessUrl}/?${params}`);
+  await page.goto(`${harnessUrl}/?${params}`, { waitUntil: 'domcontentloaded' });
   const iframe = page.locator('iframe');
   const frame = await iframe.elementHandle().then(handle => handle.contentFrame());
   await ready(frame);
@@ -145,7 +154,7 @@ try {
     assert.notDeepEqual((await state(frame)).view.direction, beforeRotation, 'Rotation is usable inside the card');
     const persisted = await state(frame);
     assert.equal(await frame.evaluate(key => localStorage.getItem(key), edition.key), topSave, 'Player leaves top-level save intact');
-    await frame.goto(frame.url());
+    await frame.goto(frame.url(), { waitUntil: 'domcontentloaded' });
     await ready(frame);
     assert.deepEqual((await state(frame)).edges, persisted.edges, 'Card reload restores its connections');
     assert.deepEqual((await state(frame)).view.direction, persisted.view.direction, 'Card reload restores its orientation');
@@ -180,7 +189,7 @@ try {
     const test = await fixture(edition, [320, 240], { game: puzzle.serialize() });
     const { page, frame, iframe } = test;
     await followHint({
-      waitForFunction: frame.waitForFunction.bind(frame),
+      waitForFunction: (predicate, arg) => frame.waitForFunction(predicate, arg, { polling: 50 }),
       evaluate: frame.evaluate.bind(frame),
       locator: frame.locator.bind(frame),
       mouse: { click: async (x, y) => {
@@ -209,7 +218,7 @@ try {
     await test.page.close();
   }
   assert.deepEqual(errors, [], 'No uncaught browser errors in player frames');
-  console.log('Passed: completion and next puzzle in all editions; denied third-party storage; no browser errors.');
+  console.log(`Passed: completion and next puzzle in all editions; denied third-party storage; no browser errors (${((Date.now() - startedAt) / 1000).toFixed(1)}s).`);
 } catch (error) {
   console.error(error);
   for (const page of browser.contexts().flatMap(context => context.pages())) {
