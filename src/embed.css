@@ -34,6 +34,45 @@ html.embedded-player { scrollbar-gutter: auto; }
 }
 .embedded-player .network-status { bottom: 68px; }
 
+/* Tutorial cards use two columns so every lesson fits the short X player. */
+.embedded-player .onboarding-main {
+  --onboarding-board-offset: 0px;
+  height: 100dvh; padding: 0;
+}
+.embedded-player .onboarding-stage {
+  width: 54%; height: calc(100% - 60px); margin: 0; transform: none;
+}
+.embedded-player .onboarding-copy {
+  top: 42px; bottom: 8px; left: 56%; width: calc(44% - 12px);
+  transform: none; display: flex; flex-direction: column;
+  justify-content: center; text-align: left;
+}
+.embedded-player .onboarding-step { font-size: 10px; margin-bottom: 6px; letter-spacing: .04em; }
+.embedded-player .onboarding-copy h2 { font-size: clamp(19px, 4.6vw, 28px); line-height: 1.15; letter-spacing: -.6px; }
+.embedded-player .onboarding-copy p { margin: 8px 0 0; font-size: clamp(12px, 2.7vw, 14px); line-height: 1.4; }
+.embedded-player .onboarding-next {
+  align-self: flex-start; margin-top: 12px; min-height: 34px;
+  padding: 8px 10px; font-size: 12px; gap: 4px;
+}
+.embedded-player .onboarding-skip { top: 6px; right: 8px; padding: 8px; font-size: 12px; }
+.embedded-player .onboarding-shortcut { justify-content: flex-start; gap: 8px; margin-top: 12px; }
+.embedded-player .onboarding-shortcut kbd {
+  min-width: 34px; min-height: 34px; padding: 4px 8px;
+  border-radius: 8px; border-bottom-width: 3px; font-size: 18px;
+}
+.embedded-player .onboarding-shortcut > span { font-size: 14px; }
+.embedded-player .onboarding-turn-controls {
+  left: 8px; right: auto; bottom: 8px; width: calc(54% - 16px);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0; padding: 4px; transform: none; border-radius: 12px;
+}
+.embedded-player .onboarding-turn-controls > span:not(.onboarding-turn-center) { display: none; }
+.embedded-player .onboarding-turn-controls .icon-button {
+  width: 0; min-width: 0; height: 36px; flex: 1; padding: 0;
+}
+.embedded-player .onboarding-turn-center { width: 24px; flex: 0 0 24px; }
+.embedded-player .onboarding-turn-controls [data-onboarding-rotate] svg { display: block; }
+
 /* Puzzle setup stays available through the home button. */
 .embedded-player .home .home-main {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
