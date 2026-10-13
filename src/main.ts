@@ -955,14 +955,15 @@ function renderOnboardingCue() {
     const vertical = direction === "up" || direction === "down";
     const bottom = Math.max(...nodes.map(node => node.y + node.radius));
     turn.dataset.direction = direction;
+    turn.style.width = `${Math.min(220, (right - left) * .65)}px`;
     const stageBounds = el("onboarding-stage").getBoundingClientRect();
-    const arrowLeft = embeddedPlayer ? stageBounds.left + 18 : 40;
-    const arrowRight = embeddedPlayer ? stageBounds.right - 18 : innerWidth - 40;
+    const arrowMargin = embeddedPlayer ? Math.max(18, turn.offsetHeight / 2 + 4) : 40;
+    const arrowLeft = embeddedPlayer ? stageBounds.left + arrowMargin : 40;
+    const arrowRight = embeddedPlayer ? stageBounds.right - arrowMargin : innerWidth - 40;
     const arrowX = direction === "down" ? Math.min(arrowRight, right + 40)
       : direction === "up" ? Math.max(arrowLeft, left - 40) : (left + right) / 2;
     turn.style.left = `${arrowX}px`;
     turn.style.top = `${vertical ? (top + bottom) / 2 : Math.max(embeddedPlayer ? 16 : 80, top - 14)}px`;
-    turn.style.width = `${Math.min(220, (right - left) * .65)}px`;
     turn.style.transform = vertical ? `translate(-50%, -50%) rotate(${direction === "up" ? -90 : 90}deg)`
       : `translate(-50%, -100%) scaleX(${direction === "left" ? -1 : 1})`;
     return;
