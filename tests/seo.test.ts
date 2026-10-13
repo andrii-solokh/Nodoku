@@ -12,7 +12,7 @@ test("homepage metadata describes Nodoku as a 3D spatial reasoning puzzle", asyn
     '<meta name="robots" content="index,follow" />',
     '<link rel="canonical" href="https://nodoku.solokh.com/" />',
     '<meta property="og:title" content="Nodoku — 3D Spatial Reasoning Puzzle" />',
-    '<meta name="twitter:card" content="summary_large_image" />',
+    '<meta name="twitter:card" content="player" />',
     '"@type": "VideoGame"',
     '<h1>3D Spatial Reasoning Puzzle</h1>',
   ]) assert.ok(html.includes(value), `missing ${value}`);

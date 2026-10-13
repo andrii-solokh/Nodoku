@@ -1,0 +1,58 @@
+/* X scales the player to its timeline width; keep the board and controls inside it. */
+html.embedded-player { scrollbar-gutter: auto; }
+.embedded-player .site-header { height: 48px; padding: 0 12px; gap: 8px; }
+.embedded-player .brand { font-size: 20px; gap: 6px; }
+.embedded-player .brand svg { width: 24px; height: 24px; }
+.embedded-player .header-actions { gap: 4px; }
+.embedded-player .embed-open { font-size: 12px; white-space: nowrap; text-underline-offset: 3px; }
+.embedded-player :is(.game-activity, .puzzle-melody, #keyboard-button, #music-button) { display: none; }
+.embedded-player .game-main { height: calc(100dvh - 48px); }
+.embedded-player .game-stage { inset: 0 0 64px; height: auto; min-height: 0; }
+.embedded-player .game-tip { display: none; }
+.embedded-player .game-toolbar {
+  inset: auto 8px 8px; display: flex; max-width: none; margin: 0;
+  padding: 4px; gap: 4px; border-radius: 14px; background: var(--line);
+}
+.embedded-player .tools-group,
+.embedded-player .rotation-tools {
+  position: static; transform: none; display: flex; flex-direction: row;
+  min-width: 0; padding: 0; gap: 0; background: none; backdrop-filter: none;
+}
+.embedded-player .tools-group { flex: 4; }
+.embedded-player .rotation-tools { flex: 5; }
+.embedded-player .flat-playing .rotation-tools { display: none; }
+.embedded-player .game-toolbar :is(.tool-button, .icon-button) {
+  width: 0; min-width: 0; height: 44px; flex: 1; padding: 0;
+  font-size: 0; gap: 0; justify-content: center;
+}
+.embedded-player .rotation-shortcut { display: none; }
+.embedded-player .rotation-tools [data-rotate] svg { display: block; }
+.embedded-player .dialog { max-height: calc(100dvh - 16px); overflow-y: auto; }
+.embedded-player .completion-dialog[open] {
+  inset: 50% auto auto 50%; transform: translate(-50%, -50%);
+  max-height: calc(100% - 16px); margin: 0; overflow-y: auto;
+}
+.embedded-player .network-status { bottom: 68px; }
+
+/* Puzzle setup stays available through the home button. */
+.embedded-player .home .home-main {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  height: auto; min-height: calc(100dvh - 48px); padding: 16px; gap: 12px;
+}
+.embedded-player .intro { display: block; padding: 0; }
+.embedded-player .intro h1 { font-size: 22px; letter-spacing: -.6px; text-align: left; margin: 0 0 12px; }
+.embedded-player :is(.intro-copy, .hero-word, .home-activity, .home-characters) { display: none; }
+.embedded-player .puzzle-options { gap: 8px; padding: 0; }
+.embedded-player .setting-row { min-height: 0; padding: 0; flex-wrap: wrap; gap: 4px; }
+.embedded-player .setting-control { width: auto; }
+.embedded-player .home-stage-wrap { width: 100%; height: 100%; min-height: 160px; margin: 0; }
+.embedded-player .home-stage { height: 100%; min-height: 160px; max-height: none; }
+.embedded-player .start-button { min-height: 42px; padding: 10px; font-size: 13px; }
+@media (max-width: 480px) {
+  .embedded-player .game-header-info { display: none; }
+}
+@media (max-width: 420px) {
+  .embedded-player .brand-name { display: none; }
+  .embedded-player .home .home-main { grid-template-columns: 1fr; }
+  .embedded-player .home-stage-wrap { display: none; }
+}

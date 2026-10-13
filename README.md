@@ -41,6 +41,12 @@ For a specific rotation lesson, add `&direction=left`, `right`, `up`, or `down`,
 
 Each direct link starts a fresh lesson with its prerequisite connections prepared. The URL follows lesson progress without adding browser history entries; reload restarts that lesson. Exiting the tutorial removes its URL parameters. Invalid steps start at step 1.
 
+## In-tweet play
+
+Share the ordinary [Nodoku](https://nodoku.solokh.com/), [Dots](https://nodoku.solokh.com/dots/), or [Groks](https://nodoku.solokh.com/groks/) URL on X. Each edition publishes a Player Card so desktop X can expand a playable puzzle inside the post. Its `?embed=1` URL opens a compact player directly into a puzzle, with a separate save from the normal website and sound muted on first load.
+
+Use **Open full game** for accounts and the full-size interface. X controls card rendering and caching. Metadata and the embedded player can be verified independently, but a live post's end-to-end result is only confirmed by testing an actual post on X.
+
 ## Play
 
 Choose a flat board (sizes 4 or 5) or a 3D cube (sizes 3, 4 or 5), and a complexity level. Each dot on a node represents one remaining connection. Select two orthogonal neighbors to add or remove a link. Use every dot and join the board into one network to finish. Any valid solution is accepted.
