@@ -43,7 +43,7 @@ Each direct link starts a fresh lesson with its prerequisite connections prepare
 
 ## In-tweet play
 
-Share the ordinary [Nodoku](https://nodoku.solokh.com/), [Dots](https://nodoku.solokh.com/dots/), or [Groks](https://nodoku.solokh.com/groks/) URL on X. Each edition publishes a Player Card so desktop X can expand a playable puzzle inside the post. Its `?embed=1` URL opens a compact player directly into a puzzle, with a separate save from the normal website and sound muted on first load.
+Share the ordinary [Nodoku](https://nodoku.solokh.com/), [Dots](https://nodoku.solokh.com/dots/), or [Groks](https://nodoku.solokh.com/groks/) URL on X. Each edition publishes a Player Card so desktop X can expand a playable puzzle inside the post. Its `?embed=1` URL opens a compact player with the interactive tutorial for new players, a separate save from the normal website, and sound muted on first load. Finish or skip the tutorial to start or resume a puzzle; **How to play** reopens the lessons without losing your puzzle.
 
 Use **Open full game** for accounts and the full-size interface. X controls card rendering and caching. Metadata and the embedded player can be verified independently, but a live post's end-to-end result is only confirmed by testing an actual post on X.
 

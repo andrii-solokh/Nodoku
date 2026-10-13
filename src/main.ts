@@ -91,7 +91,7 @@ let settings: PuzzleSettings = {
 let soundEnabled = !embeddedPlayer;
 let musicEnabled = false;
 let onboardingCompleted = false;
-let showOnboarding = !embeddedPlayer && new URLSearchParams(location.search).has("onboarding");
+let showOnboarding = new URLSearchParams(location.search).has("onboarding");
 let melodyStep = 0;
 let savedPuzzle: Puzzle | null = null;
 let savedView: unknown = null;
@@ -170,10 +170,13 @@ try {
         && savedPuzzle.nodes.some(node => node.id === stored.selected)
         ? stored.selected : null;
     }
-  } else showOnboarding = showOnboarding || (!embeddedPlayer && !navigator.webdriver);
+  } else showOnboarding = showOnboarding || !navigator.webdriver;
 } catch {
   /* A fresh game remains available when stored settings are invalid. */
 }
+// Existing tweet saves predate the tutorial. Teach new embedded players too,
+// while keeping their saved puzzle available after the lessons or Skip.
+if (embeddedPlayer && !onboardingCompleted && !navigator.webdriver) showOnboarding = true;
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const loadingScreen = document.getElementById("app-loader");
@@ -510,6 +513,10 @@ function runDemo() {
 }
 
 function persist() {
+  // Lessons use a separate tiny puzzle. Keep the real embedded game across
+  // pagehide, reload and settings changes while the tutorial is open.
+  const preserveEmbeddedGame = embeddedPlayer && mode === "onboarding";
+  const storedPuzzle = preserveEmbeddedGame ? savedPuzzle : puzzle || savedPuzzle;
   try {
     localStorage.setItem(
       storageKey,
@@ -519,11 +526,11 @@ function persist() {
         music: musicEnabled,
         onboardingCompleted,
         melodyStep,
-        screen: mode,
-        game: (puzzle || savedPuzzle)?.serialize() ?? null,
-        view: puzzle ? scene.serializeView() : savedView,
-        selected: puzzle ? selected : savedSelection,
-        attemptId: (puzzle || savedPuzzle) ? attemptId : null,
+        screen: preserveEmbeddedGame ? (savedPuzzle ? "playing" : "home") : mode,
+        game: storedPuzzle?.serialize() ?? null,
+        view: puzzle && !preserveEmbeddedGame ? scene.serializeView() : savedView,
+        selected: puzzle && !preserveEmbeddedGame ? selected : savedSelection,
+        attemptId: storedPuzzle ? attemptId : null,
       }),
     );
   } catch {
@@ -948,11 +955,15 @@ function renderOnboardingCue() {
     const vertical = direction === "up" || direction === "down";
     const bottom = Math.max(...nodes.map(node => node.y + node.radius));
     turn.dataset.direction = direction;
-    const arrowX = direction === "down" ? Math.min(innerWidth - 40, right + 40)
-      : direction === "up" ? Math.max(40, left - 40) : (left + right) / 2;
-    turn.style.left = `${arrowX}px`;
-    turn.style.top = `${vertical ? (top + bottom) / 2 : Math.max(80, top - 14)}px`;
     turn.style.width = `${Math.min(220, (right - left) * .65)}px`;
+    const stageBounds = el("onboarding-stage").getBoundingClientRect();
+    const arrowMargin = embeddedPlayer ? Math.max(18, turn.offsetHeight / 2 + 4) : 40;
+    const arrowLeft = embeddedPlayer ? stageBounds.left + arrowMargin : 40;
+    const arrowRight = embeddedPlayer ? stageBounds.right - arrowMargin : innerWidth - 40;
+    const arrowX = direction === "down" ? Math.min(arrowRight, right + 40)
+      : direction === "up" ? Math.max(arrowLeft, left - 40) : (left + right) / 2;
+    turn.style.left = `${arrowX}px`;
+    turn.style.top = `${vertical ? (top + bottom) / 2 : Math.max(embeddedPlayer ? turn.offsetHeight + 4 : 80, top - 14)}px`;
     turn.style.transform = vertical ? `translate(-50%, -50%) rotate(${direction === "up" ? -90 : 90}deg)`
       : `translate(-50%, -100%) scaleX(${direction === "left" ? -1 : 1})`;
     return;
@@ -1158,6 +1169,10 @@ function finishOnboarding(completed = false) {
   selected = null;
   mode = "home";
   updateOnboardingUrl();
+  if (embeddedPlayer) {
+    startGame(Boolean(savedPuzzle));
+    return;
+  }
   app.className = "home";
   moveCanvas("home-stage");
   updateOptions();
@@ -1179,7 +1194,7 @@ function updateOnboardingUrl() {
 function startOnboarding(step = 0, rotation = 0) {
   updateAudiencePuzzle(null);
   clearCompletionMoment();
-  if (mode === "playing" && puzzle && !puzzle.solved) {
+  if (mode === "playing" && puzzle && (embeddedPlayer || !puzzle.solved)) {
     onStrokeEnd(false);
     savedPuzzle = puzzle;
     savedView = scene.serializeView();
@@ -1690,8 +1705,7 @@ el("home-button").addEventListener("click", () => {
 });
 el("help-button").addEventListener("click", () => {
   scene.cancelPendingTap();
-  if (embeddedPlayer) el<HTMLDialogElement>("help-dialog").showModal();
-  else startOnboarding();
+  startOnboarding();
 });
 for (const name of ["keyboard", "music"])
   el(`${name}-button`).addEventListener("click", () => {
