@@ -5,6 +5,7 @@ import "@fontsource/outfit/400.css";
 import "@fontsource/outfit/500.css";
 import "@fontsource/outfit/600.css";
 import "./style.css";
+import "./embed.css";
 import charactersUrl from "./assets/dots-characters.png";
 import groksUrl from "./assets/groks-lineup.svg";
 import { DOTS_THEME } from "./dots-theme";
@@ -68,6 +69,8 @@ const labels: Record<Difficulty, string> = {
 const macKeyboard = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
 const modifierLabel = macKeyboard ? "⌘" : "Ctrl";
 const modifierKey = macKeyboard ? "Meta" : "Control";
+const embeddedPlayer = new URLSearchParams(location.search).get("embed") === "1";
+document.documentElement.classList.toggle("embedded-player", embeddedPlayer);
 const editionName = DOTS_THEME ? "Dots" : GROKS_THEME ? "Groks" : "Nodoku";
 const editionNav = `<nav class="edition-switch" aria-label="Choose a game edition">
   <a class="edition-link edition-groks" href="/groks/"${GROKS_THEME ? ' aria-current="page"' : ''}><svg viewBox="0 0 34 34" aria-hidden="true"><path d="M17 2 31 10v14L17 32 3 24V10Z" fill="currentColor"/><g fill="#101112" transform="rotate(-15 17 17)"><rect x="11" y="11" width="3.5" height="9" rx="1.7"/><rect x="20" y="11" width="3.5" height="9" rx="1.7"/></g></svg>groks</a>
@@ -77,17 +80,18 @@ const editionNav = `<nav class="edition-switch" aria-label="Choose a game editio
 const shapedCharacters = DOTS_THEME || GROKS_THEME;
 const toolShortcut = (...keys: string[]) =>
   `<span class="tool-shortcut" aria-hidden="true">${keys.map(key => `<kbd>${key}</kbd>`).join("")}</span>`;
-const storageKey = DOTS_THEME ? "nodoku.dots.v1" : GROKS_THEME ? "nodoku.groks.v1" : "nodoku.astra.v1";
+const storageKey = (DOTS_THEME ? "nodoku.dots.v1" : GROKS_THEME ? "nodoku.groks.v1" : "nodoku.astra.v1")
+  + (embeddedPlayer ? ".embed" : "");
 let settings: PuzzleSettings = {
   size: 3,
   depth: 3,
   difficulty: "easy",
   seed: 1,
 };
-let soundEnabled = true;
+let soundEnabled = !embeddedPlayer;
 let musicEnabled = false;
 let onboardingCompleted = false;
-let showOnboarding = new URLSearchParams(location.search).has("onboarding");
+let showOnboarding = !embeddedPlayer && new URLSearchParams(location.search).has("onboarding");
 let melodyStep = 0;
 let savedPuzzle: Puzzle | null = null;
 let savedView: unknown = null;
@@ -166,7 +170,7 @@ try {
         && savedPuzzle.nodes.some(node => node.id === stored.selected)
         ? stored.selected : null;
     }
-  } else showOnboarding = showOnboarding || !navigator.webdriver;
+  } else showOnboarding = showOnboarding || (!embeddedPlayer && !navigator.webdriver);
 } catch {
   /* A fresh game remains available when stored settings are invalid. */
 }
@@ -194,6 +198,7 @@ app.innerHTML = `
   <div class="game-activity" id="game-activity"></div>
   <div class="home-activity" id="home-activity">${editionNav}</div>
   <nav class="header-actions" aria-label="Game help, controls and sound">
+    ${embeddedPlayer ? `<a class="embed-open" href="${location.pathname}" target="_blank" rel="noopener">Open full game ↗</a>` : ''}
     <button class="text-button" id="help-button">${icon("help")}How to play</button>
     <button class="icon-button" id="keyboard-button" aria-label="Keyboard controls" title="Keyboard controls">${icon("keyboard")}</button>
     <button class="icon-button" id="music-button" aria-label="Music and credits" title="Music and credits" aria-haspopup="dialog" hidden>${icon("music")}</button>
@@ -340,6 +345,9 @@ app.innerHTML = `
 `;
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
+if (embeddedPlayer) {
+  app.querySelectorAll<HTMLAnchorElement>(".edition-link").forEach(link => { link.search = "?embed=1"; });
+}
 const completionShare = mountCompletionShare(el("completion-share"), channel =>
   captureAnalytics("puzzle_shared", { channel, ...puzzleAnalyticsProperties() }),
 );
@@ -1682,7 +1690,8 @@ el("home-button").addEventListener("click", () => {
 });
 el("help-button").addEventListener("click", () => {
   scene.cancelPendingTap();
-  startOnboarding();
+  if (embeddedPlayer) el<HTMLDialogElement>("help-dialog").showModal();
+  else startOnboarding();
 });
 for (const name of ["keyboard", "music"])
   el(`${name}-button`).addEventListener("click", () => {
@@ -1994,9 +2003,10 @@ if (showOnboarding) {
   startOnboarding(Number.isInteger(step) && step >= 1 && step <= 8 ? step - 1 : 0, Math.max(0, rotation));
 }
 else if (resumeOnLoad) startGame(true);
+else if (embeddedPlayer) startGame(Boolean(savedPuzzle));
 else updateOptions();
 window.addEventListener("nodoku:startup-ready", finishLoading, { once: true });
-mountAccounts(() => {
+if (!embeddedPlayer) mountAccounts(() => {
   scene.cancelPendingTap();
   onStrokeEnd(false);
   persist();

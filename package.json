@@ -31,6 +31,7 @@
     "test:sound": "node --import tsx tests/sound.mjs",
     "test:share": "node --import tsx tests/share.mjs",
     "test:persistence": "node --import tsx tests/persistence.mjs",
+    "test:embed": "node --import tsx tests/embed.mjs",
     "release:web": "npm run build",
     "release:godot": "bash scripts/release_web.sh",
     "icons:generate": "node scripts/generate_icons.mjs",

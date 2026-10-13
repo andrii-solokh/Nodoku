@@ -2443,3 +2443,9 @@ TODO / Note
 2026-09-30 Character eye blinks
 - Added short, staggered, sometimes double blinks to revealed Grok and Dots faces. Groks squash only the eye texture; Dots animate individual sculpted eyes, preserving the beret and glasses. The pink sunglasses narrow gently and the yellow sleepy eyes flatten subtly. Reduced-motion preference keeps eyes steady.
 - Production build and `git diff --check` pass. The required web-game client ran on both character routes. Inspected deterministic open, shut, and reopened gameplay captures in `output/web-game/groks-eye-blink-check/` and `output/web-game/dots-eye-blink-check/`; no browser errors.
+
+2026-10-13 In-tweet playable cards
+- Request: check the in-tweet example for Nodoku, implement missing support, merge and deploy.
+- Verified origin/main and the checkout at 5e6ebbb: all editions use image-only Twitter cards; active production headers already permit framing.
+- Added Player Card metadata and a compact ?embed=1 mode that starts a puzzle directly, keeps an isolated edition save, starts muted, offers concise rules and opens the full game in a new tab.
+- Validation: all 245 unit/server tests, build, D1 migration fixtures, Pages Functions compilation, PostHog identity and all 12 normal layout cases pass. Inspected all editions at 640×480, compact setup, 320×240 and the web-game client screenshot. Exact X sandbox tokens were observed on the reference post; the dedicated regression checks play, undo/redo, rotation, help, isolated saves, completion, flat setup and unavailable storage. Browser matrix and release checks run locally and in CI.
