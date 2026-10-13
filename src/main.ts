@@ -963,7 +963,7 @@ function renderOnboardingCue() {
     const arrowX = direction === "down" ? Math.min(arrowRight, right + 40)
       : direction === "up" ? Math.max(arrowLeft, left - 40) : (left + right) / 2;
     turn.style.left = `${arrowX}px`;
-    turn.style.top = `${vertical ? (top + bottom) / 2 : Math.max(embeddedPlayer ? 16 : 80, top - 14)}px`;
+    turn.style.top = `${vertical ? (top + bottom) / 2 : Math.max(embeddedPlayer ? turn.offsetHeight + 4 : 80, top - 14)}px`;
     turn.style.transform = vertical ? `translate(-50%, -50%) rotate(${direction === "up" ? -90 : 90}deg)`
       : `translate(-50%, -100%) scaleX(${direction === "left" ? -1 : 1})`;
     return;
