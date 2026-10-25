@@ -1,5 +1,11 @@
 import { defineConfig, type Connect, type Plugin } from "vite";
 import { sponsorshipApi } from "./scripts/sponsorship-api";
+import { prerenderEditionNavigation } from "./src/edition-navigation.ts";
+
+const editionNavigation: Plugin = {
+  name: "edition-navigation",
+  transformIndexHtml: (html, context) => prerenderEditionNavigation(html, context.path),
+};
 
 const themedPagesRedirect: Plugin = {
   name: "themed-pages-trailing-slash",
@@ -18,7 +24,7 @@ function redirect(middlewares: Connect.Server): void {
 
 export default defineConfig({
   publicDir: "static",
-  plugins: [themedPagesRedirect, sponsorshipApi()],
+  plugins: [themedPagesRedirect, sponsorshipApi(), editionNavigation],
   server: {
     host: "127.0.0.1", port: 5173,
     headers: { "Cross-Origin-Opener-Policy": "same-origin-allow-popups" },

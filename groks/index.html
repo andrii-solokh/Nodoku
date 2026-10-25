@@ -50,6 +50,7 @@
       @keyframes loader-sweep { from { transform: translateX(-36px); } to { transform: translateX(92px); } }
       @media (prefers-reduced-motion: reduce) { #app-loader { transition: none; } .loader-progress::after { animation: none; transform: translateX(28px); } }
     </style>
+    <noscript><style>#app-loader { display: none; }</style></noscript>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -83,6 +84,7 @@
         <p class="prerender-brand">groks</p>
         <h1>3D Spatial Reasoning Puzzle</h1>
         <p>Connect every node and complete the network. Each node shows how many connections it needs.</p>
+        <!-- edition-navigation -->
       </main>
     </div>
     <script>
