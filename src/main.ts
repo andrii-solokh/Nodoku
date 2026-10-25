@@ -1,3 +1,4 @@
+import { editionNavigation } from "./edition-navigation";
 import { perspectivePaths } from "./perspective-icons";
 import { complexityIcon } from "./complexity-icon";
 import "@fontsource/outfit/300.css";
@@ -72,11 +73,7 @@ const modifierKey = macKeyboard ? "Meta" : "Control";
 const embeddedPlayer = new URLSearchParams(location.search).get("embed") === "1";
 document.documentElement.classList.toggle("embedded-player", embeddedPlayer);
 const editionName = DOTS_THEME ? "Dots" : GROKS_THEME ? "Groks" : "Nodoku";
-const editionNav = `<nav class="edition-switch" aria-label="Choose a game edition">
-  <a class="edition-link edition-groks" href="/groks/"${GROKS_THEME ? ' aria-current="page"' : ''}><svg viewBox="0 0 34 34" aria-hidden="true"><path d="M17 2 31 10v14L17 32 3 24V10Z" fill="currentColor"/><g fill="#101112" transform="rotate(-15 17 17)"><rect x="11" y="11" width="3.5" height="9" rx="1.7"/><rect x="20" y="11" width="3.5" height="9" rx="1.7"/></g></svg>groks</a>
-  <span class="edition-versus" aria-hidden="true">vs</span>
-  <a class="edition-link edition-dots" href="/dots/"${DOTS_THEME ? ' aria-current="page"' : ''}><svg viewBox="0 0 34 34" aria-hidden="true"><path d="M8 9h18v17H8Z" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="8" cy="9" r="4.7" fill="#68b9ff"/><circle cx="26" cy="9" r="4.7" fill="#b8ed67"/><circle cx="8" cy="26" r="4.7" fill="#ffd560"/><circle cx="26" cy="26" r="4.7" fill="#f78cda"/></svg>dots</a>
-</nav>`;
+const editionNav = editionNavigation(DOTS_THEME ? "dots" : GROKS_THEME ? "groks" : "nodoku");
 const shapedCharacters = DOTS_THEME || GROKS_THEME;
 const toolShortcut = (...keys: string[]) =>
   `<span class="tool-shortcut" aria-hidden="true">${keys.map(key => `<kbd>${key}</kbd>`).join("")}</span>`;
