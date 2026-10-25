@@ -8,7 +8,7 @@ for (const [path, name, url] of [
   ["dots/index.html", "Dots", "https://nodoku.solokh.com/dots/"],
   ["groks/index.html", "Groks", "https://nodoku.solokh.com/groks/"],
 ]) {
-  test(`${name} publishes Open Graph fallback and playable social-card metadata`, async () => {
+  test(`${name} publishes Open Graph and large-image social-card metadata`, async () => {
     const content = await readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
     for (const [attribute, property, value] of [
@@ -20,16 +20,15 @@ for (const [path, name, url] of [
       ["property", "og:image:secure_url", "https://nodoku.solokh.com/og-image.png?v=3d-safe-v2"],
       ["property", "og:image:width", "1200"],
       ["property", "og:image:height", "630"],
-      ["name", "twitter:card", "player"],
-      ["name", "twitter:player", `${url}?embed=1`],
-      ["name", "twitter:player:width", "640"],
-      ["name", "twitter:player:height", "480"],
+      ["name", "twitter:card", "summary_large_image"],
       ["name", "twitter:title", `${name} — 3D Spatial Reasoning Puzzle`],
       ["name", "twitter:image", "https://nodoku.solokh.com/og-image.png?v=3d-safe-v2"],
+      ["name", "twitter:image:alt", "Nodoku — 3D Spatial Reasoning Puzzle"],
     ]) {
       assert.ok(content.includes(`<meta ${attribute}="${property}" content="${value}"`), `missing ${property}`);
     }
     assert.ok(content.includes(`<link rel="canonical" href="${url}"`));
+    assert.doesNotMatch(content, /name="twitter:player(?::[^"]+)?"/);
   });
 }
 
