@@ -110,6 +110,51 @@ a {
   font-weight: 600;
   letter-spacing: -1px;
 }
+/* Crawlable rules below the home screen; the board keeps the full viewport during play. */
+.edition-guide {
+  border-top: 1px solid var(--line);
+  padding: 64px 5.5vw 80px;
+  color: var(--ink);
+  -webkit-user-select: text;
+  user-select: text;
+}
+.edition-guide * { -webkit-user-select: text; user-select: text; }
+#app.playing ~ .edition-guide,
+#app.onboarding ~ .edition-guide,
+html.embedded-player .edition-guide { display: none; }
+.edition-guide-inner { max-width: 680px; margin: 0 auto; }
+.edition-guide h2 {
+  margin: 0 0 16px;
+  font-size: clamp(28px, 4vw, 38px);
+  font-weight: 450;
+  letter-spacing: -1.2px;
+  line-height: 1.15;
+}
+.edition-guide h3 {
+  margin: 36px 0 10px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+.edition-guide p,
+.edition-guide li,
+.edition-guide dd {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.65;
+}
+.edition-guide p { margin: 0 0 12px; }
+.edition-guide ol,
+.edition-guide ul { margin: 0; padding-left: 22px; }
+.edition-guide li + li { margin-top: 8px; }
+.edition-guide dl { margin: 0; }
+.edition-guide dt { margin-top: 16px; font-weight: 600; }
+.edition-guide dd { margin: 4px 0 0; }
+.edition-guide a { color: var(--purple); text-underline-offset: 3px; }
+@media (max-width: 640px) {
+  .edition-guide { padding: 44px 22px 56px; }
+  .edition-guide p, .edition-guide li, .edition-guide dd { font-size: 15px; }
+}
 .site-header {
   height: 110px;
   display: flex;

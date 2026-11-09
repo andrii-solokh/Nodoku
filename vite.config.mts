@@ -1,10 +1,12 @@
 import { defineConfig, type Connect, type Plugin } from "vite";
 import { sponsorshipApi } from "./scripts/sponsorship-api";
-import { prerenderEditionNavigation } from "./src/edition-navigation.ts";
+import { editionForPath, prerenderEditionNavigation } from "./src/edition-navigation.ts";
+import { prerenderEditionGuide } from "./src/edition-guide.ts";
 
 const editionNavigation: Plugin = {
   name: "edition-navigation",
-  transformIndexHtml: (html, context) => prerenderEditionNavigation(html, context.path),
+  transformIndexHtml: (html, context) =>
+    prerenderEditionGuide(prerenderEditionNavigation(html, context.path), editionForPath(context.path)),
 };
 
 const themedPagesRedirect: Plugin = {

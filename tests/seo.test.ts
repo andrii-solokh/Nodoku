@@ -18,7 +18,7 @@ test("homepage metadata describes Nodoku as a 3D spatial reasoning puzzle", asyn
   ]) assert.ok(html.includes(value), `missing ${value}`);
 });
 
-test("all editions end after the game without the below-game article", async () => {
+test("all editions keep one H1 and render the guide after the game, not the old article", async () => {
   const [pages, app, statistics] = await Promise.all([
     Promise.all(["index.html", "dots/index.html", "groks/index.html"].map(readRootFile)),
     readRootFile("src/main.ts"),
@@ -28,6 +28,7 @@ test("all editions end after the game without the below-game article", async () 
   for (const html of pages) {
     assert.doesNotMatch(html, /class="seo-content"|"@type": "FAQPage"|Frequently Asked Questions/);
     assert.match(html, /<div id="app">\s*<main class="prerender-home">/);
+    assert.match(html, /<!-- edition-guide -->/);
     assert.equal((html.match(/<h1\b/g) || []).length, 1);
   }
   assert.equal((app.match(/<h1\b/g) || []).length, 1);
