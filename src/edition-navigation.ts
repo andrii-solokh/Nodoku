@@ -10,8 +10,10 @@ export function editionNavigation(edition: Edition): string {
 </nav>`;
 }
 
+export function editionForPath(pathname: string): Edition {
+  return pathname.startsWith("/dots/") ? "dots" : pathname.startsWith("/groks/") ? "groks" : "nodoku";
+}
+
 export function prerenderEditionNavigation(html: string, pathname: string): string {
-  const edition: Edition = pathname.startsWith("/dots/") ? "dots"
-    : pathname.startsWith("/groks/") ? "groks" : "nodoku";
-  return html.replace(EDITION_NAVIGATION_MARKER, editionNavigation(edition));
+  return html.replace(EDITION_NAVIGATION_MARKER, editionNavigation(editionForPath(pathname)));
 }
